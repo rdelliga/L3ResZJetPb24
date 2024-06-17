@@ -26,6 +26,7 @@ using std::endl;
 
 // TODO: if local etc
 // #include "JetMETCorrections/Modules/interface/JetResolution.h"
+#include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
 
 // Need to apply MCTruth correction on the fly
 
@@ -37,7 +38,8 @@ JME::JetResolution *_jer(0);
 JME::JetResolutionScaleFactor *_jer_sf(0); */
 
 
-void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", bool isMC = false) {
+ //void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", bool isMC = false) {
+void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", bool isMC = false) {
 
   // Define and activate branches
   std::string evtPath = "hiEvtAnalyzer/HiTree";
@@ -98,12 +100,12 @@ void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", strin
   triggerTree->SetBranchStatus("HLT_AK4PFJet80_v1",1);
   triggerTree->SetBranchStatus("HLT_AK4PFJet100_v1",1);
   triggerTree->SetBranchStatus("HLT_AK4PFJet120_v1",1);
-
-  trigger = HLT_AK4PFJet60_v1 or HLT_AK4PFJet80_v1 or HLT_AK4PFJet100_v1 or HLT_AK4PFJet120_v1;
   
   // Get to JETS 
   auto jetTree = (TTree*)inFile->Get(jetPath.c_str());
-    
+  jetTree->SetBranchStatus("*",1);    
+
+
   Int_t     evt;
   
   // Reconstruted jet information
@@ -180,18 +182,25 @@ void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", strin
   dir->cd();
 
   eventhistograms *eh = new eventhistograms(dir, isMC);
- 
-				 
+   
+  // JEC stuff
+FactorizedJetCorrector* corr;
+vector<JetCorrectorParameters> vpar; 
+ vpar.push_back(JetCorrectorParameters("jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt"));			 
+
+ corr = new FactorizedJetCorrector(vpar);
+
+ // jetTree->Print();
 // Start event loop to fill histograms:
    cout << "Number of entries :" <<  jetTree->GetEntries()  << endl; 
-for (int i = 0; i < jetTree->GetEntries(); ++i) {
-  //  for (int i = 0; i < 1000; ++i) {
+   //for (int i = 0; i < jetTree->GetEntries(); ++i) {
+  for (int i = 0; i < 1000; ++i) {
      evtTree->GetEntry(i);
      skimTree->GetEntry(i);
-     
-     //  cout << pprimaryVertexFilter << endl;
+     triggerTree->GetEntry(i);
 
- 
+     trigger = HLT_AK4PFJet60_v1 or HLT_AK4PFJet80_v1 or HLT_AK4PFJet100_v1 or HLT_AK4PFJet120_v1;
+     //  cout << pprimaryVertexFilter << endl;
      if (!trigger) continue;
 
      evtwt = 1;
@@ -205,6 +214,7 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
      //  if (pprimaryVertexFilter != 1) continue; // TODO: test, for some reason gets always 0 but should be 1
      //     if (hiBin > CENTRALITYHIGH or hiBin < CENTRALITYLOW) continue;
      jetTree->GetEntry(i);
+
      if (nref < 1) continue;
      
      //MC: JER resmear? -> needs rho
@@ -218,7 +228,32 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
      //     if (weight > 0.1) cout << weight << " " << evtwt << endl;
      if (isMC)  eh->event_pthatwsgenweight->Fill(pthat,weight);
      
-     // Get dijet system (do not impose any cuts here)
+
+     // This is dijet with tag and probe
+
+     double tagpt, probept, tageta, probeeta, pt3, ptavgtp, alpha;
+     double asymmtp;
+     double djrespasymm;
+
+
+     // Apply MCtruth JEC and fill some basic histograms
+     for (int j = 0; j < nref; ++j ) {
+	 // REDO JEC
+	 corr->setJetPt(jtpt[j]);
+	 // corr->setJetE(jteu[jetidx]);
+	 corr->setJetEta(jteta[j]);
+
+	 vector<float> v = corr->getSubCorrections();
+	 // jtjesnew[jetidx] = v.back()
+
+	 float jes = v.back();
+
+	 //	 cout << "New jes correction: " << jtpt[j] << " " << j << " "  << jes << endl;
+
+	 // TODO: APPLY
+	 jtpt[j] *= jes;
+
+    // Get dijet system (do not impose any cuts here)
      if (nref > 1) {
        dphi = DPhi(jtphi[0],jtphi[1]);
        leadpt = jtpt[0];
@@ -228,20 +263,14 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
        ddeta = abs(jteta[0]-jteta[1]);
        avgpt = 0.5*(leadpt+subleadpt);
        djetasymm = (leadpt-subleadpt)/(leadpt+subleadpt);
-     }
-
-     // This is dijet with tag and probe
-
-     double tagpt, probept, tageta, probeeta, pt3, ptavgtp, alpha;
-     double asymmtp;
-     double djrespasymm;
+     }     
 
 // Need also the response
-
 	//     if (nref > 1 and doTPdijet) {
      if (nref > 1) {
-        
+
        for (int j = 0; j < 2; ++j) {   // Use both jets as t/b in turn, maybe change later
+
 	 tagpt = jtpt[j];
 	 probept = jtpt[(j == 0 ? 1 : 0)];
 	 tageta = jteta[j];
@@ -280,10 +309,8 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
      }
 
 
-     // This part should be purely for filling histograms
-     for (int j = 0; j < nref; ++j ) {
 
-       for (auto &histrange : _histos) { ///// etabins instead of pts?
+    for (auto &histrange : _histos) { ///// etabins instead of pts?
 	 for (auto &h : histrange.second) {
 	   if (jteta[j] >= h->etamin and jteta[j] < h->etamax and hiBin >= h->hibinmin and hiBin < h->hibinmax) {
 	     h->jetetaphi->Fill(jteta[j],jtphi[j],weight);
@@ -297,8 +324,6 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
 	       h->dijetdeltaphi->Fill(dphi,evtwt);
 	       h->dijetdeltaeta->Fill(ddeta,evtwt);
 
-	       // Actual t&p stuff?
-	       //     cout << "TEST" << endl;
 	     }
 
 	     
