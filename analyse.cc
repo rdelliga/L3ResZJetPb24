@@ -193,14 +193,13 @@ vector<JetCorrectorParameters> vpar;
  // jetTree->Print();
 // Start event loop to fill histograms:
    cout << "Number of entries :" <<  jetTree->GetEntries()  << endl; 
-   //for (int i = 0; i < jetTree->GetEntries(); ++i) {
-  for (int i = 0; i < 1000; ++i) {
+  for (int i = 0; i < jetTree->GetEntries(); ++i) {
+   //  for (int i = 0; i < 1000; ++i) {
      evtTree->GetEntry(i);
      skimTree->GetEntry(i);
      triggerTree->GetEntry(i);
 
      trigger = HLT_AK4PFJet60_v1 or HLT_AK4PFJet80_v1 or HLT_AK4PFJet100_v1 or HLT_AK4PFJet120_v1;
-     //  cout << pprimaryVertexFilter << endl;
      if (!trigger) continue;
 
      evtwt = 1;
