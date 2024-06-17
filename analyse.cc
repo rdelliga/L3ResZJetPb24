@@ -244,119 +244,110 @@ vector<JetCorrectorParameters> vpar;
 	 corr->setJetEta(jteta[j]);
 
 	 vector<float> v = corr->getSubCorrections();
-	 // jtjesnew[jetidx] = v.back()
-
 	 float jes = v.back();
 
 	 //	 cout << "New jes correction: " << jtpt[j] << " " << j << " "  << jes << endl;
-
-	 // TODO: APPLY
 	 jtpt[j] *= jes;
 
     // Get dijet system (do not impose any cuts here)
-     if (nref > 1) {
-       dphi = DPhi(jtphi[0],jtphi[1]);
-       leadpt = jtpt[0];
-       subleadpt = jtpt[1];
-       leadeta = jteta[0];
-       subleadeta = jteta[1];
-       ddeta = abs(jteta[0]-jteta[1]);
-       avgpt = 0.5*(leadpt+subleadpt);
-       djetasymm = (leadpt-subleadpt)/(leadpt+subleadpt);
-     }     
+	 if (nref > 1) {
+	   dphi = DPhi(jtphi[0],jtphi[1]);
+	   leadpt = jtpt[0];
+	   subleadpt = jtpt[1];
+	   leadeta = jteta[0];
+	   subleadeta = jteta[1];
+	   ddeta = abs(jteta[0]-jteta[1]);
+	   avgpt = 0.5*(leadpt+subleadpt);
+	   djetasymm = (leadpt-subleadpt)/(leadpt+subleadpt);
+	 }     
 
-// Need also the response
 	//     if (nref > 1 and doTPdijet) {
-     if (nref > 1) {
+	 if (nref > 1) {
 
-       for (int j = 0; j < 2; ++j) {   // Use both jets as t/b in turn, maybe change later
+	   for (int j = 0; j < 2; ++j) {   // Use both jets as t/b in turn, maybe change later
 
-	 tagpt = jtpt[j];
-	 probept = jtpt[(j == 0 ? 1 : 0)];
-	 tageta = jteta[j];
-
-	 if (abs(tageta) > 1.3) continue;
+	     tagpt = jtpt[j];
+	     probept = jtpt[(j == 0 ? 1 : 0)];
+	     tageta = jteta[j];
+	     
+	     if (abs(tageta) > 1.3) continue;
 	 
-	 probeeta = jteta[(j == 0 ? 1 : 0)];
+	     probeeta = jteta[(j == 0 ? 1 : 0)];
      
-         ptavgtp = 0.5*(tagpt  + probept);
-	 asymmtp = probept - tagpt;
+	     ptavgtp = 0.5*(tagpt  + probept);
+	     asymmtp = probept - tagpt;
+	     
+	     alpha = jtpt[2]/ptavgtp;
 
-	 alpha = jtpt[2]/ptavgtp;
+	     // DPhi requirement?
+	     // Fill in average pT
+	     // eta bin from probeeta
 
-	 // DPhi requirement?
-	 // Fill in average pT
-	 // eta bin from probeeta
+	     for (auto &histrange : _histos) { 
+	       for (auto &h : histrange.second) {
 
-	 for (auto &histrange : _histos) { 
-	   for (auto &h : histrange.second) {
+		 if (probeeta >= h->etamin and probeeta < h->etamax and hiBin >= h->hibinmin and hiBin < h->hibinmax) {
 
-	     if (probeeta >= h->etamin and probeeta < h->etamax and hiBin >= h->hibinmin and hiBin < h->hibinmax) {
+		   if (alpha < 0.3)  {
+		     h->dijetbalance_a03->Fill(asymmtp/2./ptavgtp);
+		     h->dijetasymmetry_a03->Fill(ptavgtp, asymmtp/2./ptavgtp);
+		   }
 
-	       if (alpha < 0.3)  {
-		 h->dijetbalance_a03->Fill(asymmtp/2./ptavgtp);
-		 h->dijetasymmetry_a03->Fill(ptavgtp, asymmtp/2./ptavgtp);
+		   // Second: alpha < 1
+		   h->dijetbalance_a1->Fill(asymmtp/2./ptavgtp);
+		   h->dijetasymmetry_a1->Fill(ptavgtp, asymmtp/2./ptavgtp);
+		 }
 	       }
-
-	       // Second: alpha < 1
-	       h->dijetbalance_a1->Fill(asymmtp/2./ptavgtp);
-	       h->dijetasymmetry_a1->Fill(ptavgtp, asymmtp/2./ptavgtp);
-	     }
-	   }
-	 } 
-	 
-       }    
-     }
+	     } 
+	     
+	   }    
+	 }
 
 
 
-    for (auto &histrange : _histos) { ///// etabins instead of pts?
-	 for (auto &h : histrange.second) {
-	   if (jteta[j] >= h->etamin and jteta[j] < h->etamax and hiBin >= h->hibinmin and hiBin < h->hibinmax) {
-	     h->jetetaphi->Fill(jteta[j],jtphi[j],weight);
+	 for (auto &histrange : _histos) { ///// etabins instead of pts?
+	   for (auto &h : histrange.second) {
+	     if (jteta[j] >= h->etamin and jteta[j] < h->etamax and hiBin >= h->hibinmin and hiBin < h->hibinmax) {
+	       h->jetetaphi->Fill(jteta[j],jtphi[j],weight);
 	   
 	     //      if (isMC and weight > 0.001) continue; // TODO: study this more?
 
-	     if (j == 0 and nref > 1 and dphi > 2.7) { // Fill dijet system based on leading jet pT
+	       if (j == 0 and nref > 1 and dphi > 2.7) { // Fill dijet system based on leading jet pT
 	       // TOOD: impose further criteria for proper tag and probe
 
-	       h->dijetasymmetry->Fill(djetasymm,evtwt);
-	       h->dijetdeltaphi->Fill(dphi,evtwt);
-	       h->dijetdeltaeta->Fill(ddeta,evtwt);
+		 h->dijetasymmetry->Fill(djetasymm,evtwt);
+		 h->dijetdeltaphi->Fill(dphi,evtwt);
+		 h->dijetdeltaeta->Fill(ddeta,evtwt);
 
-	     }
+	       }
 
 	     
-	   h->jet_pt->Fill(jtpt[j],evtwt);
-	   h->jet_pt_genweight->Fill(jtpt[j],weight);
-	   h->jet_eta->Fill(jteta[j],evtwt);
-	   h->jet_phi->Fill(jtphi[j],evtwt);
+	       h->jet_pt->Fill(jtpt[j],evtwt);
+	       h->jet_pt_genweight->Fill(jtpt[j],weight);
+	       h->jet_eta->Fill(jteta[j],evtwt);
+	       h->jet_phi->Fill(jtphi[j],evtwt);
   
       
-	   if (isMC) {
+	       if (isMC) {
 	     
-	     h->genjet_pt->Fill(jtpt_gen[j],evtwt);
-	     h->genjet_eta->Fill(jteta_gen[j],evtwt);
-	     h->genjet_phi->Fill(jtphi_gen[j],evtwt);
+		 h->genjet_pt->Fill(jtpt_gen[j],evtwt);
+		 h->genjet_eta->Fill(jteta_gen[j],evtwt);
+		 h->genjet_phi->Fill(jtphi_gen[j],evtwt);
+		 
+		 h->jetresponse->Fill(jtpt_gen[j],jtpt[j]/jtpt_gen[j],evtwt);
+	     
+		 h->ptres->Fill((jtpt[j]-jtpt_gen[j])/jtpt_gen[j],evtwt);
 
-	     h->jetresponse->Fill(jtpt_gen[j],jtpt[j]/jtpt_gen[j],evtwt);
-	     
-	     h->ptres->Fill((jtpt[j]-jtpt_gen[j])/jtpt_gen[j],evtwt);
-
-	     h->ptgenvsptreco->Fill(jtpt_gen[j],jtpt[j],evtwt);
-	     h->ptrecovsweight->Fill(jtpt[j],weight);
-	     h->ptgenvsweight->Fill(jtpt_gen[j],weight);
-	     
+		 h->ptgenvsptreco->Fill(jtpt_gen[j],jtpt[j],evtwt);
+		 h->ptrecovsweight->Fill(jtpt[j],weight);
+		 h->ptgenvsweight->Fill(jtpt_gen[j],weight);
+		 
+	       }
+	     }
 	   }
-	   }
-	   
 	 }
-
-	 
-	 }
-     }
-
-    }
+     }    
+  }
 
   // Write output histograms
   
