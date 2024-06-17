@@ -184,8 +184,8 @@ void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", strin
 				 
 // Start event loop to fill histograms:
    cout << "Number of entries :" <<  jetTree->GetEntries()  << endl; 
-  for (int i = 0; i < jetTree->GetEntries(); ++i) {
-    //  for (int i = 0; i < 1000; ++i) {
+for (int i = 0; i < jetTree->GetEntries(); ++i) {
+  //  for (int i = 0; i < 1000; ++i) {
      evtTree->GetEntry(i);
      skimTree->GetEntry(i);
      
@@ -193,7 +193,7 @@ void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", strin
 
  
      if (!trigger) continue;
-     
+
      evtwt = 1;
      if (isMC) {
        evtwt *=  weight;
@@ -237,9 +237,10 @@ void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", strin
      double djrespasymm;
 
 // Need also the response
-   
-     if (nref > 1 and doTPdijet) {
-   
+
+	//     if (nref > 1 and doTPdijet) {
+     if (nref > 1) {
+        
        for (int j = 0; j < 2; ++j) {   // Use both jets as t/b in turn, maybe change later
 	 tagpt = jtpt[j];
 	 probept = jtpt[(j == 0 ? 1 : 0)];
@@ -297,7 +298,7 @@ void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", strin
 	       h->dijetdeltaeta->Fill(ddeta,evtwt);
 
 	       // Actual t&p stuff?
-
+	       //     cout << "TEST" << endl;
 	     }
 
 	     
