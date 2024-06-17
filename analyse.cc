@@ -276,9 +276,10 @@ vector<JetCorrectorParameters> vpar;
      
 	     ptavgtp = 0.5*(tagpt  + probept);
 	     asymmtp = probept - tagpt;
-	     
-	     alpha = jtpt[2]/ptavgtp;
 
+	     if (nref > 2) alpha = jtpt[2]/ptavgtp; // Problem if only two jets! -> does it make sense to look at the effect? -> m
+	     else alpha = 1;
+	     
 	     // DPhi requirement?
 	     // Fill in average pT
 	     // eta bin from probeeta
