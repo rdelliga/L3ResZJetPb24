@@ -17,36 +17,47 @@ void deriveL2(string inFileName = "output/dijet.root") {
   // Get asymmetry histograms
   //TH1D* asymm = (TH1D*)inFile->Get("hbin_-1.0_0.0/eta_0.0_1.3/dijetasymmetry"); // dijetasymmetry_a1 -> get this
   // Should loop over eta bins
-  TProfile* asymm = (TProfile*)inFile->Get("hibin_-1.0_0.0/eta_0.0_1.3/dijetasymmetry_a1"); // dijetasymmetry_a1 -> get this
+
+  vector<string> etabins = {"eta_-5.2_-3.9", "eta_-3.9_-2.6", "eta_-2.6_-1.3", "eta_-1.3_0.0", "eta_0.0_1.3", "eta_1.3_2.6", "eta_2.6_3.9", "eta_3.9_5.2"};
+
+  map<string, TProfile*> asymm;
+  map<string, TH1D*> nom, denom, response;
+
+  TFile *outfile = new TFile("L2residuals.root","RECREATE");
+
+  for (int i = 0; i < etabins.size(); i++) {
+    
+    asymm[etabins[i].c_str()] = (TProfile*)inFile->Get(Form("hibin_-1.0_0.0/%s/dijetasymmetry_a1",etabins[i].c_str())); // dijetasymmetry_a1 -> get this
+
+    cout << etabins[i] << endl;
 
 
-  TH1D *nom = asymm->ProjectionX("nom");
-  TH1D *denom = asymm->ProjectionX("denom");
+    nom[etabins[i].c_str()] = asymm[etabins[i].c_str()]->ProjectionX(Form("nom_%s",etabins[i].c_str()));
+    denom[etabins[i].c_str()] = asymm[etabins[i].c_str()]->ProjectionX(Form("denom_%s",etabins[i].c_str()));
 
-  nom->Reset();
-  denom->Reset();
+    nom[etabins[i].c_str()]->Reset();
+    denom[etabins[i].c_str()]->Reset();
 
-  for (int i = 1; i <= nom->GetNbinsX(); ++i) {
-    //cout << nom->GetBinCenter(i) << endl;
-    double as = asymm->GetBinContent(i);
-    double err = asymm->GetBinError(i);
-    nom->SetBinContent(i,1+as); // ERRORS
-    nom->SetBinError(i,err); // ERRORS
-    denom->SetBinContent(i,1-as); // ERRORS
-    denom->SetBinError(i,err); // ERRORS
+    
+    for (int j = 1; j <= nom[etabins[i].c_str()]->GetNbinsX(); ++j) {
+      //cout << nom->GetBinCenter(j) << endl;
+      double as = asymm[etabins[i].c_str()]->GetBinContent(j);
+      double err = asymm[etabins[i].c_str()]->GetBinError(j);
+      
+      nom[etabins[i].c_str()]->SetBinContent(j,1+as); 
+      nom[etabins[i].c_str()]->SetBinError(j,err); 
+      denom[etabins[i].c_str()]->SetBinContent(j,1-as);
+      denom[etabins[i].c_str()]->SetBinError(j,err); 
+
+    }
+
+    response[etabins[i].c_str()] =  (TH1D*)nom[etabins[i].c_str()]->Clone(Form("response_%s",etabins[i].c_str()));
+    response[etabins[i].c_str()]->Divide(denom[etabins[i].c_str()]);
+
+    nom[etabins[i].c_str()]->Write();
+    denom[etabins[i].c_str()]->Write();
+    response[etabins[i].c_str()]->Write();
 
   }
    
-
-  //  nom->Add(de,1);
-  //  denom->Add(asymm,-1);
-  // Need Binning from above
-  //TH1D* response = (TH1D*)asymm->Clone("response");
-
-  //nom->Divide(nom,denom,1,1,"B");
-  nom->Divide(denom);
-  nom->Draw();
-
-  TFile *outfile = new TFile("L2residuals.root","RECREATE");
-  nom->Write();
 }
