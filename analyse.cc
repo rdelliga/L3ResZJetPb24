@@ -235,7 +235,7 @@ vector<JetCorrectorParameters> vpar;
      double djrespasymm;
 
 
-     // Apply MCtruth JEC and fill some basic histograms
+     // Apply MCtruth JEC
      for (int j = 0; j < nref; ++j ) {
 	 // REDO JEC
 	 corr->setJetPt(jtpt[j]);
@@ -248,61 +248,66 @@ vector<JetCorrectorParameters> vpar;
 	 //	 cout << "New jes correction: " << jtpt[j] << " " << j << " "  << jes << endl;
 	 jtpt[j] *= jes;
 
+     }
+
+	
+
     // Get dijet system (do not impose any cuts here)
-	 if (nref > 1) {
-	   dphi = DPhi(jtphi[0],jtphi[1]);
-	   leadpt = jtpt[0];
-	   subleadpt = jtpt[1];
-	   leadeta = jteta[0];
-	   subleadeta = jteta[1];
-	   ddeta = abs(jteta[0]-jteta[1]);
-	   avgpt = 0.5*(leadpt+subleadpt);
-	   djetasymm = (leadpt-subleadpt)/(leadpt+subleadpt);
-	 }     
+     if (nref > 1) {
+       dphi = DPhi(jtphi[0],jtphi[1]);
+       leadpt = jtpt[0];
+       subleadpt = jtpt[1];
+       leadeta = jteta[0];
+       subleadeta = jteta[1];
+       ddeta = abs(jteta[0]-jteta[1]);
+       avgpt = 0.5*(leadpt+subleadpt);
+       djetasymm = (leadpt-subleadpt)/(leadpt+subleadpt);
+     }     
 
-	//     if (nref > 1 and doTPdijet) {
-	 if (nref > 1) {
-
-	   for (int j = 0; j < 2; ++j) {   // Use both jets as t/b in turn, maybe change later
-
-	     tagpt = jtpt[j];
-	     probept = jtpt[(j == 0 ? 1 : 0)];
-	     tageta = jteta[j];
-	     
-	     if (abs(tageta) > 1.3) continue;
+     //     if (nref > 1 and doTPdijet) {
+     if (nref > 1) {
+       
+       for (int j = 0; j < 2; ++j) {   // Use both jets as t/b in turn, maybe change later
 	 
-	     probeeta = jteta[(j == 0 ? 1 : 0)];
-     
-	     ptavgtp = 0.5*(tagpt  + probept);
-	     asymmtp = probept - tagpt;
-
-	     if (nref > 2) alpha = jtpt[2]/ptavgtp; // Problem if only two jets! -> does it make sense to look at the effect? -> m
-	     else alpha = 1;
+	 tagpt = jtpt[j];
+	 probept = jtpt[(j == 0 ? 1 : 0)];
+	 tageta = jteta[j];
+	 
+	 if (abs(tageta) > 1.3) continue;
+	 
+	 probeeta = jteta[(j == 0 ? 1 : 0)];
+	 
+	 ptavgtp = 0.5*(tagpt  + probept);
+	 asymmtp = probept - tagpt;
+	 
+	 if (nref > 2) alpha = jtpt[2]/ptavgtp; // Problem if only two jets! -> does it make sense to look at the effect? -> m
+	 else alpha = 1;
+	 
+	 // DPhi requirement?
+	 // Fill in average pT
+	 // eta bin from probeeta
+	 
+	 for (auto &histrange : _histos) { 
+	   for (auto &h : histrange.second) {
 	     
-	     // DPhi requirement?
-	     // Fill in average pT
-	     // eta bin from probeeta
-
-	     for (auto &histrange : _histos) { 
-	       for (auto &h : histrange.second) {
-
-		 if (probeeta >= h->etamin and probeeta < h->etamax and hiBin >= h->hibinmin and hiBin < h->hibinmax) {
-
-		   if (alpha < 0.3)  {
-		     h->dijetbalance_a03->Fill(asymmtp/2./ptavgtp);
-		     h->dijetasymmetry_a03->Fill(ptavgtp, asymmtp/2./ptavgtp);
-		   }
-
-		   // Second: alpha < 1
-		   h->dijetbalance_a1->Fill(asymmtp/2./ptavgtp);
-		   h->dijetasymmetry_a1->Fill(ptavgtp, asymmtp/2./ptavgtp);
-		 }
+	     if (probeeta >= h->etamin and probeeta < h->etamax and hiBin >= h->hibinmin and hiBin < h->hibinmax) {
+	       
+	       if (alpha < 0.3)  {
+		 h->dijetbalance_a03->Fill(asymmtp/2./ptavgtp);
+		 h->dijetasymmetry_a03->Fill(ptavgtp, asymmtp/2./ptavgtp);
 	       }
-	     } 
-	     
-	   }    
-	 }
+	       
+	       // Second: alpha < 1
+	       h->dijetbalance_a1->Fill(asymmtp/2./ptavgtp);
+	       h->dijetasymmetry_a1->Fill(ptavgtp, asymmtp/2./ptavgtp);
+	     }
+	   }
+	 } 
+	 
+       }    
+     }
 
+	 for (int j = 0; j < nref; ++j ) {
 
 
 	 for (auto &histrange : _histos) { ///// etabins instead of pts?
