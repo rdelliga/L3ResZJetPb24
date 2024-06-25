@@ -29,6 +29,7 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
 // TODO: UPDATE TO JERC BINS
   
   jet_pt = new TH1D("reco jet pT", "reco jet p_{T}; reco jet p_{T};", 100, 15, 1000);
+  jet_uncorr_pt = new TH1D("reco jet pT uncorr", "reco jet p_{T}; reco jet p_{T};", 100, 15, 1000);
   jet_pt_genweight = new TH1D("reco jet pT, gen w", "reco jet p_{T}, gen weight only; reco jet p_{T};", 100, 100, 1000);
   jet_eta = new TH1D("reco jet eta"," reco jet #eta; reco jet #eta;", 40, -5.2, 5.2);
   jet_phi = new TH1D("reco jet phi"," reco jet #phi; reco jet #phi;", 25, -3.1415926535, 3.1415926535);

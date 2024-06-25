@@ -87,20 +87,43 @@ void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_0406202
   //40 is prescaled but quite few events, need to be added later
   
   Int_t trigger = 0;
+  bool usecalotrig = true;
+
 
   Int_t HLT_AK4PFJet60_v1, HLT_AK4PFJet80_v1, HLT_AK4PFJet100_v1, HLT_AK4PFJet120_v1;
+  Int_t HLT_AK4CaloJet60_v1, HLT_AK4CaloJet80_v1, HLT_AK4CaloJet100_v1, HLT_AK4CaloJet120_v1;
+
   auto triggerTree = (TTree*)inFile->Get(triggerPath.c_str());
+
   triggerTree->SetBranchAddress("HLT_AK4PFJet60_v1",&HLT_AK4PFJet60_v1); 
   triggerTree->SetBranchAddress("HLT_AK4PFJet80_v1",&HLT_AK4PFJet80_v1); 
   triggerTree->SetBranchAddress("HLT_AK4PFJet100_v1",&HLT_AK4PFJet100_v1);
   triggerTree->SetBranchAddress("HLT_AK4PFJet120_v1",&HLT_AK4PFJet120_v1);
-
-  triggerTree->SetBranchStatus("*",0);
-  triggerTree->SetBranchStatus("HLT_AK4PFJet60_v1",1);
-  triggerTree->SetBranchStatus("HLT_AK4PFJet80_v1",1);
-  triggerTree->SetBranchStatus("HLT_AK4PFJet100_v1",1);
-  triggerTree->SetBranchStatus("HLT_AK4PFJet120_v1",1);
   
+  triggerTree->SetBranchAddress("HLT_AK4CaloJet60_v1",&HLT_AK4CaloJet60_v1); 
+  triggerTree->SetBranchAddress("HLT_AK4CaloJet80_v1",&HLT_AK4CaloJet80_v1); 
+  triggerTree->SetBranchAddress("HLT_AK4CaloJet100_v1",&HLT_AK4CaloJet100_v1);
+  triggerTree->SetBranchAddress("HLT_AK4CaloJet120_v1",&HLT_AK4CaloJet120_v1);
+  
+ 
+  triggerTree->SetBranchStatus("*",0);
+  if (!usecalotrig) {  cout << "Use PF triggers" << endl;
+
+    triggerTree->SetBranchStatus("HLT_AK4PFJet60_v1",1);
+    triggerTree->SetBranchStatus("HLT_AK4PFJet80_v1",1);
+    triggerTree->SetBranchStatus("HLT_AK4PFJet100_v1",1);
+    triggerTree->SetBranchStatus("HLT_AK4PFJet120_v1",1);
+  
+   }
+   else {
+    cout << "Use Calo triggers" << endl;
+
+    triggerTree->SetBranchStatus("HLT_AK4CaloJet60_v1",1);
+    triggerTree->SetBranchStatus("HLT_AK4CaloJet80_v1",1);
+    triggerTree->SetBranchStatus("HLT_AK4CaloJet100_v1",1);
+    triggerTree->SetBranchStatus("HLT_AK4CaloJet120_v1",1);
+   }
+
   // Get to JETS 
   auto jetTree = (TTree*)inFile->Get(jetPath.c_str());
   jetTree->SetBranchStatus("*",1);    
@@ -111,6 +134,7 @@ void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_0406202
   // Reconstruted jet information
   Int_t     nref;
   Float_t   jtpt[MAXJETS];
+  Float_t   jtpt_uncorr[MAXJETS];
   Float_t   jteta[MAXJETS];
   Float_t   jtphi[MAXJETS];
 
@@ -193,13 +217,15 @@ vector<JetCorrectorParameters> vpar;
  // jetTree->Print();
 // Start event loop to fill histograms:
    cout << "Number of entries :" <<  jetTree->GetEntries()  << endl; 
-  for (int i = 0; i < jetTree->GetEntries(); ++i) {
-   //  for (int i = 0; i < 1000; ++i) {
+   for (int i = 0; i < jetTree->GetEntries(); ++i) {
+     //for (int i = 0; i < 1000; ++i) {
      evtTree->GetEntry(i);
      skimTree->GetEntry(i);
      triggerTree->GetEntry(i);
 
-     trigger = HLT_AK4PFJet60_v1 or HLT_AK4PFJet80_v1 or HLT_AK4PFJet100_v1 or HLT_AK4PFJet120_v1;
+     if (usecalotrig) trigger = (HLT_AK4CaloJet60_v1 or HLT_AK4CaloJet80_v1 or HLT_AK4CaloJet100_v1 or HLT_AK4CaloJet120_v1);
+     else trigger = (HLT_AK4PFJet60_v1 or HLT_AK4PFJet80_v1 or HLT_AK4PFJet100_v1 or HLT_AK4PFJet120_v1);
+   
      if (!trigger) continue;
 
      evtwt = 1;
@@ -246,6 +272,7 @@ vector<JetCorrectorParameters> vpar;
 	 float jes = v.back();
 
 	 //	 cout << "New jes correction: " << jtpt[j] << " " << j << " "  << jes << endl;
+	 jtpt_uncorr[j] = jtpt[j];
 	 jtpt[j] *= jes;
 
      }
@@ -328,6 +355,7 @@ vector<JetCorrectorParameters> vpar;
 
 	     
 	       h->jet_pt->Fill(jtpt[j],evtwt);
+	       h->jet_uncorr_pt->Fill(jtpt_uncorr[j],evtwt);
 	       h->jet_pt_genweight->Fill(jtpt[j],weight);
 	       h->jet_eta->Fill(jteta[j],evtwt);
 	       h->jet_phi->Fill(jtphi[j],evtwt);

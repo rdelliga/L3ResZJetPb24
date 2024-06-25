@@ -21,6 +21,7 @@ class histograms {
 // Jet histograms
 
   TH1D* jet_pt;
+  TH1D* jet_uncorr_pt;
   TH1D* jet_pt_genweight;
   TH1D* jet_eta;
   TH1D* jet_phi;
