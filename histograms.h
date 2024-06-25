@@ -101,7 +101,7 @@ class histograms {
   static constexpr float etaforjec[] = {-5.2, -3.9, -2.6, -1.3, 0.0, 1.3, 2.6, 3.9, 5.0};
   static constexpr unsigned int netaforjec = sizeof(etaforjec)/sizeof(etaforjec[0])-1;
 
-  static constexpr float ptforjec[] = {40, 60, 80 100, 120, 140, 180, 220, 300, 500, 700, 5000};
+  static constexpr float ptforjec[] = {40, 60, 80, 100, 120, 140, 180, 220, 300, 500, 700, 5000};
   static constexpr unsigned int nptforjec = sizeof(ptforjec)/sizeof(ptforjec[0])-1;
 
 
