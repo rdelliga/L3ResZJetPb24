@@ -42,7 +42,8 @@ JME::JetResolutionScaleFactor *_jer_sf(0); */
 
 void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", bool isMC = false) {
 //void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", bool isMC = false) {
-
+  TRandom3 r;
+  
   // Define and activate branches
   std::string evtPath = "hiEvtAnalyzer/HiTree";
   std::string triggerPath = "hltanalysis/HltTree";
@@ -401,14 +402,14 @@ vector<JetCorrectorParameters> vpar;
 	       h->jet_eta->Fill(jteta[j],evtwt);
 	       h->jet_phi->Fill(jtphi[j],evtwt);
 
-         // Fill without t&p, TODO: add t&p versions
-         h->jet_nef->Fill(jtnef[j],evtwt);
-         h->jet_cef->Fill(jtcef[j],evtwt);
-         h->jet_nhf->Fill(jtnhf[j],evtwt);
-         h->jet_chf->Fill(jtchf[j],evtwt);
-         h->jet_muf->Fill(jtmuf[j],evtwt);       
+	       // Fill without t&p, TODO: add t&p versions
+	       h->jet_nef->Fill(jtpt[j],jtnef[j],evtwt);
+	       h->jet_cef->Fill(jtpt[j],jtcef[j],evtwt);
+	       h->jet_nhf->Fill(jtpt[j],jtnhf[j],evtwt);
+	       h->jet_chf->Fill(jtpt[j],jtchf[j],evtwt);
+	       h->jet_muf->Fill(jtpt[j],jtmuf[j],evtwt);       
 
-         //cout << jtmuf[j] << endl;
+	       //cout << jtnef[j] << endl;
 
 
 	       if (isMC) {

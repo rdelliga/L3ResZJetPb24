@@ -37,11 +37,11 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
 
 
   // PF composition
-  jet_nhf = new TH1D("reco jet nhf", "reco jet nhf; reco jet p_{T};", 100, 15, 1000);
-  jet_chf = new TH1D("reco jet chf", "reco jet chf; reco jet p_{T};", 100, 15, 1000);
-  jet_nef = new TH1D("reco jet nef", "reco jet nef; reco jet p_{T};", 100, 15, 1000); 
-  jet_cef = new TH1D("reco jet cef", "reco jet cef; reco jet p_{T};", 100, 15, 1000);
-  jet_muf = new TH1D("reco jet muf", "reco jet muf; reco jet p_{T};", 100, 15, 1000);
+  jet_nhf = new TProfile("reco jet nhf", "reco jet nhf; reco jet p_{T};", 100, 15, 1000);
+  jet_chf = new TProfile("reco jet chf", "reco jet chf; reco jet p_{T};", 100, 15, 1000);
+  jet_nef = new TProfile("reco jet nef", "reco jet nef; reco jet p_{T};", 100, 15, 1000); 
+  jet_cef = new TProfile("reco jet cef", "reco jet cef; reco jet p_{T};", 100, 15, 1000);
+  jet_muf = new TProfile("reco jet muf", "reco jet muf; reco jet p_{T};", 100, 15, 1000);
 
 
   jetetaphi = new TH2D("eta-phi distribution",";#eta; #phi",netas,etarange,nphis,phirange);

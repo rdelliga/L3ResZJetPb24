@@ -27,11 +27,11 @@ class histograms {
   TH1D* jet_phi;
 
 // PF composition
-  TH1D* jet_nhf;
-  TH1D* jet_chf;
-  TH1D* jet_nef; 
-  TH1D* jet_cef;
-  TH1D* jet_muf;
+  TProfile* jet_nhf;
+  TProfile* jet_chf;
+  TProfile* jet_nef; 
+  TProfile* jet_cef;
+  TProfile* jet_muf;
 
 // Substructure
   TH1D* jetdyn_kt;
