@@ -26,6 +26,14 @@ class histograms {
   TH1D* jet_eta;
   TH1D* jet_phi;
 
+// PF composition
+  TH1D* jet_nhf;
+  TH1D* jet_chf;
+  TH1D* jet_nef; 
+  TH1D* jet_cef;
+  TH1D* jet_muf;
+
+// Substructure
   TH1D* jetdyn_kt;
   TH1D* jetdyn_deltaR;
   TH1D* jetdyn_z;

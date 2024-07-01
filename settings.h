@@ -1,5 +1,6 @@
 // Some general parameters
 
+#define REDOJES 0
 
 int MAXJETS = 50;
 

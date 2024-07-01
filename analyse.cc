@@ -26,7 +26,10 @@ using std::endl;
 
 // TODO: if local etc
 // #include "JetMETCorrections/Modules/interface/JetResolution.h"
+
+#if REDOJES == 1
 #include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
+#endif
 
 // Need to apply MCTruth correction on the fly
 
@@ -38,8 +41,8 @@ JME::JetResolution *_jer(0);
 JME::JetResolutionScaleFactor *_jer_sf(0); */
 
 
- //void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", bool isMC = false) {
-void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", bool isMC = false) {
+void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", bool isMC = false) {
+//void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", bool isMC = false) {
 
   // Define and activate branches
   std::string evtPath = "hiEvtAnalyzer/HiTree";
@@ -128,7 +131,6 @@ void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_0406202
   auto jetTree = (TTree*)inFile->Get(jetPath.c_str());
   jetTree->SetBranchStatus("*",1);    
 
-
   Int_t     evt;
   
   // Reconstruted jet information
@@ -137,6 +139,12 @@ void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_0406202
   Float_t   jtpt_uncorr[MAXJETS];
   Float_t   jteta[MAXJETS];
   Float_t   jtphi[MAXJETS];
+
+  Float_t   jtnhf[MAXJETS];
+  Float_t   jtchf[MAXJETS];
+  Float_t   jtnef[MAXJETS];
+  Float_t   jtcef[MAXJETS];
+  Float_t   jtmuf[MAXJETS];
 
   Float_t   jtdyn_kt[MAXJETS];
   Float_t   jtdyn_deltaR[MAXJETS];
@@ -147,6 +155,12 @@ void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_0406202
   jetTree->SetBranchAddress("jtpt", &jtpt);
   jetTree->SetBranchAddress("jteta", &jteta);
   jetTree->SetBranchAddress("jtphi", &jtphi);
+
+  jetTree->SetBranchAddress("jtPfNHF", &jtnhf);
+  jetTree->SetBranchAddress("jtPfCHF", &jtchf);
+  jetTree->SetBranchAddress("jtPfNEF", &jtnef);
+  jetTree->SetBranchAddress("jtPfCEF", &jtcef);
+  jetTree->SetBranchAddress("jtPfMUF", &jtmuf);
   
 
   Float_t leadpt = 0;
@@ -208,17 +222,19 @@ void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_0406202
   eventhistograms *eh = new eventhistograms(dir, isMC);
    
   // JEC stuff
+#if REDOJES == 1  
 FactorizedJetCorrector* corr;
 vector<JetCorrectorParameters> vpar; 
  vpar.push_back(JetCorrectorParameters("jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt"));			 
 
  corr = new FactorizedJetCorrector(vpar);
+#endif
 
  // jetTree->Print();
 // Start event loop to fill histograms:
    cout << "Number of entries :" <<  jetTree->GetEntries()  << endl; 
    for (int i = 0; i < jetTree->GetEntries(); ++i) {
-     //for (int i = 0; i < 1000; ++i) {
+ //  for (int i = 0; i < 1000; ++i) {
      evtTree->GetEntry(i);
      skimTree->GetEntry(i);
      triggerTree->GetEntry(i);
@@ -262,7 +278,10 @@ vector<JetCorrectorParameters> vpar;
 
 
      // Apply MCtruth JEC
+
      for (int j = 0; j < nref; ++j ) {
+      	 jtpt_uncorr[j] = jtpt[j];
+         #if REDOJES == 1
 	 // REDO JEC
 	 corr->setJetPt(jtpt[j]);
 	 // corr->setJetE(jteu[jetidx]);
@@ -272,9 +291,8 @@ vector<JetCorrectorParameters> vpar;
 	 float jes = v.back();
 
 	 //	 cout << "New jes correction: " << jtpt[j] << " " << j << " "  << jes << endl;
-	 jtpt_uncorr[j] = jtpt[j];
 	 jtpt[j] *= jes;
-
+#endif
      }
 
 	
@@ -308,7 +326,7 @@ vector<JetCorrectorParameters> vpar;
 	 asymmtp = probept - tagpt;
 	 
 	 if (nref > 2) alpha = jtpt[2]/ptavgtp; // Problem if only two jets! -> does it make sense to look at the effect? -> m
-	 else alpha = 1;
+	 else alpha = 0;
 	 
 	 // DPhi requirement?
 	 // Fill in average pT
@@ -359,8 +377,17 @@ vector<JetCorrectorParameters> vpar;
 	       h->jet_pt_genweight->Fill(jtpt[j],weight);
 	       h->jet_eta->Fill(jteta[j],evtwt);
 	       h->jet_phi->Fill(jtphi[j],evtwt);
-  
-      
+
+         // Fill without t&p, TODO: add t&p versions
+         h->jet_nef->Fill(jtnef[j],evtwt);
+         h->jet_cef->Fill(jtcef[j],evtwt);
+         h->jet_nhf->Fill(jtnhf[j],evtwt);
+         h->jet_chf->Fill(jtchf[j],evtwt);
+         h->jet_muf->Fill(jtmuf[j],evtwt);       
+
+         //cout << jtmuf[j] << endl;
+
+
 	       if (isMC) {
 	     
 		 h->genjet_pt->Fill(jtpt_gen[j],evtwt);
