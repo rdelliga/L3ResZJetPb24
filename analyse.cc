@@ -40,6 +40,7 @@ JME::JetResolutionScaleFactor *_jer_sf(0); */
 
  //void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", bool isMC = false) {
 void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", bool isMC = false) {
+  TRandom3 r;
 
   // Define and activate branches
   std::string evtPath = "hiEvtAnalyzer/HiTree";
@@ -72,9 +73,11 @@ void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_0406202
 
   //// EVENT FILTERS - CHECK
   auto skimTree = (TTree*)inFile->Get(skimPath.c_str());
-  
+  skimTree->SetBranchStatus("*",1);
+
   // Int_t pclusterCompatibilityFilter = 1;
-  //  Int_t pphfCoincFilter2Th4 = 1;
+  // Int_t pphfCoincFilter2Th4 = 1;
+
   Int_t pprimaryVertexFilter = 1;
 
   // skimTree->SetBranchAddress("pclusterCompatibilityFilter", &pclusterCompatibilityFilter);
@@ -217,10 +220,10 @@ vector<JetCorrectorParameters> vpar;
  // jetTree->Print();
 // Start event loop to fill histograms:
    cout << "Number of entries :" <<  jetTree->GetEntries()  << endl; 
-   for (int i = 0; i < jetTree->GetEntries(); ++i) {
-     //for (int i = 0; i < 1000; ++i) {
+  for (int i = 0; i < jetTree->GetEntries(); ++i) {
+    // for (int i = 0; i < 1000; ++i) {
      evtTree->GetEntry(i);
-     skimTree->GetEntry(i);
+  
      triggerTree->GetEntry(i);
 
      if (usecalotrig) trigger = (HLT_AK4CaloJet60_v1 or HLT_AK4CaloJet80_v1 or HLT_AK4CaloJet100_v1 or HLT_AK4CaloJet120_v1);
@@ -236,7 +239,8 @@ vector<JetCorrectorParameters> vpar;
      //   cout << weight << " " << evtwt << endl;
           
      // BASIC EVENT FILTERS
-     //  if (pprimaryVertexFilter != 1) continue; // TODO: test, for some reason gets always 0 but should be 1
+     skimTree->GetEntry(i);
+     if (pprimaryVertexFilter != 1) continue; // TODO: test, for some reason gets always 0 but should be 1
      //     if (hiBin > CENTRALITYHIGH or hiBin < CENTRALITYLOW) continue;
      jetTree->GetEntry(i);
 
@@ -293,16 +297,36 @@ vector<JetCorrectorParameters> vpar;
 
      //     if (nref > 1 and doTPdijet) {
      if (nref > 1) {
-       
-       for (int j = 0; j < 2; ++j) {   // Use both jets as t/b in turn, maybe change later
+
+      
+       int tagind = -1;
+       if (jteta[0] > 1.3 and jteta[1] <= 1.3)  tagind = 1;
+       else if (jteta[1] > 1.3 and jteta[0] <= 1.3)  tagind = 0;
+       else if (jteta[0] <= 1.3 and jteta[1] <= 1.3)  {
+	 const auto rand = r.Rndm();
+	 if (rand < 0.5) tagind = 1;
+	 else tagind = 0;
+       }
+
+       int probeind = 1-tagind;
+       tagpt = jtpt[tagind];
+       probept = jtpt[probeind];
+
+       tageta = jteta[tagind];
+       probeeta = jteta[probeind];
+
+
+       //    for (int j = 0; j < 2; ++j) {   // Use both jets as t/b in turn, change
+	 // Change to: if on of jets is in the barrel, use
+	 // if both jets in barrel, do randomly
 	 
-	 tagpt = jtpt[j];
-	 probept = jtpt[(j == 0 ? 1 : 0)];
-	 tageta = jteta[j];
+	 //tagpt = jtpt[j];
+	 //probept = jtpt[(j == 0 ? 1 : 0)];
+	 //tageta = jteta[j];
 	 
-	 if (abs(tageta) > 1.3) continue;
+	 //if (abs(tageta) > 1.3) continue;
 	 
-	 probeeta = jteta[(j == 0 ? 1 : 0)];
+       // probeeta = jteta[(j == 0 ? 1 : 0)];
 	 
 	 ptavgtp = 0.5*(tagpt  + probept);
 	 asymmtp = probept - tagpt;
@@ -331,7 +355,7 @@ vector<JetCorrectorParameters> vpar;
 	   }
 	 } 
 	 
-       }    
+	 //       }    
      }
 
 	 for (int j = 0; j < nref; ++j ) {
