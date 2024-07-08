@@ -1,0 +1,66 @@
+// THStack to plot jet PF composition
+
+void plotcomposition() {
+
+  gStyle->SetOptStat(0);
+
+  TFile *filein = new TFile("testoutput.root","READ");
+  vector<string> etabins = {"eta_-5.2_-3.9", "eta_-3.9_-2.6", "eta_-2.6_-1.3", "eta_-1.3_0.0", "eta_0.0_1.3", "eta_1.3_2.6", "eta_2.6_3.9", "eta_3.9_5.2"};
+  
+  // Select eta bin to plot
+  int i = 4;
+
+  auto leg = new TLegend(0.1,0.1,0.3,0.3);
+  
+  map<string, map<string,TProfile*>> profs;
+  map<string,map<string,TH1D*>> hists;
+
+  vector<string> histonames = {"chf", "nhf", "nef", "cef", "muf"}; // In pp plots cef+muf combined
+  vector<string> colours = {"kRed", "kGreen", "kBlue", "kCyan", "kYellow"};
+
+  map<string, pair<int, int> > _style;
+  _style["chf"] = make_pair<int, int>(kRed, kFullCircle);
+  _style["nef"] = make_pair<int, int>(kBlue, kFullSquare);
+  _style["nhf"] = make_pair<int, int>(kGreen+1, kFullDiamond);
+  _style["cef"] = make_pair<int, int>(kCyan+1, kOpenTriangleUp);
+  _style["muf"] = make_pair<int, int>(kMagenta+1, kOpenTriangleDown);
+  _style["hhf"] = make_pair<int, int>(kViolet+2, kOpenDiamond);
+  _style["hef"] = make_pair<int, int>(kOrange+2, kOpenSquare);
+
+  map<string, string> _labels;
+  _labels["chf"] = "Charged hadrons";
+  _labels["nhf"] = "Neutral hadrons";
+  _labels["cef"] = "Electrons";
+  _labels["nef"] = "Photons";
+  _labels["muf"] = "Muons";
+  
+  for(const string& h : histonames ) profs[Form("%s",h.c_str())][Form("%s",etabins[i].c_str())] = (TProfile*)filein->Get(Form("hibin_-1.0_0.0/%s/reco jet %s",etabins[i].c_str(),h.c_str()));
+
+
+  // Copy TProfiles into TH1Ds
+
+  auto hcomp = new THStack("hcomp","");
+  int ci = 0;
+  for(const string& h : histonames )  {
+    //    	 nom[etabins[i].c_str()] = asymm[etabins[i].c_str()]->ProjectionX(Form("nom_%s",etabins[i].c_str()));
+    // Can one yst use pointers
+    //    TH1D &his =  hists[Form("%s",h.c_str())][Form("%s",etabins[i].c_str())];
+    hists[Form("%s",h.c_str())][Form("%s",etabins[i].c_str())] = profs[Form("%s",h.c_str())][Form("%s",etabins[i].c_str())]->ProjectionX(Form("proj_%s_%s",h.c_str(),etabins[i].c_str()));
+    hists[Form("%s",h.c_str())][Form("%s",etabins[i].c_str())]->SetFillColor(_style[h.c_str()].first);
+    hcomp->Add(hists[Form("%s",h.c_str())][Form("%s",etabins[i].c_str())]);
+
+    leg->AddEntry(hists[Form("%s",h.c_str())][Form("%s",etabins[i].c_str())], _labels[h.c_str()].c_str());
+  }
+
+
+  TCanvas *c1 = new TCanvas("c1","c1",600,600);
+  hcomp->SetMaximum(1);
+  hcomp->Draw("H");
+  leg->Draw("same");
+  gPad->SetLogx();
+  gPad->RedrawAxis();
+  
+  int minpt = 80;
+
+
+}
