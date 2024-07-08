@@ -40,6 +40,8 @@ map<string, vector<histograms*> > _histos;
 JME::JetResolution *_jer(0);
 JME::JetResolutionScaleFactor *_jer_sf(0); */
 
+strin jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt";
+
 void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", bool isMC = false) {
 //void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", bool isMC = false) {
   TRandom3 r;
@@ -227,7 +229,7 @@ void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", strin
 #if REDOJES == 1  
 FactorizedJetCorrector* corr;
 vector<JetCorrectorParameters> vpar; 
- vpar.push_back(JetCorrectorParameters("jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt"));			 
+ vpar.push_back(JetCorrectorParameters(jecfile.c_str()));			 
 
  corr = new FactorizedJetCorrector(vpar);
 #endif
