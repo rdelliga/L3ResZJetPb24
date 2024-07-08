@@ -40,10 +40,14 @@ map<string, vector<histograms*> > _histos;
 JME::JetResolution *_jer(0);
 JME::JetResolutionScaleFactor *_jer_sf(0); */
 
-strin jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt";
+// 2023ppwithpbpb_MC_L2Relative_AK4PF.txt  2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt  2023ppwithpp_MC_L2Relative_AK4PF.txt  2023ppwithpp_old_MC_L2Relative_AK4PF.txt
+//void analyse(string inFileName = "/cmshome/martikai/data/run3_pprefpbpbreco_data_05072024.root", string outputfilename = "pbpbreco_witholdmctruth.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
 
-void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", bool isMC = false) {
-//void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", bool isMC = false) {
+  //void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
+void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
+
+
+
   TRandom3 r;
   
   // Define and activate branches
