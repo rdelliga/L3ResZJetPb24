@@ -3,11 +3,20 @@
 //#include settings.h
 
 // How stat errors actually work in this case?
+/*
+  string intputMC = "results/pbpbreco_witholdmctruth_abseta.root";
+  string inputData = "results/ppreco_witholdmctruth_abseta.root";
+*/
 
-void deriveL2(string inFileName = "output/dijet.root") {
 
 
+// What needed for MC? weigths etc?
 
+//void deriveL2(string inFileName = "results/pbpbreco_witholdmctruth_abseta.root", string outfilename = "L2residuals_pbpbreco.root") {
+void deriveL2(string inFileName = "ppreco_MC.root", string outfilename = "L2residuals_ppreco.root") {
+
+  
+  
   // Open file
   TFile *inFile = new TFile(inFileName.c_str(), "READ"); // TODO: safety checks about opening file successfully
 
@@ -18,12 +27,13 @@ void deriveL2(string inFileName = "output/dijet.root") {
   //TH1D* asymm = (TH1D*)inFile->Get("hbin_-1.0_0.0/eta_0.0_1.3/dijetasymmetry"); // dijetasymmetry_a1 -> get this
   // Should loop over eta bins
 
-  vector<string> etabins = {"eta_-5.2_-3.9", "eta_-3.9_-2.6", "eta_-2.6_-1.3", "eta_-1.3_0.0", "eta_0.0_1.3", "eta_1.3_2.6", "eta_2.6_3.9", "eta_3.9_5.2"};
+  //  vector<string> etabins = {"eta_-5.2_-3.9", "eta_-3.9_-2.6", "eta_-2.6_-1.3", "eta_-1.3_0.0", "eta_0.0_1.3", "eta_1.3_2.6", "eta_2.6_3.9", "eta_3.9_5.2"};
+  vector<string> etabins = {"eta_0.0_1.3", "eta_1.3_2.6", "eta_2.6_3.9", "eta_3.9_5.2"};
 
   map<string, TProfile*> asymm;
   map<string, TH1D*> nom, denom, response;
 
-  TFile *outfile = new TFile("L2residuals.root","RECREATE");
+  TFile *outfile = new TFile(outfilename.c_str(),"RECREATE");
 
   for (int i = 0; i < etabins.size(); i++) {
     
