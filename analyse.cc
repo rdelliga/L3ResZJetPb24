@@ -44,10 +44,14 @@ JME::JetResolutionScaleFactor *_jer_sf(0); */
 //void analyse(string inFileName = "/cmshome/martikai/data/run3_pprefpbpbreco_data_05072024.root", string outputfilename = "pbpbreco_witholdmctruth.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
 
   //void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
-void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
+
+// void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
 
 
+//void analyse(string inFileName = "/home/laura/Data/jecmc/MC_pprefwpbpbreco_privateforjec.root", string outputfilename = "pbpbreco_MC.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
 
+// void analyse(string inFileName = "/home/laura/Data/jecmc/MC_ppref_privateforjec.root", string outputfilename = "ppreco_MC_fixabsetas.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
+  
   TRandom3 r;
   
   // Define and activate branches
@@ -81,7 +85,7 @@ void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_0406202
 
   //// EVENT FILTERS - CHECK
   auto skimTree = (TTree*)inFile->Get(skimPath.c_str());
-  skimTree->SetBranchStatus("*",1);
+  if (!isMC) skimTree->SetBranchStatus("*",1);   // Temporary fix because f'd up tuples
 
   // Int_t pclusterCompatibilityFilter = 1;
   // Int_t pphfCoincFilter2Th4 = 1;
@@ -89,7 +93,7 @@ void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_0406202
   Int_t pprimaryVertexFilter = 1;
 
   // skimTree->SetBranchAddress("pclusterCompatibilityFilter", &pclusterCompatibilityFilter);
-  skimTree->SetBranchAddress("pprimaryVertexFilter", &pprimaryVertexFilter);
+  if (!isMC) skimTree->SetBranchAddress("pprimaryVertexFilter", &pprimaryVertexFilter);
 
   // if (!isMC)  skimTree->SetBranchAddress("pphfCoincFilter2Th4", &pphfCoincFilter2Th4); // MC test tuple does not have this */ 
 
@@ -242,15 +246,16 @@ vector<JetCorrectorParameters> vpar;
 // Start event loop to fill histograms:
    cout << "Number of entries :" <<  jetTree->GetEntries()  << endl; 
 
-  for (int i = 0; i < jetTree->GetEntries(); ++i) {
-    // for (int i = 0; i < 1000; ++i) {
+for (int i = 0; i < jetTree->GetEntries(); ++i) {
+  //  for (int i = 0; i < 1000; ++i) {
      evtTree->GetEntry(i);
   
      triggerTree->GetEntry(i);
 
      if (usecalotrig) trigger = (HLT_AK4CaloJet60_v1 or HLT_AK4CaloJet80_v1 or HLT_AK4CaloJet100_v1 or HLT_AK4CaloJet120_v1);
      else trigger = (HLT_AK4PFJet60_v1 or HLT_AK4PFJet80_v1 or HLT_AK4PFJet100_v1 or HLT_AK4PFJet120_v1);
-   
+     if (!isMC) trigger = true; // TEMPORARY FIX
+     
      if (!trigger) continue;
 
      evtwt = 1;
@@ -261,9 +266,11 @@ vector<JetCorrectorParameters> vpar;
      //   cout << weight << " " << evtwt << endl;
           
      // BASIC EVENT FILTERS
-     skimTree->GetEntry(i);
-     if (pprimaryVertexFilter != 1) continue; // TODO: test, for some reason gets always 0 but should be 1
+     if (!isMC) {
+       skimTree->GetEntry(i);
+       if (pprimaryVertexFilter != 1) continue; // TODO: test, for some reason gets always 0 but should be 1
      //     if (hiBin > CENTRALITYHIGH or hiBin < CENTRALITYLOW) continue;
+     }
      jetTree->GetEntry(i);
 
      if (nref < 1) continue;
@@ -278,7 +285,6 @@ vector<JetCorrectorParameters> vpar;
      eh->event_vz->Fill(vz, evtwt);
      //     if (weight > 0.1) cout << weight << " " << evtwt << endl;
      if (isMC)  eh->event_pthatwsgenweight->Fill(pthat,weight);
-     
 
      // This is dijet with tag and probe
 
@@ -286,13 +292,13 @@ vector<JetCorrectorParameters> vpar;
      double asymmtp;
      double djrespasymm;
 
-
      // Apply MCtruth JEC
 
      for (int j = 0; j < nref; ++j ) {
       	 jtpt_uncorr[j] = jtpt[j];
          #if REDOJES == 1
 	 // REDO JEC
+	 cout << "Applying JES" << endl;
 	 corr->setJetPt(jtpt[j]);
 	 // corr->setJetE(jteu[jetidx]);
 	 corr->setJetEta(jteta[j]);
@@ -304,8 +310,6 @@ vector<JetCorrectorParameters> vpar;
 	 jtpt[j] *= jes;
 #endif
      }
-
-	
 
     // Get dijet system (do not impose any cuts here)
      if (nref > 1) {
@@ -321,12 +325,12 @@ vector<JetCorrectorParameters> vpar;
 
      //     if (nref > 1 and doTPdijet) {
      if (nref > 1) {
-
-      
+    
        int tagind = -1;
-       if (jteta[0] > 1.3 and jteta[1] <= 1.3)  tagind = 1;
-       else if (jteta[1] > 1.3 and jteta[0] <= 1.3)  tagind = 0;
-       else if (jteta[0] <= 1.3 and jteta[1] <= 1.3)  {
+       // Here was a bug; absolute values were missing; check effect
+       if (abs(jteta[0]) > 1.3 and abs(jteta[1]) <= 1.3)  tagind = 1;
+       else if (abs(jteta[1]) > 1.3 and abs(jteta[0]) <= 1.3)  tagind = 0;
+       else if (abs(jteta[0]) <= 1.3 and abs(jteta[1]) <= 1.3)  {
 	 const auto rand = r.Rndm();
 	 if (rand < 0.5) tagind = 1;
 	 else tagind = 0;
@@ -366,7 +370,8 @@ vector<JetCorrectorParameters> vpar;
 	   for (auto &h : histrange.second) {
 	     
 	     if (probeeta >= h->etamin and probeeta < h->etamax and hiBin >= h->hibinmin and hiBin < h->hibinmax) {
-	       
+
+	       // TODO: different alphas (could to 3D profile but...?)
 	       if (alpha < 0.3)  {
 		 h->dijetbalance_a03->Fill(asymmtp/2./ptavgtp);
 		 h->dijetasymmetry_a03->Fill(ptavgtp, asymmtp/2./ptavgtp);
@@ -393,7 +398,6 @@ vector<JetCorrectorParameters> vpar;
 	     //      if (isMC and weight > 0.001) continue; // TODO: study this more?
 
 	       if (j == 0 and nref > 1 and dphi > 2.7) { // Fill dijet system based on leading jet pT
-	       // TOOD: impose further criteria for proper tag and probe
 
 		 h->dijetasymmetry->Fill(djetasymm,evtwt);
 		 h->dijetdeltaphi->Fill(dphi,evtwt);
