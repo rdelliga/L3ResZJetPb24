@@ -4,9 +4,17 @@ void plotdijets() {
 
   gStyle->SetOptStat(0);
 
-  TFile *filein = new TFile("L2residuals_newtagandprobe.root","READ");
-  vector<string> etabins = {"eta_-5.2_-3.9", "eta_-3.9_-2.6", "eta_-2.6_-1.3", "eta_-1.3_0.0", "eta_0.0_1.3", "eta_1.3_2.6", "eta_2.6_3.9", "eta_3.9_5.2"};
-  vector<string> label = {"-5.2 < #eta < -3.9", "-3.9 < #eta < -2.6", "-2.6< #eta < -1.3","-1.3 < #eta < 0", "0 < #eta < 1.3", "1.3 < #eta < 2.6", "2.6 < #eta < 3.9", "3.9 < #eta < 5.2"};
+  TFile *filein = new TFile("L2residuals_pbpbreco.root","READ");
+  string plottag = "pbpbreco";
+  
+  //vector<string> etabins = {"eta_-5.2_-3.9", "eta_-3.9_-2.6", "eta_-2.6_-1.3", "eta_-1.3_0.0", "eta_0.0_1.3", "eta_1.3_2.6", "eta_2.6_3.9", "eta_3.9_5.2"};
+  //vector<string> label = {"-5.2 < #eta < -3.9", "-3.9 < #eta < -2.6", "-2.6< #eta < -1.3","-1.3 < #eta < 0", "0 < #eta < 1.3", "1.3 < #eta < 2.6", "2.6 < #eta < 3.9", "3.9 < #eta < 5.2"};
+
+  vector<string> etabins = {"eta_0.0_1.3", "eta_1.3_2.6", "eta_2.6_3.9", "eta_3.9_5.2"};
+  vector<string> label = {"0 < #eta < 1.3", "1.3 < #eta < 2.6", "2.6 < #eta < 3.9", "3.9 < #eta < 5.2"};
+
+
+
   map<string,TH1D*> resps;
 
    /*  auto leg = new TLegend(0.57,0.8,0.85,0.9); //  x, y, x, y
@@ -62,10 +70,10 @@ void plotdijets() {
    latex->SetNDC();
    latex->SetTextSize(0.05);
    latex->DrawLatex(.6,.75,Form("%s",label[i].c_str()));
-
+ 
 
    // Print
-   c1->Print(Form("plots/residual_newtagandprobe_%s.pdf",etabins[i].c_str()));
+   c1->Print(Form("plots/residuals_%s_%s.pdf",etabins[i].c_str(),plottag.c_str()));
 
 
   }
