@@ -146,7 +146,7 @@ class histograms {
   
 
   histograms(TDirectory *dir, float ptmin, float ptmax, float hibinmin, float hibinmax, bool ismc);
-   ~histograms();
+  //   ~histograms();
   
  void Write();
 
