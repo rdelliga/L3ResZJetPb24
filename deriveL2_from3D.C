@@ -1,0 +1,134 @@
+// Derive responses from dijet asymmetries using the 3D profile
+
+//#include settings.h
+#include "histograms.h"
+
+// How stat errors actually work in this case?
+/*
+  string intputMC = "results/pbpbreco_witholdmctruth_abseta.root";
+  string inputData = "results/ppreco_witholdmctruth_abseta.root";
+*/
+
+// Want to
+// - fill 1-A/1+A histograms
+// - calculate responses
+// - these are done in bins of pt and eta
+// - do alpha-extrapolation
+// - need both data and M
+
+
+//void deriveL2(string inFileName = "results/pbpbreco_witholdmctruth_abseta.root", string outfilename = "L2residuals_pbpbreco.root") {
+void deriveL2_from3D(string inFileName = "ppreco_MC_test3D.root", string outfilename = "L2residuals_ppreco_from3D.root") {
+
+  // Open file
+  TFile *inFile = new TFile(inFileName.c_str(), "READ"); // TODO: safety checks about opening file successfully
+
+  //// These are bins to be processed
+  //  vector<string> etabins = {"eta_-5.2_-3.9", "eta_-3.9_-2.6", "eta_-2.6_-1.3", "eta_-1.3_0.0", "eta_0.0_1.3", "eta_1.3_2.6", "eta_2.6_3.9", "eta_3.9_5.2"};
+  vector<string> etabins = {"eta_-5.2_5.2"};
+  vector<string> ptbins = {"eta_-5.2_5.2"}; // TODO: is this needed?
+
+  map<string, TProfile*> asymm3d, data3d, mc3d;
+  map<string, TH1D*> nom, denom, response;
+
+  TFile *outfile = new TFile(outfilename.c_str(),"RECREATE");
+
+  
+  // Folders in bins of pT? Eventually should be only one bin of pT, was this an overkill?
+  // pT bins same as in the 3D profile?
+
+  // DO WE NEED A 3D PROFILE? SHOULD WE JUST FILL IN BINS OF PT in the analysis part? Then do 2D profile; alpha, eta
+
+  TH1D* vsalpha = new TH1D("testvsalpha","  ; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
+  
+  TH1D* vsalpha_nom = new TH1D("vsalpha_nom","  ; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
+  TH1D* vsalpha_denom = new TH1D("vsalpha_denom","  ; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
+
+  // This does the responses in wide bins of eta
+  for (int i = 0; i < etabins.size(); i++) { // This just takes the inputs from the eta range used in the analysis
+    
+    asymm3d[etabins[i].c_str()] = (TProfile*)inFile->Get(Form("hibin_-1.0_0.0/%s/dijetasymmetry3D",etabins[i].c_str())); // Bins in order: pT, eta, alpha
+
+    cout << etabins[i] << endl;
+
+    asymm3d[etabins[i].c_str()]->Draw();
+
+    int ptbin = 1; // Maybe loop over bins?
+
+    for (int etabin = 1; etabin <= asymm3d[etabins[i].c_str()]->GetYaxis()->GetNbins(); ++etabin) {
+      cout <<  asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,1) << endl;
+    }
+
+    cout << "LOOP OVER BINS OF ALPHA" << endl; // TODO: the requirement is alpha < val, not val1 < alpha < val2 in each bin!
+    int    etabin = 2;
+
+
+    // Do in bins of pT, eta: as function of alpha
+    for (int alpha = 1; alpha <= asymm3d[etabins[i].c_str()]->GetZaxis()->GetNbins(); ++alpha) {
+      cout <<  asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,alpha) << endl;
+      double val =   asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,alpha);
+      double err =   asymm3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,alpha);
+
+      
+      vsalpha_nom->SetBinContent(alpha-1, 1+val); // histogram bins start from 0
+      vsalpha_nom->SetBinError(alpha-1, err); // histogram bins start from 0
+
+      vsalpha_denom->SetBinContent(alpha-1, 1-val); // histogram bins start from 0
+      vsalpha_denom->SetBinError(alpha-1, err); // histogram bins start from 0
+  
+    }
+    vsalpha_denom->Draw();
+    vsalpha_nom->Draw("same");
+
+    // Linear fit -> But this is just A, need to calculate response and Data/MC ratio first, and determine value at alpha = 0.2 / 0.3 (Which one is proper working point?)
+    // vsalpha->Fit("pol1","","",0.2,1);      // f, "", "", lower range, upper range
+    // TODO: save extrapolation to alpha -> 0 in own histograms, with values of eta
+    
+    // Do in bins of pT, alpha: as function of eta
+
+    
+   
+    /*     cout << asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,1,1) << endl;
+    cout << asymm3d[etabins[i].c_str()]->GetYaxis()->GetBinLowEdge(1) << endl;
+    cout << asymm3d[etabins[i].c_str()]->GetYaxis()->GetNbins() << endl;
+    cout << asymm3d[etabins[i].c_str()]->GetYaxis()->GetBinLowEdge(asymm3d[etabins[i].c_str()]->GetYaxis()->GetNbins() +1 ) << endl; //? */
+    
+
+  
+   
+    
+
+    // Need to do nominator and denominator with bin content
+
+
+    // TODO: can't use projection like this?
+    // R in bins of pt, eta
+    // nom[etabins[i].c_str()] = asymm[etabins[i].c_str()]->ProjectionX(Form("nom_%s",etabins[i].c_str()));
+    //  denom[etabins[i].c_str()] = asymm[etabins[i].c_str()]->ProjectionX(Form("denom_%s",etabins[i].c_str()));
+
+    // nom[etabins[i].c_str()]->Reset();
+    // denom[etabins[i].c_str()]->Reset();
+
+    
+    /* for (int j = 1; j <= nom[etabins[i].c_str()]->GetNbinsX(); ++j) {
+      //cout << nom->GetBinCenter(j) << endl;
+        double as = asymm[etabins[i].c_str()]->GetBinContent(j);
+       double err = asymm[etabins[i].c_str()]->GetBinError(j);
+      
+      nom[etabins[i].c_str()]->SetBinContent(j,1+as); 
+      nom[etabins[i].c_str()]->SetBinError(j,err); 
+      denom[etabins[i].c_str()]->SetBinContent(j,1-as);
+      denom[etabins[i].c_str()]->SetBinError(j,err); 
+
+      } */ 
+
+    // response[etabins[i].c_str()] =  (TH1D*)nom[etabins[i].c_str()]->Clone(Form("response_%s",etabins[i].c_str()));
+    // response[etabins[i].c_str()]->Divide(denom[etabins[i].c_str()]);
+
+    /* nom[etabins[i].c_str()]->Write();
+    denom[etabins[i].c_str()]->Write();
+    response[etabins[i].c_str()]->Write(); */
+
+  }
+   
+}

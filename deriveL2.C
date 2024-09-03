@@ -35,6 +35,7 @@ void deriveL2(string inFileName = "ppreco_MC.root", string outfilename = "L2resi
 
   TFile *outfile = new TFile(outfilename.c_str(),"RECREATE");
 
+  // This does the responses in wide bins of eta
   for (int i = 0; i < etabins.size(); i++) {
     
     asymm[etabins[i].c_str()] = (TProfile*)inFile->Get(Form("hibin_-1.0_0.0/%s/dijetasymmetry_a1",etabins[i].c_str())); // dijetasymmetry_a1 -> get this

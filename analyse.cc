@@ -51,6 +51,9 @@ JME::JetResolutionScaleFactor *_jer_sf(0); */
 //void analyse(string inFileName = "/home/laura/Data/jecmc/MC_pprefwpbpbreco_privateforjec.root", string outputfilename = "pbpbreco_MC.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
 
 // void analyse(string inFileName = "/home/laura/Data/jecmc/MC_ppref_privateforjec.root", string outputfilename = "ppreco_MC_fixabsetas.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
+
+
+void analyse(string inFileName = "/home/laura/Data/jecmc/MC_ppref_privateforjec.root", string outputfilename = "ppreco_MC_test3D.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
   
   TRandom3 r;
   
@@ -197,8 +200,7 @@ JME::JetResolutionScaleFactor *_jer_sf(0); */
   
   }
 
-  // TODO: rho, control this
-
+  // TODO: rho?
 
   TFile *outfile = new TFile(outputfilename.c_str(),"RECREATE");
 
@@ -247,7 +249,7 @@ vector<JetCorrectorParameters> vpar;
    cout << "Number of entries :" <<  jetTree->GetEntries()  << endl; 
 
 for (int i = 0; i < jetTree->GetEntries(); ++i) {
-  //  for (int i = 0; i < 1000; ++i) {
+  // for (int i = 0; i < 1000; ++i) {
      evtTree->GetEntry(i);
   
      triggerTree->GetEntry(i);
@@ -343,6 +345,8 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
        tageta = jteta[tagind];
        probeeta = jteta[probeind];
 
+       float dphitp = DPhi(jtphi[tagind],jtphi[probeind]);
+
 
        //    for (int j = 0; j < 2; ++j) {   // Use both jets as t/b in turn, change
 	 // Change to: if on of jets is in the barrel, use
@@ -359,24 +363,30 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
 	 ptavgtp = 0.5*(tagpt  + probept);
 	 asymmtp = probept - tagpt;
 	 
-	 if (nref > 2) alpha = jtpt[2]/ptavgtp; // Problem if only two jets! -> does it make sense to look at the effect? -> m
-	 else alpha = 0;
+	 if (nref > 2) alpha = jtpt[2]/ptavgtp; 
+	 else alpha = 0; // In case only two jets
 	 
-	 // DPhi requirement?
-	 // Fill in average pT
-	 // eta bin from probeeta
+	 // Fill in average pT, eta bin from probeeta
 	 
-	 for (auto &histrange : _histos) { 
+	 for (auto &histrange : _histos) {    // DPhi?
 	   for (auto &h : histrange.second) {
 	     
-	     if (probeeta >= h->etamin and probeeta < h->etamax and hiBin >= h->hibinmin and hiBin < h->hibinmax) {
+	     if (probeeta >= h->etamin and probeeta < h->etamax and hiBin >= h->hibinmin and hiBin < h->hibinmax and dphitp > 2.7) {
 
-	       // TODO: different alphas (could to 3D profile but...?)
-	       if (alpha < 0.3)  {
+	       // This is the full eta range, actual derivation
+	       if ((h->etamin - h->etamax) < -10) h->dijetasymmetry3D->Fill(ptavgtp, probeeta, alpha, asymmtp/2./ptavgtp); // <<------------
+
+	       if (alpha < 0.1)   h->dijetasymmetry_a01->Fill(ptavgtp, asymmtp/2./ptavgtp);
+	       else if (alpha < 0.2)   h->dijetasymmetry_a02->Fill(ptavgtp, asymmtp/2./ptavgtp);
+	       else if (alpha < 0.3)  {
 		 h->dijetbalance_a03->Fill(asymmtp/2./ptavgtp);
 		 h->dijetasymmetry_a03->Fill(ptavgtp, asymmtp/2./ptavgtp);
 	       }
-	       
+	       else if (alpha < 0.35)   h->dijetasymmetry_a035->Fill(ptavgtp, asymmtp/2./ptavgtp);
+	       else if (alpha < 0.4)   h->dijetasymmetry_a04->Fill(ptavgtp, asymmtp/2./ptavgtp);
+	       else if (alpha < 0.5)   h->dijetasymmetry_a05->Fill(ptavgtp, asymmtp/2./ptavgtp);
+	       else if (alpha < 0.6)   h->dijetasymmetry_a06->Fill(ptavgtp, asymmtp/2./ptavgtp);
+
 	       // Second: alpha < 1
 	       h->dijetbalance_a1->Fill(asymmtp/2./ptavgtp);
 	       h->dijetasymmetry_a1->Fill(ptavgtp, asymmtp/2./ptavgtp);
@@ -398,13 +408,11 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
 	     //      if (isMC and weight > 0.001) continue; // TODO: study this more?
 
 	       if (j == 0 and nref > 1 and dphi > 2.7) { // Fill dijet system based on leading jet pT
-
 		 h->dijetasymmetry->Fill(djetasymm,evtwt);
 		 h->dijetdeltaphi->Fill(dphi,evtwt);
 		 h->dijetdeltaeta->Fill(ddeta,evtwt);
 
 	       }
-
 	     
 	       h->jet_pt->Fill(jtpt[j],evtwt);
 	       h->jet_uncorr_pt->Fill(jtpt_uncorr[j],evtwt);

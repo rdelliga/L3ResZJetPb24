@@ -4,6 +4,8 @@
 #include "TH1D.h"
 #include "TH2D.h"
 #include "TProfile.h"
+#include "TProfile2D.h"
+#include "TProfile3D.h"
 #include "TDirectory.h"
 
 
@@ -76,10 +78,29 @@ class histograms {
 
 
 // JERC dijets
+  TProfile* dijetasymmetry_a01;
+  TProfile* dijetasymmetry_a02;
+  TProfile* dijetasymmetry_a035;
+  TProfile* dijetasymmetry_a04;
+  TProfile* dijetasymmetry_a05;
+  TProfile* dijetasymmetry_a06;
+  
   TH1D* dijetbalance_a03;
   TProfile* dijetasymmetry_a03;
   TH1D* dijetbalance_a1;
   TProfile* dijetasymmetry_a1;
+
+// 2D profiles for the derivation
+  TProfile2D* dijetasymmetry2D_a01;
+  TProfile2D* dijetasymmetry2D_a02;
+  TProfile2D* dijetasymmetry2D_a03;
+  TProfile2D* dijetasymmetry2D_a04;
+  TProfile2D* dijetasymmetry2D_a05;
+  TProfile2D* dijetasymmetry2D_a06;
+
+
+  // 3D profile for the derivation - obsolete?
+  TProfile3D* dijetasymmetry3D;
 
 
 // PF composition?
@@ -113,18 +134,20 @@ class histograms {
   
   
   // These are the bins for JEC statistics etc checks
-  static constexpr float etaforjec[] = {-5.2, -3.9, -2.6, -1.3, 0.0, 1.3, 2.6, 3.9, 5.0};
+  static constexpr float etaforjec[] = {-5.2, -3.9, -2.6, -1.3, 0.0, 1.3, 2.6, 3.9, 5.2}; // folders created using these? 
   static constexpr unsigned int netaforjec = sizeof(etaforjec)/sizeof(etaforjec[0])-1;
 
-  static constexpr float ptforjec[] = {40, 60, 80, 100, 120, 140, 180, 220, 300, 500, 700, 5000};
+  // TODO: possibly, likely, wider axes
+  static constexpr double ptforjec[] = {40, 60, 80, 100, 120, 140, 180, 220, 300, 500, 700, 5000};
   static constexpr unsigned int nptforjec = sizeof(ptforjec)/sizeof(ptforjec[0])-1;
 
+  static constexpr double alphavalues[] = {0.0, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6}; // N&A 0.2-0.45, what was the reasoning? Need to extrapolate to a -> 0
+  static constexpr unsigned int nalphavalues = sizeof(alphavalues)/sizeof(alphavalues[0])-1;
+  
 
   histograms(TDirectory *dir, float ptmin, float ptmax, float hibinmin, float hibinmax, bool ismc);
-  // Do we need a directory too?
- ~histograms();
-  //  this->blabla
-
+   ~histograms();
+  
  void Write();
 
   private:

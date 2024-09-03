@@ -24,7 +24,6 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
 
 // Weight vs reco pT profile? scatter plot? reco pt vs weight and gen pt vs. weight?
 
-
 // Jet histograms
 // TODO: UPDATE TO JERC BINS
   
@@ -34,15 +33,12 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   jet_eta = new TH1D("reco jet eta"," reco jet #eta; reco jet #eta;", 40, -5.2, 5.2);
   jet_phi = new TH1D("reco jet phi"," reco jet #phi; reco jet #phi;", 25, -3.1415926535, 3.1415926535);
 
-
-
   // PF composition
   jet_nhf = new TProfile("reco jet nhf", "reco jet nhf; reco jet p_{T};", 100, 15, 1000);
   jet_chf = new TProfile("reco jet chf", "reco jet chf; reco jet p_{T};", 100, 15, 1000);
   jet_nef = new TProfile("reco jet nef", "reco jet nef; reco jet p_{T};", 100, 15, 1000); 
   jet_cef = new TProfile("reco jet cef", "reco jet cef; reco jet p_{T};", 100, 15, 1000);
   jet_muf = new TProfile("reco jet muf", "reco jet muf; reco jet p_{T};", 100, 15, 1000);
-
 
   jetetaphi = new TH2D("eta-phi distribution",";#eta; #phi",netas,etarange,nphis,phirange);
   
@@ -66,12 +62,41 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   dijetdeltaphi  = new TH1D("dijetdeltaphi"," ; delta phi;", 40, 0, 3.1415926535);
   dijetdeltaeta  = new TH1D("dijetdeltaeta"," ; delta eta;", 40, 0, 5.2);
 
+  //  dijetbalance_a01 = new TH1D("dijetbalance_a01","  ; ;", 20, -2, 2);
+  dijetasymmetry_a01 = new TProfile("dijetasymmetry_a01","  ; ;",  nptforjec, &ptforjec[0]);
+
+  // dijetbalance_a02 = new TH1D("dijetbalance_a02","  ; ;", 20, -2, 2);
+  dijetasymmetry_a02 = new TProfile("dijetasymmetry_a02","  ; ;",  nptforjec, &ptforjec[0]);
+
   dijetbalance_a03 = new TH1D("dijetbalance_a03","  ; ;", 20, -2, 2);
   dijetasymmetry_a03 = new TProfile("dijetasymmetry_a03","  ; ;",  nptforjec, &ptforjec[0]);
+
+  //  dijetbalance_a035 = new TH1D("dijetbalance_a035","  ; ;", 20, -2, 2);
+  dijetasymmetry_a035 = new TProfile("dijetasymmetry_a035","  ; ;",  nptforjec, &ptforjec[0]);
+  
+  //  dijetbalance_a04 = new TH1D("dijetbalance_a04","  ; ;", 20, -2, 2);
+  dijetasymmetry_a04 = new TProfile("dijetasymmetry_a04","  ; ;",  nptforjec, &ptforjec[0]);
+
+  //  dijetbalance_a05 = new TH1D("dijetbalance_a05","  ; ;", 20, -2, 2);
+  dijetasymmetry_a05 = new TProfile("dijetasymmetry_a05","  ; ;",  nptforjec, &ptforjec[0]);
+
+  //  dijetbalance_a06 = new TH1D("dijetbalance_a06","  ; ;", 20, -2, 2);
+  dijetasymmetry_a06 = new TProfile("dijetasymmetry_a06","  ; ;",  nptforjec, &ptforjec[0]);
+  
   dijetbalance_a1= new TH1D("dijetbalance_a1","  ; ;", 20, -2, 2);
   dijetasymmetry_a1 = new TProfile("dijetasymmetry_a1","  ; ;",  nptforjec, &ptforjec[0]);
 
 
+  if ((this->etamin - this->etamax) < -10) {
+    dijetasymmetry3D = new TProfile3D("dijetasymmetry3D", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0], nalphavalues, &alphavalues[0]); // might be obsolete
+
+    dijetasymmetry2D_a01 = new TProfile2D("dijetasymmetry2D_a01", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
+    dijetasymmetry2D_a02 = new TProfile2D("dijetasymmetry2D_a02", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
+    dijetasymmetry2D_a03 = new TProfile2D("dijetasymmetry2D_a03", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
+    dijetasymmetry2D_a04 = new TProfile2D("dijetasymmetry2D_a04", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
+    dijetasymmetry2D_a05 = new TProfile2D("dijetasymmetry2D_a05", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
+    dijetasymmetry2D_a06 = new TProfile2D("dijetasymmetry2D_a06", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
+  }
 
 
   // Add: dijet respone in different bins?
