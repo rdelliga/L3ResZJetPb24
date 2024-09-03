@@ -248,8 +248,8 @@ vector<JetCorrectorParameters> vpar;
 // Start event loop to fill histograms:
    cout << "Number of entries :" <<  jetTree->GetEntries()  << endl; 
 
-for (int i = 0; i < jetTree->GetEntries(); ++i) {
-  // for (int i = 0; i < 1000; ++i) {
+   //for (int i = 0; i < jetTree->GetEntries(); ++i) {
+for (int i = 0; i < 100000; ++i) {
      evtTree->GetEntry(i);
   
      triggerTree->GetEntry(i);
@@ -374,22 +374,43 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
 	     if (probeeta >= h->etamin and probeeta < h->etamax and hiBin >= h->hibinmin and hiBin < h->hibinmax and dphitp > 2.7) {
 
 	       // This is the full eta range, actual derivation
-	       if ((h->etamin - h->etamax) < -10) h->dijetasymmetry3D->Fill(ptavgtp, probeeta, alpha, asymmtp/2./ptavgtp); // <<------------
+	       if ((h->etamin - h->etamax) < -10) {
 
-	       if (alpha < 0.1)   h->dijetasymmetry_a01->Fill(ptavgtp, asymmtp/2./ptavgtp);
-	       else if (alpha < 0.2)   h->dijetasymmetry_a02->Fill(ptavgtp, asymmtp/2./ptavgtp);
-	       else if (alpha < 0.3)  {
-		 h->dijetbalance_a03->Fill(asymmtp/2./ptavgtp);
-		 h->dijetasymmetry_a03->Fill(ptavgtp, asymmtp/2./ptavgtp);
+		 if (alpha < 0.1)   {
+		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.1-0.0001, asymmtp/2./ptavgtp); // These should match with bins?
+		   h->dijetasymmetry2D_a01->Fill(ptavgtp, probeeta, asymmtp/2./ptavgtp);
+		 }
+
+		 if (alpha < 0.2)  {
+		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.2-0.0001, asymmtp/2./ptavgtp); // These should match with bins?
+		   h->dijetasymmetry2D_a02->Fill(ptavgtp, probeeta, asymmtp/2./ptavgtp);
+
+		 }
+		 if (alpha < 0.3)  {
+		   h->dijetbalance_a03->Fill(asymmtp/2./ptavgtp);
+		   h->dijetasymmetry2D_a03->Fill(ptavgtp, probeeta, asymmtp/2./ptavgtp);
+		   h->dijetasymmetry_a03->Fill(ptavgtp, asymmtp/2./ptavgtp);
+
+		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.3-0.0001, asymmtp/2./ptavgtp); // These should match with bins?
+		 }
+		 //else if (alpha < 0.35)   h->dijetasymmetry2D_a035->Fill(ptavgtp, probeeta, asymmtp/2./ptavgtp);
+		 if (alpha < 0.4)   {
+		   h->dijetasymmetry2D_a04->Fill(ptavgtp, probeeta, asymmtp/2./ptavgtp);
+		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.4-0.0001, asymmtp/2./ptavgtp); // These should match with bins?
+		 }
+		 
+		 if (alpha < 0.5) {
+		   h->dijetasymmetry2D_a05->Fill(ptavgtp, probeeta, asymmtp/2./ptavgtp);
+		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.5-0.0001, asymmtp/2./ptavgtp); // These should match with bins?
+		 }
+		 if (alpha < 0.6) {
+		   h->dijetasymmetry2D_a06->Fill(ptavgtp, probeeta, asymmtp/2./ptavgtp);
+		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.6-0.0001, asymmtp/2./ptavgtp); // These should match with bins?
+		 }
 	       }
-	       else if (alpha < 0.35)   h->dijetasymmetry_a035->Fill(ptavgtp, asymmtp/2./ptavgtp);
-	       else if (alpha < 0.4)   h->dijetasymmetry_a04->Fill(ptavgtp, asymmtp/2./ptavgtp);
-	       else if (alpha < 0.5)   h->dijetasymmetry_a05->Fill(ptavgtp, asymmtp/2./ptavgtp);
-	       else if (alpha < 0.6)   h->dijetasymmetry_a06->Fill(ptavgtp, asymmtp/2./ptavgtp);
-
-	       // Second: alpha < 1
-	       h->dijetbalance_a1->Fill(asymmtp/2./ptavgtp);
-	       h->dijetasymmetry_a1->Fill(ptavgtp, asymmtp/2./ptavgtp);
+		 // Second: alpha < 1
+		 h->dijetbalance_a1->Fill(asymmtp/2./ptavgtp);
+		 h->dijetasymmetry_a1->Fill(ptavgtp, asymmtp/2./ptavgtp);
 	     }
 	   }
 	 } 

@@ -14,7 +14,7 @@
 // - calculate responses
 // - these are done in bins of pt and eta
 // - do alpha-extrapolation
-// - need both data and M
+// - need both data and MC
 
 
 //void deriveL2(string inFileName = "results/pbpbreco_witholdmctruth_abseta.root", string outfilename = "L2residuals_pbpbreco.root") {
@@ -24,7 +24,6 @@ void deriveL2_from3D(string inFileName = "ppreco_MC_test3D.root", string outfile
   TFile *inFile = new TFile(inFileName.c_str(), "READ"); // TODO: safety checks about opening file successfully
 
   //// These are bins to be processed
-  //  vector<string> etabins = {"eta_-5.2_-3.9", "eta_-3.9_-2.6", "eta_-2.6_-1.3", "eta_-1.3_0.0", "eta_0.0_1.3", "eta_1.3_2.6", "eta_2.6_3.9", "eta_3.9_5.2"};
   vector<string> etabins = {"eta_-5.2_5.2"};
   vector<string> ptbins = {"eta_-5.2_5.2"}; // TODO: is this needed?
 
@@ -32,7 +31,6 @@ void deriveL2_from3D(string inFileName = "ppreco_MC_test3D.root", string outfile
   map<string, TH1D*> nom, denom, response;
 
   TFile *outfile = new TFile(outfilename.c_str(),"RECREATE");
-
   
   // Folders in bins of pT? Eventually should be only one bin of pT, was this an overkill?
   // pT bins same as in the 3D profile?
@@ -44,6 +42,9 @@ void deriveL2_from3D(string inFileName = "ppreco_MC_test3D.root", string outfile
   TH1D* vsalpha_nom = new TH1D("vsalpha_nom","  ; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
   TH1D* vsalpha_denom = new TH1D("vsalpha_denom","  ; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
 
+  TH1D* vseta_nom = new TH1D("vseta_nom","  ; ;",  histograms::nwetas, &histograms::wetarange[0]);
+  TH1D* vseta_denom = new TH1D("vseta_denom","  ; ;",  histograms::nwetas, &histograms::wetarange[0]);
+  
   // This does the responses in wide bins of eta
   for (int i = 0; i < etabins.size(); i++) { // This just takes the inputs from the eta range used in the analysis
     
@@ -51,17 +52,42 @@ void deriveL2_from3D(string inFileName = "ppreco_MC_test3D.root", string outfile
 
     cout << etabins[i] << endl;
 
-    asymm3d[etabins[i].c_str()]->Draw();
+    // asymm3d[etabins[i].c_str()]->Draw();
 
-    int ptbin = 1; // Maybe loop over bins?
+    int ptbin = 2; // Maybe loop over bins?
+
+    // Start development from here
+
+    cout << "Getting corrections as function of eta" << endl;
+    cout << "pT bin edges: " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin) << " " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin+1) << endl;
 
     for (int etabin = 1; etabin <= asymm3d[etabins[i].c_str()]->GetYaxis()->GetNbins(); ++etabin) {
+      
       cout <<  asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,1) << endl;
+      
+      double val = asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,1);
+      double err = asymm3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,1);
+      
+      vseta_nom->SetBinContent(etabin-1, 1+val);
+      vseta_nom->SetBinError(etabin-1, err);
+
+      vseta_denom->SetBinContent(etabin-1, 1-val);
+      vseta_denom->SetBinError(etabin-1, err);
+
     }
 
-    cout << "LOOP OVER BINS OF ALPHA" << endl; // TODO: the requirement is alpha < val, not val1 < alpha < val2 in each bin!
-    int    etabin = 2;
+    TH1D* resp_eta = (TH1D*)vseta_nom->Clone("resp_eta");
+    resp_eta->Divide(vseta_denom);
+    resp_eta->Draw();
+    // Response is the ratio of these
 
+
+    // TODO: in different bins of pt
+    // Make map(s)? -> then save later
+    
+    
+    /* cout << "LOOP OVER BINS OF ALPHA - these are asymmetries in a selected bin of pt, eta" << endl;
+    int    etabin = 2; 
 
     // Do in bins of pT, eta: as function of alpha
     for (int alpha = 1; alpha <= asymm3d[etabins[i].c_str()]->GetZaxis()->GetNbins(); ++alpha) {
@@ -78,7 +104,7 @@ void deriveL2_from3D(string inFileName = "ppreco_MC_test3D.root", string outfile
   
     }
     vsalpha_denom->Draw();
-    vsalpha_nom->Draw("same");
+    vsalpha_nom->Draw("same"); */
 
     // Linear fit -> But this is just A, need to calculate response and Data/MC ratio first, and determine value at alpha = 0.2 / 0.3 (Which one is proper working point?)
     // vsalpha->Fit("pol1","","",0.2,1);      // f, "", "", lower range, upper range
