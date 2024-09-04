@@ -20,7 +20,7 @@
 //void deriveL2(string inFileName = "results/pbpbreco_witholdmctruth_abseta.root", string outfilename = "L2residuals_pbpbreco.root") {
 //void deriveL2_from3D(string inFileName = "ppreco_MC_test3D.root", string outfilename = "L2residuals_ppreco_from3D.root", bool dodt = true) {
 
-void deriveL2_from3D(string inFileName = "HIJEC_results/pbpbreco_MC_lxplus.root",string inFileNameDT = "HIJEC_results/pbpbreco_DATA_lxplus.root", string outfilename = "L2residuals_ppreco_from3Dlpxlus.root", bool dodt = true) {
+void deriveL2_from3D(string inFileName = "HIJEC_results/pbpbreco_MC_lxplus.root",string inFileNameDT = "HIJEC_results/pbpbreco_DATA_lxplus.root", string outfilename = "L2residuals_pbpbreco_from3Dlpxlus.root", bool dodt = true) {
 
   // Open file
   TFile *inFile = new TFile(inFileName.c_str(), "READ"); // TODO: safety checks about opening file successfully
@@ -32,15 +32,18 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/pbpbreco_MC_lxplus.root"
   //vector<string> ptbins = {"eta_-5.2_5.2"}; // TODO: is this needed?
 
   int ptbin = 2; // Maybe loop over bins?
+  int alphabin = 3; // check how these correspond!!!!!!!!!!
 
   map<string, TProfile*> asymm3d, data3d, mc3d;
-  map<string, TH1D*> nom, denom, responses;
+  map<string, TH1D*> nom, denom, responses, respETA;
   // TODO: should one save responses is like 3d thing? means: how to save responses from the different alphas, actually.
 
   
   TFile *outfile = new TFile(outfilename.c_str(),"RECREATE");
   
   TH1D* vsalpha = new TH1D("testvsalpha","  ; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
+
+  // Make these as histogram template, then a map, fill histograms in a map?
   
   TH1D* vsalpha_nom = new TH1D("vsalpha_nom","  ; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
   TH1D* vsalpha_denom = new TH1D("vsalpha_denom","  ; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
@@ -61,23 +64,28 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/pbpbreco_MC_lxplus.root"
 
 ///////////////// Start development from here
 
-  cout << "Getting corrections as function of eta" << endl;
-  cout << "pT bin edges: " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin) << " " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin+1) << endl;
+//TODO: make this a pt bin loop
 
+  for (int ptbin = 1; ptbin < 10; ++ptbin) {
+
+    cout << "Getting corrections as function of eta" << endl;
+    cout << "pT bin edges: " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin) << " " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin+1) << endl;
+    string ptstr = Form("%.0fto%.0f",asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin),asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin+1));
+    cout << ptstr.c_str() << endl;
   //  data3d[etabins[i].c_str()]->Draw("same");
+
+  cout << "check alpha bin: " << asymm3d[etabins[i].c_str()]->GetZaxis()->GetNbins() << endl;
+  cout << " bin edges: " << asymm3d[etabins[i].c_str()]->GetZaxis()->GetBinLowEdge(alphabin) << " " << asymm3d[etabins[i].c_str()]->GetZaxis()->GetBinLowEdge(alphabin+1) << endl;
+  string alphastr = Form("alpha%.1f",asymm3d[etabins[i].c_str()]->GetZaxis()->GetBinLowEdge(alphabin+1));
 
   // This is for MC
   for (int etabin = 1; etabin <= asymm3d[etabins[i].c_str()]->GetYaxis()->GetNbins(); ++etabin) {
       
-      cout <<  asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,1) << endl;
+    // cout <<  asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,alphabin) << endl;
       
-      double val = asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,1);
-      double err = asymm3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,1);
+      double val = asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,alphabin);
+      double err = asymm3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,alphabin);
 
-      //double val = data3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,1);
-      //double err = data3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,1);
-
-      
       vseta_nom->SetBinContent(etabin-1, 1+val);
       vseta_nom->SetBinError(etabin-1, err);
 
@@ -87,6 +95,7 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/pbpbreco_MC_lxplus.root"
     }
 
   TH1D* resp_eta = (TH1D*)vseta_nom->Clone("resp_eta");
+  respETA[Form("resp_eta_%d",ptbin)] = (TH1D*)vseta_nom->Clone("resp_eta");
   resp_eta->Divide(vseta_denom);
   resp_eta->Draw();
     // Response is the ratio of these
@@ -95,10 +104,10 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/pbpbreco_MC_lxplus.root"
   // This is for Data
     for (int etabin = 1; etabin <= data3d[etabins[i].c_str()]->GetYaxis()->GetNbins(); ++etabin) {
       
-      cout << data3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,1) << endl;
+      //  cout << data3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,alphabin) << endl;
     
-      double val = data3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,1);
-      double err = data3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,1);
+      double val = data3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,alphabin);
+      double err = data3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,alphabin);
      
       vseta_nom_data->SetBinContent(etabin-1, 1+val);
       vseta_nom_data->SetBinError(etabin-1, err);
@@ -108,24 +117,28 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/pbpbreco_MC_lxplus.root"
 
     }
 
+  // Response is the ratio of these
   TH1D* resp_eta_data = (TH1D*)vseta_nom_data->Clone("resp_eta_data");
   resp_eta_data->Divide(vseta_denom_data);
   resp_eta_data->SetLineColor(kRed);
   resp_eta_data->Draw("same");
 
-
-   // Response is the ratio of these
-
-  
-
-  responses["mc_pt40to60_alpha02"] = resp_eta; // Loop somehow to save these
-
-
+   responses[Form("mc_pt%s_%s",ptstr.c_str(),alphastr.c_str())] = resp_eta; // Loop somehow to save these
 
   // TODO: data handling; this is a placeholder
-  responses["dt_pt40to60_alpha02"] = resp_eta; // Loop somehow to save these
+    responses[Form("dt_pt%s_%s",ptstr.c_str(),alphastr.c_str())] = resp_eta_data; // Loop somehow to save these
 
+    responses[Form("ratio_pt%s_%s",ptstr.c_str(),alphastr.c_str())] = (TH1D*)resp_eta->Clone("ratio"); // Loop somehow to save these
+    responses[Form("ratio_pt%s_%s",ptstr.c_str(),alphastr.c_str())]->Divide(resp_eta_data);
 
+  // TODO: do this in a smart way
+    responses[Form("mc_pt%s_%s",ptstr.c_str(),alphastr.c_str())]->Write(Form("mc_pt%s_%s",ptstr.c_str(),alphastr.c_str()));
+    responses[Form("dt_pt%s_%s",ptstr.c_str(),alphastr.c_str())]->Write(Form("dt_pt%s_%s",ptstr.c_str(),alphastr.c_str()));
+    responses[Form("ratio_pt%s_%s",ptstr.c_str(),alphastr.c_str())]->Write(Form("ratio_pt%s_%s",ptstr.c_str(),alphastr.c_str()));
+  //  Form("mc_%s_%s",ptstr.c_str(),alphastr.c_str())
+
+  }
+  
   // Need to save the ratios too
   
     // TODO: in different bins of pt, save, also data?
@@ -173,35 +186,6 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/pbpbreco_MC_lxplus.root"
     
 
   
-   
-    
-
-    // Need to do nominator and denominator with bin content
-
-
-    // TODO: can't use projection like this?
-    // R in bins of pt, eta
-    // nom[etabins[i].c_str()] = asymm[etabins[i].c_str()]->ProjectionX(Form("nom_%s",etabins[i].c_str()));
-    //  denom[etabins[i].c_str()] = asymm[etabins[i].c_str()]->ProjectionX(Form("denom_%s",etabins[i].c_str()));
-
-    // nom[etabins[i].c_str()]->Reset();
-    // denom[etabins[i].c_str()]->Reset();
-
-    
-    /* for (int j = 1; j <= nom[etabins[i].c_str()]->GetNbinsX(); ++j) {
-      //cout << nom->GetBinCenter(j) << endl;
-        double as = asymm[etabins[i].c_str()]->GetBinContent(j);
-       double err = asymm[etabins[i].c_str()]->GetBinError(j);
-      
-      nom[etabins[i].c_str()]->SetBinContent(j,1+as); 
-      nom[etabins[i].c_str()]->SetBinError(j,err); 
-      denom[etabins[i].c_str()]->SetBinContent(j,1-as);
-      denom[etabins[i].c_str()]->SetBinError(j,err); 
-
-      } */ 
-
-    // response[etabins[i].c_str()] =  (TH1D*)nom[etabins[i].c_str()]->Clone(Form("response_%s",etabins[i].c_str()));
-    // response[etabins[i].c_str()]->Divide(denom[etabins[i].c_str()]);
 
     /* nom[etabins[i].c_str()]->Write();
     denom[etabins[i].c_str()]->Write();
