@@ -18,25 +18,28 @@
 
 
 //void deriveL2(string inFileName = "results/pbpbreco_witholdmctruth_abseta.root", string outfilename = "L2residuals_pbpbreco.root") {
-void deriveL2_from3D(string inFileName = "ppreco_MC_test3D.root", string outfilename = "L2residuals_ppreco_from3D.root") {
+//void deriveL2_from3D(string inFileName = "ppreco_MC_test3D.root", string outfilename = "L2residuals_ppreco_from3D.root", bool dodt = true) {
+
+void deriveL2_from3D(string inFileName = "HIJEC_results/pbpbreco_MC_lxplus.root",string inFileNameDT = "HIJEC_results/pbpbreco_DATA_lxplus.root", string outfilename = "L2residuals_ppreco_from3Dlpxlus.root", bool dodt = true) {
 
   // Open file
   TFile *inFile = new TFile(inFileName.c_str(), "READ"); // TODO: safety checks about opening file successfully
+  TFile *inFileDT = new TFile(inFileNameDT.c_str(), "READ"); // TODO: safety checks about opening file successfully
 
   //// These are bins to be processed
   vector<string> etabins = {"eta_-5.2_5.2"};
-  vector<string> ptbins = {"eta_-5.2_5.2"}; // TODO: is this needed?
+  int i = 0;
+  //vector<string> ptbins = {"eta_-5.2_5.2"}; // TODO: is this needed?
+
+  int ptbin = 2; // Maybe loop over bins?
 
   map<string, TProfile*> asymm3d, data3d, mc3d;
-  map<string, TH1D*> nom, denom, response;
+  map<string, TH1D*> nom, denom, responses;
+  // TODO: should one save responses is like 3d thing? means: how to save responses from the different alphas, actually.
 
+  
   TFile *outfile = new TFile(outfilename.c_str(),"RECREATE");
   
-  // Folders in bins of pT? Eventually should be only one bin of pT, was this an overkill?
-  // pT bins same as in the 3D profile?
-
-  // DO WE NEED A 3D PROFILE? SHOULD WE JUST FILL IN BINS OF PT in the analysis part? Then do 2D profile; alpha, eta
-
   TH1D* vsalpha = new TH1D("testvsalpha","  ; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
   
   TH1D* vsalpha_nom = new TH1D("vsalpha_nom","  ; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
@@ -44,29 +47,36 @@ void deriveL2_from3D(string inFileName = "ppreco_MC_test3D.root", string outfile
 
   TH1D* vseta_nom = new TH1D("vseta_nom","  ; ;",  histograms::nwetas, &histograms::wetarange[0]);
   TH1D* vseta_denom = new TH1D("vseta_denom","  ; ;",  histograms::nwetas, &histograms::wetarange[0]);
+
+
+  TH1D* vseta_nom_data = new TH1D("vseta_nom_data","  ; ;",  histograms::nwetas, &histograms::wetarange[0]);
+  TH1D* vseta_denom_data = new TH1D("vseta_denom_data","  ; ;",  histograms::nwetas, &histograms::wetarange[0]);
   
-  // This does the responses in wide bins of eta
-  for (int i = 0; i < etabins.size(); i++) { // This just takes the inputs from the eta range used in the analysis
-    
-    asymm3d[etabins[i].c_str()] = (TProfile*)inFile->Get(Form("hibin_-1.0_0.0/%s/dijetasymmetry3D",etabins[i].c_str())); // Bins in order: pT, eta, alpha
+     
+  asymm3d[etabins[i].c_str()] = (TProfile*)inFile->Get("hibin_-1.0_0.0/eta_-5.2_5.2/dijetasymmetry3D"); // Bins in order: pT, eta, alpha
+  data3d[etabins[i].c_str()] = (TProfile*)inFileDT->Get("hibin_-1.0_0.0/eta_-5.2_5.2/dijetasymmetry3D"); // Bins in order: pT, eta, alpha
 
-    cout << etabins[i] << endl;
+  cout << etabins[i] << endl;
+  //data3d[etabins[i].c_str()]->Draw();
 
-    // asymm3d[etabins[i].c_str()]->Draw();
+///////////////// Start development from here
 
-    int ptbin = 2; // Maybe loop over bins?
+  cout << "Getting corrections as function of eta" << endl;
+  cout << "pT bin edges: " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin) << " " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin+1) << endl;
 
-    // Start development from here
+  //  data3d[etabins[i].c_str()]->Draw("same");
 
-    cout << "Getting corrections as function of eta" << endl;
-    cout << "pT bin edges: " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin) << " " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin+1) << endl;
-
-    for (int etabin = 1; etabin <= asymm3d[etabins[i].c_str()]->GetYaxis()->GetNbins(); ++etabin) {
+  // This is for MC
+  for (int etabin = 1; etabin <= asymm3d[etabins[i].c_str()]->GetYaxis()->GetNbins(); ++etabin) {
       
       cout <<  asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,1) << endl;
       
       double val = asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,1);
       double err = asymm3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,1);
+
+      //double val = data3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,1);
+      //double err = data3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,1);
+
       
       vseta_nom->SetBinContent(etabin-1, 1+val);
       vseta_nom->SetBinError(etabin-1, err);
@@ -76,14 +86,56 @@ void deriveL2_from3D(string inFileName = "ppreco_MC_test3D.root", string outfile
 
     }
 
-    TH1D* resp_eta = (TH1D*)vseta_nom->Clone("resp_eta");
-    resp_eta->Divide(vseta_denom);
-    resp_eta->Draw();
+  TH1D* resp_eta = (TH1D*)vseta_nom->Clone("resp_eta");
+  resp_eta->Divide(vseta_denom);
+  resp_eta->Draw();
     // Response is the ratio of these
 
+  
+  // This is for Data
+    for (int etabin = 1; etabin <= data3d[etabins[i].c_str()]->GetYaxis()->GetNbins(); ++etabin) {
+      
+      cout << data3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,1) << endl;
+    
+      double val = data3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,1);
+      double err = data3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,1);
+     
+      vseta_nom_data->SetBinContent(etabin-1, 1+val);
+      vseta_nom_data->SetBinError(etabin-1, err);
 
-    // TODO: in different bins of pt
+      vseta_denom_data->SetBinContent(etabin-1, 1-val);
+      vseta_denom_data->SetBinError(etabin-1, err);
+
+    }
+
+  TH1D* resp_eta_data = (TH1D*)vseta_nom_data->Clone("resp_eta_data");
+  resp_eta_data->Divide(vseta_denom_data);
+  resp_eta_data->SetLineColor(kRed);
+  resp_eta_data->Draw("same");
+
+
+   // Response is the ratio of these
+
+  
+
+  responses["mc_pt40to60_alpha02"] = resp_eta; // Loop somehow to save these
+
+
+
+  // TODO: data handling; this is a placeholder
+  responses["dt_pt40to60_alpha02"] = resp_eta; // Loop somehow to save these
+
+
+  // Need to save the ratios too
+  
+    // TODO: in different bins of pt, save, also data?
     // Make map(s)? -> then save later
+
+
+    /// HERE THE ISR/FSR CORRECTIONS; need to get the responses in bins of pt, eta
+    // so maybe above actually do 3D map thing?
+    // Could do just 2D/3D histograms? maybe easier to deal with 1Ds?
+
     
     
     /* cout << "LOOP OVER BINS OF ALPHA - these are asymmetries in a selected bin of pt, eta" << endl;
@@ -155,6 +207,5 @@ void deriveL2_from3D(string inFileName = "ppreco_MC_test3D.root", string outfile
     denom[etabins[i].c_str()]->Write();
     response[etabins[i].c_str()]->Write(); */
 
-  }
    
 }
