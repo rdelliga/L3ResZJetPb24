@@ -116,3 +116,7 @@ void histograms::Write() {
   dir->cd();
   dir->Write();
   }
+
+// HistosBasic::~HistosBasic() {
+//  Write();/
+// };

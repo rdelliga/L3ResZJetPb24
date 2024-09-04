@@ -25,8 +25,9 @@ class eventhistograms {
 
 
   eventhistograms(TDirectory *dir, bool ismc);
- 
-  ~eventhistograms();
+
+  
+  //  ~eventhistograms();
   //  this->blabla
 
  void Write();
