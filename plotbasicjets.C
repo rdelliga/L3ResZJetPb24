@@ -5,12 +5,28 @@ void plotbasicjets(float h1 = -1.0, float h2 = 0.0, float eta1 = -5.2, float eta
 
   gStyle->SetOptStat(0);
 
-  string intputMC = "HIJEC_results/pbpbreco_MC_lxplus.root";
+  // string intputMC = "HIJEC_results/pbpbreco_MC_lxplus.root";
+  // string inputData = "HIJEC_results/pbpbreco_DATA_lxplus.root";
+
+  /* string legtxtMC = "MC";
+  string legtxtData = "data";
+  string namelabel = "recosMCvsdata"; */
+
+  /*string intputMC = "HIJEC_results/ppreco_DATA_lxplus.root";
   string inputData = "HIJEC_results/pbpbreco_DATA_lxplus.root";
 
-  string legtxtMC = "MC";
-  string legtxtData = "data";
+  string legtxtMC = "pp reco, data";
+  string legtxtData = "PbPb reco, data";
+  string namelabel = "recosdata"; */
 
+  string intputMC = "HIJEC_results/ppreco_MC_lxplus.root";
+  string inputData = "HIJEC_results/pbpbreco_MC_lxplus.root";
+
+  string legtxtMC = "pp reco, MC";
+  string legtxtData = "PbPb reco, MC";
+  string namelabel = "recosMC";
+  
+  
   TFile *filedt = new TFile(inputData.c_str(),"READ");
   TFile *filemc = new TFile(intputMC.c_str(),"READ");
 
@@ -67,6 +83,9 @@ void plotbasicjets(float h1 = -1.0, float h2 = 0.0, float eta1 = -5.2, float eta
     
     rp->Draw();
     rp->GetLowYaxis()->SetNdivisions(505);
+    rp->GetLowerRefYaxis()->SetTitle("pp/PbPb");
+
+    //if (i == 0) rp->GetLowerRefGraph()->SetMaximum(5);
 
     
     
@@ -84,7 +103,7 @@ void plotbasicjets(float h1 = -1.0, float h2 = 0.0, float eta1 = -5.2, float eta
   latex->DrawLatex(.6,.70,Form("%.0f-%.0f %%",ce1,ce2));  */
 
    // Print
-    c1->Print(Form("plotformeeting/datavsmc_%s_hbin_%.0f_%.0f_eta_%.1f_%.1f.pdf",plots[i].c_str(),h1,h2,eta1,eta2));
+    c1->Print(Form("plotformeeting/datavsmc_%s_hbin_%.0f_%.0f_eta_%.1f_%.1f_%s.pdf",plots[i].c_str(),h1,h2,eta1,eta2,namelabel.c_str()));
    //   gPad->RedrawAxis();
    //   c1->Print(Form("datavsmc_%s_pt_%.0f_%.0f.png",plots[i].c_str(),pt1,pt2));
 
