@@ -20,7 +20,9 @@
 //void deriveL2(string inFileName = "results/pbpbreco_witholdmctruth_abseta.root", string outfilename = "L2residuals_pbpbreco.root") {
 //void deriveL2_from3D(string inFileName = "ppreco_MC_test3D.root", string outfilename = "L2residuals_ppreco_from3D.root", bool dodt = true) {
 
-void deriveL2_from3D(string inFileName = "HIJEC_results/pbpbreco_MC_lxplus.root",string inFileNameDT = "HIJEC_results/pbpbreco_DATA_lxplus.root", string outfilename = "L2residuals_pbpbreco_from3Dlpxlus.root", bool dodt = true) {
+//void deriveL2_from3D(string inFileName = "HIJEC_results/pbpbreco_MC_lxplus.root",string inFileNameDT = "HIJEC_results/pbpbreco_DATA_lxplus.root", string outfilename = "L2residuals_pbpbreco_from3Dlxplus_alpha03.root", bool dodt = true,   int alphabin = 3) {
+
+void deriveL2_from3D(string inFileName = "HIJEC_results/ppreco_MC_lxplus.root",string inFileNameDT = "HIJEC_results/ppreco_DATA_lxplus.root", string outfilename = "L2residuals_ppreco_from3Dlxplus_alpha02.root", bool dodt = true,   int alphabin = 2) {
 
   // Open file
   TFile *inFile = new TFile(inFileName.c_str(), "READ"); // TODO: safety checks about opening file successfully
@@ -32,7 +34,7 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/pbpbreco_MC_lxplus.root"
   //vector<string> ptbins = {"eta_-5.2_5.2"}; // TODO: is this needed?
 
   int ptbin = 2; // Maybe loop over bins?
-  int alphabin = 3; // check how these correspond!!!!!!!!!!
+  // check how these correspond!!!!!!!!!!
 
   map<string, TProfile*> asymm3d, data3d, mc3d;
   map<string, TH1D*> nom, denom, responses, respETA;
@@ -66,7 +68,7 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/pbpbreco_MC_lxplus.root"
 
 //TODO: make this a pt bin loop
 
-  for (int ptbin = 1; ptbin < 10; ++ptbin) {
+  for (int ptbin = 1; ptbin < 7; ++ptbin) {
 
     cout << "Getting corrections as function of eta" << endl;
     cout << "pT bin edges: " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin) << " " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin+1) << endl;
