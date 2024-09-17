@@ -33,6 +33,16 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   jet_eta = new TH1D("reco jet eta"," reco jet #eta; reco jet #eta;", 40, -5.2, 5.2);
   jet_phi = new TH1D("reco jet phi"," reco jet #phi; reco jet #phi;", 25, -3.1415926535, 3.1415926535);
 
+
+  // Triggers - could technically use fwd? what bins to use?
+  HLT60 = new TH1D("HLT60", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
+  HLT80 = new TH1D("HLT80", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
+  HLT100 = new TH1D("HLT100", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
+  HLT120 = new TH1D("HLT120", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
+  HLT60vs120 = new TH1D("HLT60vs120", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
+  HLT60vs80 = new TH1D("HLT60vs80", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
+  HLT60vs100 = new TH1D("HLT60vs100", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
+  
   // PF composition
   jet_nhf = new TProfile("reco jet nhf", "reco jet nhf; reco jet p_{T};", 100, 15, 1000);
   jet_chf = new TProfile("reco jet chf", "reco jet chf; reco jet p_{T};", 100, 15, 1000);
@@ -88,7 +98,11 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
 
 
   if ((this->etamin - this->etamax) < -10) {
-    dijetasymmetry3D = new TProfile3D("dijetasymmetry3D", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0], nalphavalues, &alphavalues[0]); // might be obsolete
+    dijetasymmetry3D = new TProfile3D("dijetasymmetry3D", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0], nalphavalues, &alphavalues[0]); 
+    dijetasymmetry3Dabseta = new TProfile3D("dijetasymmetry3Dabseta", ";;", nptforjec, &ptforjec[0], nwabsetas, &wabsetarange[0], nalphavalues, &alphavalues[0]); 
+
+    dijetasymmetry3Dnarrow = new TProfile3D("dijetasymmetry3Dnarrow", ";;", nptforjec, &ptforjec[0], netas, &etarange[0], nalphavalues, &alphavalues[0]); 
+    dijetasymmetry3Dabsetanarrow = new TProfile3D("dijetasymmetry3Dabsetanarrow", ";;", nptforjec, &ptforjec[0], nabsetas, &absetarange[0], nalphavalues, &alphavalues[0]); 
 
     dijetasymmetry2D_a01 = new TProfile2D("dijetasymmetry2D_a01", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
     dijetasymmetry2D_a02 = new TProfile2D("dijetasymmetry2D_a02", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);

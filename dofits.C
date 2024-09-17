@@ -15,6 +15,8 @@ void dofits(float fitmin = 0.1, float fitmax = 0.4) {
 
   
   // We want to fit one eta bin
+
+  // TODO: change this so that histogram contents are copied into TGraphs and the reference alpha is excluded 
   //  for (int etabin = 19; etabin < 20; ++etabin) { // TODO bins
   int etabin = 21;
     // pick histos for different pT:s
