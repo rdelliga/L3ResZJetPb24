@@ -28,6 +28,16 @@ class histograms {
   TH1D* jet_eta;
   TH1D* jet_phi;
 
+  // Trigger
+  TH1D* HLT60;
+  TH1D* HLT80;
+  TH1D* HLT100;
+  TH1D* HLT120;
+  TH1D* HLT60vs120;
+  TH1D* HLT60vs80;
+  TH1D* HLT60vs100;
+  
+
 // PF composition
   TProfile* jet_nhf;
   TProfile* jet_chf;
@@ -99,8 +109,12 @@ class histograms {
   TProfile2D* dijetasymmetry2D_a06;
 
 
-  // 3D profile for the derivation - obsolete?
+  // 3D profile for the derivation 
   TProfile3D* dijetasymmetry3D;
+  TProfile3D* dijetasymmetry3Dnarrow;
+
+  TProfile3D* dijetasymmetry3Dabseta;
+  TProfile3D* dijetasymmetry3Dabsetanarrow;
 
 
 // PF composition?
@@ -120,12 +134,22 @@ class histograms {
   };
   static constexpr unsigned int netas = sizeof(etarange)/sizeof(etarange[0])-1;
 
-  // Taken from Nick and Austin's pp ref progress
+    static constexpr double absetarange[] = {0.000, 0.087, 0.174, 0.261, 0.348, 0.435, 0.522, 0.609, 0.696, 0.783, 0.870, 0.957, 1.044, 1.131, 1.218,1.305, 1.392, 1.479, 1.566, 1.653, 1.74, 1.83, 1.93, 2.043, 2.172, 2.322, 2.5,2.65, 2.853, 2.964, 3.139, 3.314, 3.489, 3.664, 3.839, 4.013, 4.191, 4.363,4.538, 4.716, 4.889, 5.191  };
+  static constexpr unsigned int nabsetas = sizeof(absetarange)/sizeof(absetarange[0])-1;
+
+  // This is L2res binning used also in ppJEC
   static constexpr double wetarange[] = {    -5.191, -3.839, -3.489, -3.139, -2.964,-2.853, -2.65, -2.5,-2.322,-2.172,-1.93,-1.653,-1.479,-1.305,-1.044,-0.783,-0.522,-0.261, 0.000,
                                               0.261,  0.522,  0.783,  1.044,  1.305, 1.479, 1.653, 1.93, 2.172, 2.322,  2.5,  2.65, 2.853, 2.964, 3.139, 3.489, 3.839, 5.191
   };
   static constexpr unsigned int nwetas = sizeof(wetarange)/sizeof(wetarange[0])-1;
 
+  
+  static constexpr double wabsetarange[] = {0.0, 0.261,  0.522,  0.783,  1.044,  1.305, 1.479, 1.653, 1.93, 2.172, 2.322,  2.5,  2.65, 2.853, 2.964, 3.139, 3.489, 3.839, 5.191
+  };
+  static constexpr unsigned int nwabsetas = sizeof(wabsetarange)/sizeof(wabsetarange[0])-1;
+
+
+  
   static constexpr double phirange[] = {    -3.14159265360, -3.0543261909902775, -2.9670597283905553, -2.879793265790833, -2.792526803191111, -2.705260340591389, -2.6179938779916667, -2.5307274153919446, -2.443460952792222, -2.3561944901925, -2.2689280275927777, -2.1816615649930555, -2.0943951023933334, -2.0071286397936112, -1.9198621771938889, -1.8325957145941667, -1.7453292519944443, -1.6580627893947222, -1.570796326795, -1.4835298641952777, -1.3962634015955555, -1.3089969389958334, -1.221730476396111, -1.1344640137963888, -1.0471975511966667, -0.9599310885969444, -0.8726646259972222, -0.7853981633975, -0.6981317007977778, -0.6108652381980555, -0.5235987755983333, -0.4363323129986111, -0.3490658503988889, -0.26179938779916667, -0.17453292519944444, -0.08726646259972222,
     0.0, 0.08726646259972222, 0.17453292519944444, 0.26179938779916667, 0.3490658503988889, 0.4363323129986111, 0.5235987755983333, 0.6108652381980555, 0.6981317007977778, 0.7853981633975, 0.8726646259972222, 0.9599310885969444, 1.0471975511966667, 1.1344640137963888, 1.221730476396111, 1.3089969389958334, 1.3962634015955555, 1.4835298641952777, 1.570796326795, 1.6580627893947222, 1.7453292519944443, 1.8325957145941667, 1.9198621771938889, 2.0071286397936112, 2.0943951023933334, 2.1816615649930555, 2.2689280275927777, 2.3561944901925, 2.443460952792222, 2.5307274153919446, 2.6179938779916667, 2.705260340591389, 2.792526803191111, 2.879793265790833, 2.9670597283905553, 3.0543261909902775, 3.14159265360
   };
@@ -137,16 +161,21 @@ class histograms {
   static constexpr float etaforjec[] = {-5.2, -3.9, -2.6, -1.3, 0.0, 1.3, 2.6, 3.9, 5.2}; // folders created using these? 
   static constexpr unsigned int netaforjec = sizeof(etaforjec)/sizeof(etaforjec[0])-1;
 
-  // TODO: possibly, likely, wider axes needed
-  //  static constexpr double ptforjec[] = {40, 60, 80, 100, 120, 140, 180, 220, 300, 500, 700, 5000};
-  static constexpr double ptforjec[] = {40, 60, 80, 120, 180, 300, 5000};
+
+  // Should one try narrower bins first too?
+  //   static constexpr double ptforjec[] = {40, 60, 80, 100, 120, 140, 180, 220, 300, 500, 700, 5000};
+  static constexpr double ptforjec[] = {40, 55, 80, 120, 170, 1000}; // Could consider 120, 180 -> 140?
   static constexpr unsigned int nptforjec = sizeof(ptforjec)/sizeof(ptforjec[0])-1;
 
-  //  static constexpr double alphavalues[] = {0.0, 0.1, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6}; // N&A 0.2-0.45, what was the reasoning? Need to extrapolate to a -> 0
-  static constexpr double alphavalues[] = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6}; // N&A 0.2-0.45, what was the reasoning? Need to extrapolate to a -> 0
-  static constexpr unsigned int nalphavalues = sizeof(alphavalues)/sizeof(alphavalues[0])-1;
-  
+  // Wider bins
+  static constexpr double wptforjec[] = {40, 60, 80, 100, 120, 140, 180, 220, 300, 1000};
+  static constexpr unsigned int nwptforjec = sizeof(ptforjec)/sizeof(ptforjec[0])-1;
 
+  static constexpr double alphavalues[] = {0.0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5}; 
+  //static constexpr double alphavalues[] = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6};
+  static constexpr unsigned int nalphavalues = sizeof(alphavalues)/sizeof(alphavalues[0])-1;
+
+ 
   histograms(TDirectory *dir, float ptmin, float ptmax, float hibinmin, float hibinmax, bool ismc);
   //   ~histograms();
   

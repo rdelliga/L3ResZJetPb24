@@ -16,7 +16,8 @@ const int nhibins = sizeof(hibins)/sizeof(hibins[0])-1;
 float ptedges[] = {0., 5000};
 const int nptbins = sizeof(ptedges)/sizeof(ptedges[0])-1;
 
-float etaedges[] = {-5.2, -3.9, -2.6, -1.3, 0, 1.3, 2.6, 3.9, 5.2, -5.2, 5.2};
+//float etaedges[] = {-5.2, -3.9, -2.6, -1.3, 0, 1.3, 2.6, 3.9, 5.2, -5.2, 5.2};
+float etaedges[] = {5.2, -5.2, 5.2};
 const int netabins = sizeof(etaedges)/sizeof(etaedges[0])-1;
 
 

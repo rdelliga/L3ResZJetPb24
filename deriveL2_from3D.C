@@ -20,7 +20,9 @@
 //void deriveL2(string inFileName = "results/pbpbreco_witholdmctruth_abseta.root", string outfilename = "L2residuals_pbpbreco.root") {
 //void deriveL2_from3D(string inFileName = "ppreco_MC_test3D.root", string outfilename = "L2residuals_ppreco_from3D.root", bool dodt = true) {
 
-void deriveL2_from3D(string inFileName = "HIJEC_results/pbpbreco_MC_lxplus.root",string inFileNameDT = "HIJEC_results/pbpbreco_DATA_lxplus.root", string outfilename = "L2residuals_ppreco_from3Dlpxlus.root", bool dodt = true) {
+//void deriveL2_from3D(string inFileName = "HIJEC_results/pbpbreco_MC_lxplus.root",string inFileNameDT = "HIJEC_results/pbpbreco_DATA_lxplus.root", string outfilename = "L2residuals_pbpbreco_from3Dlxplus_alpha03.root", bool dodt = true,   int alphabin = 3) {
+
+void deriveL2_from3D(string inFileName = "HIJEC_results/ppreco_MC_lxplus.root",string inFileNameDT = "HIJEC_results/ppreco_DATA_lxplus.root", string outfilename = "test.root", bool dodt = true,   int alphabin = 2) {
 
   // Open file
   TFile *inFile = new TFile(inFileName.c_str(), "READ"); // TODO: safety checks about opening file successfully
@@ -29,21 +31,24 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/pbpbreco_MC_lxplus.root"
   //// These are bins to be processed
   vector<string> etabins = {"eta_-5.2_5.2"};
   int i = 0;
-  //vector<string> ptbins = {"eta_-5.2_5.2"}; // TODO: is this needed?
-
-  int ptbin = 2; // Maybe loop over bins?
 
   map<string, TProfile*> asymm3d, data3d, mc3d;
   map<string, TH1D*> nom, denom, responses;
+  map<int, TH1D*> respETA;
   // TODO: should one save responses is like 3d thing? means: how to save responses from the different alphas, actually.
 
   
   TFile *outfile = new TFile(outfilename.c_str(),"RECREATE");
   
   TH1D* vsalpha = new TH1D("testvsalpha","  ; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
+
+  // Make these as histogram template, then a map, fill histograms in a map?
   
   TH1D* vsalpha_nom = new TH1D("vsalpha_nom","  ; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
   TH1D* vsalpha_denom = new TH1D("vsalpha_denom","  ; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
+
+  TH1D* vsalpha_nom_data = new TH1D("vsalpha_nom_data","  ; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
+  TH1D* vsalpha_denom_data = new TH1D("vsalpha_denom_data","  ; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
 
   TH1D* vseta_nom = new TH1D("vseta_nom","  ; ;",  histograms::nwetas, &histograms::wetarange[0]);
   TH1D* vseta_denom = new TH1D("vseta_denom","  ; ;",  histograms::nwetas, &histograms::wetarange[0]);
@@ -59,153 +64,157 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/pbpbreco_MC_lxplus.root"
   cout << etabins[i] << endl;
   //data3d[etabins[i].c_str()]->Draw();
 
-///////////////// Start development from here
+///////////////// Responses against eta in bin of alpha cut, pt
 
-  cout << "Getting corrections as function of eta" << endl;
-  cout << "pT bin edges: " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin) << " " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin+1) << endl;
+  for (int ptbin = 1; ptbin < 7; ++ptbin) {
 
+    cout << "Getting corrections as function of eta" << endl;
+    cout << "pT bin edges: " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin) << " " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin+1) << endl;
+    string ptstr = Form("%.0fto%.0f",asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin),asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin+1));
+    cout << ptstr.c_str() << endl;
   //  data3d[etabins[i].c_str()]->Draw("same");
+
+  cout << "alpha bin: " << alphabin << endl;
+  cout << " alpha bin edges: " << asymm3d[etabins[i].c_str()]->GetZaxis()->GetBinLowEdge(alphabin) << " " << asymm3d[etabins[i].c_str()]->GetZaxis()->GetBinLowEdge(alphabin+1) << endl;
+  string alphastr = Form("alpha%.1f",asymm3d[etabins[i].c_str()]->GetZaxis()->GetBinLowEdge(alphabin+1));
 
   // This is for MC
   for (int etabin = 1; etabin <= asymm3d[etabins[i].c_str()]->GetYaxis()->GetNbins(); ++etabin) {
       
-      cout <<  asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,1) << endl;
+    // cout <<  asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,alphabin) << endl;
       
-      double val = asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,1);
-      double err = asymm3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,1);
+      double val = asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,alphabin);
+      double err = asymm3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,alphabin);
 
-      //double val = data3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,1);
-      //double err = data3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,1);
-
+      //      cout << "Check bins " << vseta_nom->GetBinLowEdge(etabin-1) << endl;
+      //  cout << "Check bins " << asymm3d[etabins[i].c_str()]->GetYaxis()->GetBinLowEdge(etabin-1) << endl;
       
-      vseta_nom->SetBinContent(etabin-1, 1+val);
-      vseta_nom->SetBinError(etabin-1, err);
+      vseta_nom->SetBinContent(etabin, 1+val);
+      vseta_nom->SetBinError(etabin, err);
 
-      vseta_denom->SetBinContent(etabin-1, 1-val);
-      vseta_denom->SetBinError(etabin-1, err);
+      vseta_denom->SetBinContent(etabin, 1-val);
+      vseta_denom->SetBinError(etabin, err);
 
     }
 
   TH1D* resp_eta = (TH1D*)vseta_nom->Clone("resp_eta");
   resp_eta->Divide(vseta_denom);
   resp_eta->Draw();
-    // Response is the ratio of these
-
-  
+   
   // This is for Data
     for (int etabin = 1; etabin <= data3d[etabins[i].c_str()]->GetYaxis()->GetNbins(); ++etabin) {
       
-      cout << data3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,1) << endl;
+      //  cout << data3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,alphabin) << endl;
     
-      double val = data3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,1);
-      double err = data3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,1);
+      double val = data3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,alphabin);
+      double err = data3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,alphabin);
      
-      vseta_nom_data->SetBinContent(etabin-1, 1+val);
-      vseta_nom_data->SetBinError(etabin-1, err);
+      vseta_nom_data->SetBinContent(etabin, 1+val);
+      vseta_nom_data->SetBinError(etabin, err);
 
-      vseta_denom_data->SetBinContent(etabin-1, 1-val);
-      vseta_denom_data->SetBinError(etabin-1, err);
+      vseta_denom_data->SetBinContent(etabin, 1-val);
+      vseta_denom_data->SetBinError(etabin, err);
 
     }
 
+  // First part of the correction is the ratio of these
   TH1D* resp_eta_data = (TH1D*)vseta_nom_data->Clone("resp_eta_data");
-  resp_eta_data->Divide(vseta_denom_data);
-  resp_eta_data->SetLineColor(kRed);
-  resp_eta_data->Draw("same");
-
-
-   // Response is the ratio of these
-
+    resp_eta_data->Divide(vseta_denom_data);
+    resp_eta_data->SetLineColor(kRed);
+    resp_eta_data->Draw("same");
   
+    responses[Form("mc_pt%s_%s",ptstr.c_str(),alphastr.c_str())] = resp_eta; 
 
-  responses["mc_pt40to60_alpha02"] = resp_eta; // Loop somehow to save these
+    responses[Form("dt_pt%s_%s",ptstr.c_str(),alphastr.c_str())] = resp_eta_data; 
 
+    // responses[Form("ratio_pt%s_%s",ptstr.c_str(),alphastr.c_str())] = (TH1D*)resp_eta->Clone("ratio"); 
+    //  responses[Form("ratio_pt%s_%s",ptstr.c_str(),alphastr.c_str())]->Divide(resp_eta_data);
+    respETA[ptbin] = (TH1D*)resp_eta->Clone("ratio"); 
+    respETA[ptbin]->Divide(resp_eta_data);
 
+  // TODO: do this in a smart way
+    responses[Form("mc_pt%s_%s",ptstr.c_str(),alphastr.c_str())]->Write(Form("mc_pt%s_%s",ptstr.c_str(),alphastr.c_str()));
+    responses[Form("dt_pt%s_%s",ptstr.c_str(),alphastr.c_str())]->Write(Form("dt_pt%s_%s",ptstr.c_str(),alphastr.c_str()));
+    //   responses[Form("ratio_pt%s_%s",ptstr.c_str(),alphastr.c_str())]->Write(Form("ratio_pt%s_%s",ptstr.c_str(),alphastr.c_str()));   // This is the reference for the fit
+    respETA[ptbin]->Write(Form("ratio_pt%s_%s",ptstr.c_str(),alphastr.c_str()));   // This is the reference for the fit
 
-  // TODO: data handling; this is a placeholder
-  responses["dt_pt40to60_alpha02"] = resp_eta; // Loop somehow to save these
+  //  Form("mc_%s_%s",ptstr.c_str(),alphastr.c_str())
 
+  }
 
-  // Need to save the ratios too
-  
-    // TODO: in different bins of pt, save, also data?
-    // Make map(s)? -> then save later
+  /// HERE THE ISR/FSR CORRECTIONS; need to get the responses in bins of pt, eta
+  // TODO: check alpha logic
+   cout << "number of alpha bins: " << asymm3d[etabins[i].c_str()]->GetZaxis()->GetNbins() << endl;
 
+   
+  // loop over bin in pt
+  for (int ptbin = 1; ptbin < 7; ++ptbin) {  // TODO: LIMIT
+  // loop over bin in eta
+     cout << "NEW PT BIN " << ptbin << endl;
+     for (int etabin = 1; etabin <= data3d[etabins[i].c_str()]->GetYaxis()->GetNbins(); ++etabin) {
+       cout << "NEW ETA BIN " << data3d[etabins[i].c_str()]->GetYaxis()->GetBinLowEdge(etabin) << " " << data3d[etabins[i].c_str()]->GetYaxis()->GetBinLowEdge(etabin+1) <<  endl;
+  // loop over alphas and save in histogram            -            get from ratio or get from data and mc separately and get ratio?
+  //     TH1D* respvsalpha = new TH1D("vsa", nalphavalues, &alphavalues[0]);
+       
+       for (int alphabin = 1; alphabin <= asymm3d[etabins[i].c_str()]->GetZaxis()->GetNbins(); ++alphabin) { // TODO: check bins
+	 double val = asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,alphabin);
+	 double err = asymm3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,alphabin);
+	 
+	       vsalpha_nom->SetBinContent(alphabin, 1+val); 
+	       vsalpha_nom->SetBinError(alphabin, err);
 
-    /// HERE THE ISR/FSR CORRECTIONS; need to get the responses in bins of pt, eta
-    // so maybe above actually do 3D map thing?
-    // Could do just 2D/3D histograms? maybe easier to deal with 1Ds?
+	       vsalpha_denom->SetBinContent(alphabin, 1-val);
+	       vsalpha_denom->SetBinError(alphabin, err); 
 
-    
-    
-    /* cout << "LOOP OVER BINS OF ALPHA - these are asymmetries in a selected bin of pt, eta" << endl;
-    int    etabin = 2; 
+	 double valdt = data3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,alphabin);
+	 double errdt = data3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,alphabin);
+	 
+	       vsalpha_nom_data->SetBinContent(alphabin, 1+valdt); 
+	       vsalpha_nom_data->SetBinError(alphabin, errdt);
 
-    // Do in bins of pT, eta: as function of alpha
-    for (int alpha = 1; alpha <= asymm3d[etabins[i].c_str()]->GetZaxis()->GetNbins(); ++alpha) {
-      cout <<  asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,alpha) << endl;
-      double val =   asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,alpha);
-      double err =   asymm3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,alpha);
+	       vsalpha_denom_data->SetBinContent(alphabin, 1-valdt);
+	       vsalpha_denom_data->SetBinError(alphabin, errdt); 
 
-      
-      vsalpha_nom->SetBinContent(alpha-1, 1+val); // histogram bins start from 0
-      vsalpha_nom->SetBinError(alpha-1, err); // histogram bins start from 0
+	       //cout <<  alphabin << " " << val << endl;
 
-      vsalpha_denom->SetBinContent(alpha-1, 1-val); // histogram bins start from 0
-      vsalpha_denom->SetBinError(alpha-1, err); // histogram bins start from 0
-  
-    }
-    vsalpha_denom->Draw();
-    vsalpha_nom->Draw("same"); */
+      }
+     vsalpha_nom->Divide(vsalpha_denom);
+     vsalpha_nom_data->Divide(vsalpha_denom_data);
+
+     vsalpha_nom->Divide(vsalpha_nom_data); // This is the MC/Data responses in bin of alpha
+     vsalpha_nom->Write(Form("Respvsa_%d_%d",ptbin,etabin));
+
+     TH1D* vsalpha_norm = (TH1D*)vsalpha_nom->Clone(Form("vsalpha_norm_%d_%d",ptbin,etabin));
+     for (int bin = 1; bin <= vsalpha_nom->GetXaxis()->GetNbins(); ++bin) {
+         double val =  vsalpha_nom->GetBinContent(bin);
+      	 double err = vsalpha_nom->GetBinError(bin);
+
+	 double norm =  respETA[ptbin]->GetBinContent(etabin);
+	 double normerr =  respETA[ptbin]->GetBinError(etabin);
+
+	 vsalpha_norm->SetBinContent(bin,val/norm);
+	 vsalpha_norm->SetBinError(bin,err/norm); // TODO: check this is correct
+
+	 cout << "in alphabin " << alphabin << " norm " << norm << " lowedge " <<   vsalpha_norm->GetBinLowEdge(bin) << endl;
+
+       
+     }
+     vsalpha_norm->Write(Form("Respvsa_norm_%d_%d",ptbin,etabin)); // This is a histogram that will be eventually fitted
+     //    vsalpha_norm->Fit("pol1","","",0.2,0.5);  // Fit all pt bin at once?
+  // fit histogram - do we fit all bins of pt at once actually?
+  // save fits?
+  // Save value at alpha = 0 in a histogram?
+  // Should one actually put in tgraph of smth? for the fit
+       
+   }
+
+   }
+
 
     // Linear fit -> But this is just A, need to calculate response and Data/MC ratio first, and determine value at alpha = 0.2 / 0.3 (Which one is proper working point?)
     // vsalpha->Fit("pol1","","",0.2,1);      // f, "", "", lower range, upper range
     // TODO: save extrapolation to alpha -> 0 in own histograms, with values of eta
-    
-    // Do in bins of pT, alpha: as function of eta
-
-    
-   
-    /*     cout << asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,1,1) << endl;
-    cout << asymm3d[etabins[i].c_str()]->GetYaxis()->GetBinLowEdge(1) << endl;
-    cout << asymm3d[etabins[i].c_str()]->GetYaxis()->GetNbins() << endl;
-    cout << asymm3d[etabins[i].c_str()]->GetYaxis()->GetBinLowEdge(asymm3d[etabins[i].c_str()]->GetYaxis()->GetNbins() +1 ) << endl; //? */
-    
-
-  
-   
-    
-
-    // Need to do nominator and denominator with bin content
-
-
-    // TODO: can't use projection like this?
-    // R in bins of pt, eta
-    // nom[etabins[i].c_str()] = asymm[etabins[i].c_str()]->ProjectionX(Form("nom_%s",etabins[i].c_str()));
-    //  denom[etabins[i].c_str()] = asymm[etabins[i].c_str()]->ProjectionX(Form("denom_%s",etabins[i].c_str()));
-
-    // nom[etabins[i].c_str()]->Reset();
-    // denom[etabins[i].c_str()]->Reset();
-
-    
-    /* for (int j = 1; j <= nom[etabins[i].c_str()]->GetNbinsX(); ++j) {
-      //cout << nom->GetBinCenter(j) << endl;
-        double as = asymm[etabins[i].c_str()]->GetBinContent(j);
-       double err = asymm[etabins[i].c_str()]->GetBinError(j);
-      
-      nom[etabins[i].c_str()]->SetBinContent(j,1+as); 
-      nom[etabins[i].c_str()]->SetBinError(j,err); 
-      denom[etabins[i].c_str()]->SetBinContent(j,1-as);
-      denom[etabins[i].c_str()]->SetBinError(j,err); 
-
-      } */ 
-
-    // response[etabins[i].c_str()] =  (TH1D*)nom[etabins[i].c_str()]->Clone(Form("response_%s",etabins[i].c_str()));
-    // response[etabins[i].c_str()]->Divide(denom[etabins[i].c_str()]);
-
-    /* nom[etabins[i].c_str()]->Write();
-    denom[etabins[i].c_str()]->Write();
-    response[etabins[i].c_str()]->Write(); */
+ 
 
    
 }
