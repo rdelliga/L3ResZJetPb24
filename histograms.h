@@ -138,7 +138,8 @@ class histograms {
   static constexpr unsigned int netaforjec = sizeof(etaforjec)/sizeof(etaforjec[0])-1;
 
   // TODO: possibly, likely, wider axes needed
-  static constexpr double ptforjec[] = {40, 60, 80, 100, 120, 140, 180, 220, 300, 500, 700, 5000};
+  //  static constexpr double ptforjec[] = {40, 60, 80, 100, 120, 140, 180, 220, 300, 500, 700, 5000};
+  static constexpr double ptforjec[] = {40, 60, 80, 120, 180, 300, 5000};
   static constexpr unsigned int nptforjec = sizeof(ptforjec)/sizeof(ptforjec[0])-1;
 
   //  static constexpr double alphavalues[] = {0.0, 0.1, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6}; // N&A 0.2-0.45, what was the reasoning? Need to extrapolate to a -> 0
