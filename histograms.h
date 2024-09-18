@@ -161,6 +161,7 @@ class histograms {
   static constexpr float etaforjec[] = {-5.2, -3.9, -2.6, -1.3, 0.0, 1.3, 2.6, 3.9, 5.2}; // folders created using these? 
   static constexpr unsigned int netaforjec = sizeof(etaforjec)/sizeof(etaforjec[0])-1;
 
+
   // Should one try narrower bins first too?
   //   static constexpr double ptforjec[] = {40, 60, 80, 100, 120, 140, 180, 220, 300, 500, 700, 5000};
   static constexpr double ptforjec[] = {40, 55, 80, 120, 170, 1000}; // Could consider 120, 180 -> 140?

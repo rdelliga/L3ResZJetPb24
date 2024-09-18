@@ -53,6 +53,17 @@ void analyse(string inFileName = "testdata/run3_pprefpbpbreco_data_05072024.root
 //void analyse(string inFileName = "/home/laura/Data/jecmc/MC_pprefwpbpbreco_privateforjec.root", string outputfilename = "pbpbreco_MC.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
 
 // void analyse(string inFileName = "/home/laura/Data/jecmc/MC_ppref_privateforjec.root", string outputfilename = "ppreco_MC_fixabsetas.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
+// void analyse(string inFileName = "/home/laura/Data/jecmc/MC_ppref_privateforjec.root", string outputfilename = "ppreco_MC_test3D.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
+
+
+// LXPLUS
+// DATA 
+//void analyse(string inFileName = "/eos/user/l/lamartik/run3_pprefpbpbreco_data_05072024.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/pbpbreco_DATA_lxplus.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
+//void analyse(string inFileName = "/eos/user/l/lamartik/run3_ppref_data_04062024.root", string outputfilename = "/eos/user/l/lamartik/ppreco_DATA_lxplus.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
+
+  // MC
+//void analyse(string inFileName = "/eos/cms/store/group/phys_heavyions/lamartik/tuples/MC_pprefwpbpbreco_privateforjec.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/pbpbreco_MC_lxplus.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
+void analyse(string inFileName = "/eos/cms/store/group/phys_heavyions/lamartik/tuples/MC_ppref_privateforjec.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/ppreco_MC_lxplus.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
 
 
 //void analyse(string inFileName = "/home/laura/Data/jecmc/MC_ppref_privateforjec.root", string outputfilename = "ppreco_MC_test3D.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
@@ -257,7 +268,7 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
 
      if (usecalotrig) trigger = (HLT_AK4CaloJet60_v1 or HLT_AK4CaloJet80_v1 or HLT_AK4CaloJet100_v1 or HLT_AK4CaloJet120_v1);
      else trigger = (HLT_AK4PFJet60_v1 or HLT_AK4PFJet80_v1 or HLT_AK4PFJet100_v1 or HLT_AK4PFJet120_v1);
-     if (!isMC) trigger = true; // TEMPORARY FIX
+     if (isMC) trigger = true; // TEMPORARY FIX
      
      if (!trigger) continue;
 
@@ -301,7 +312,7 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
       	 jtpt_uncorr[j] = jtpt[j];
          #if REDOJES == 1
 	 // REDO JEC
-	 cout << "Applying JES" << endl;
+	 // cout << "Applying JES" << endl;
 	 corr->setJetPt(jtpt[j]);
 	 // corr->setJetE(jteu[jetidx]);
 	 corr->setJetEta(jteta[j]);
