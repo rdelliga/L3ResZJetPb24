@@ -20,9 +20,9 @@
 //void deriveL2(string inFileName = "results/pbpbreco_witholdmctruth_abseta.root", string outfilename = "L2residuals_pbpbreco.root") {
 //void deriveL2_from3D(string inFileName = "ppreco_MC_test3D.root", string outfilename = "L2residuals_ppreco_from3D.root", bool dodt = true) {
 
-//void deriveL2_from3D(string inFileName = "HIJEC_results/pbpbreco_MC_lxplus.root",string inFileNameDT = "HIJEC_results/pbpbreco_DATA_lxplus.root", string outfilename = "L2residuals_pbpbreco_from3Dlxplus_alpha03.root", bool dodt = true,   int alphabin = 3) {
+void deriveL2_from3D(string inFileName = "HIJEC_results/rebin/pbpbreco_MC_lxplus.root",string inFileNameDT = "HIJEC_results/rebin/pbpbreco_DATA_lxplus.root", string outfilename = "L2residuals_pbpbreco_from3Dlxplus_alpha03_rebin.root", bool dodt = true,   int alphabin = 3) {
 
-void deriveL2_from3D(string inFileName = "HIJEC_results/ppreco_MC_lxplus.root",string inFileNameDT = "HIJEC_results/ppreco_DATA_lxplus.root", string outfilename = "test.root", bool dodt = true,   int alphabin = 2) {
+//void deriveL2_from3D(string inFileName = "HIJEC_results/ppreco_MC_lxplus.root",string inFileNameDT = "HIJEC_results/ppreco_DATA_lxplus.root", string outfilename = "test.root", bool dodt = true,   int alphabin = 2) {
 
   // Open file
   TFile *inFile = new TFile(inFileName.c_str(), "READ"); // TODO: safety checks about opening file successfully
@@ -57,16 +57,18 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/ppreco_MC_lxplus.root",s
   TH1D* vseta_nom_data = new TH1D("vseta_nom_data","  ; ;",  histograms::nwetas, &histograms::wetarange[0]);
   TH1D* vseta_denom_data = new TH1D("vseta_denom_data","  ; ;",  histograms::nwetas, &histograms::wetarange[0]);
   
-     
+  
   asymm3d[etabins[i].c_str()] = (TProfile*)inFile->Get("hibin_-1.0_0.0/eta_-5.2_5.2/dijetasymmetry3D"); // Bins in order: pT, eta, alpha
   data3d[etabins[i].c_str()] = (TProfile*)inFileDT->Get("hibin_-1.0_0.0/eta_-5.2_5.2/dijetasymmetry3D"); // Bins in order: pT, eta, alpha
 
-  cout << etabins[i] << endl;
+
+  cout << etabins[i] <<  " nptbins  " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetNbins() << endl;
   //data3d[etabins[i].c_str()]->Draw();
 
 ///////////////// Responses against eta in bin of alpha cut, pt
 
-  for (int ptbin = 1; ptbin < 7; ++ptbin) {
+  for (int ptbin = 1; ptbin <= asymm3d[etabins[i].c_str()]->GetXaxis()->GetNbins(); ++ptbin) {
+    //    for (int ptbin = 1; ptbin < 5; ++ptbin) {
 
     cout << "Getting corrections as function of eta" << endl;
     cout << "pT bin edges: " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin) << " " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin+1) << endl;
@@ -148,7 +150,7 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/ppreco_MC_lxplus.root",s
 
    
   // loop over bin in pt
-  for (int ptbin = 1; ptbin < 7; ++ptbin) {  // TODO: LIMIT
+  for (int ptbin = 1; ptbin <= asymm3d[etabins[i].c_str()]->GetXaxis()->GetNbins(); ++ptbin) {  // TODO: LIMIT
   // loop over bin in eta
      cout << "NEW PT BIN " << ptbin << endl;
      for (int etabin = 1; etabin <= data3d[etabins[i].c_str()]->GetYaxis()->GetNbins(); ++etabin) {
