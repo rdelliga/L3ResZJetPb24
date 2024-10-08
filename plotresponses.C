@@ -6,13 +6,13 @@ void plotresponses(float h1 = -1.0, float h2 = 0.0, float eta1 = -5.2, float eta
 
   gStyle->SetOptStat(0);
 
-  string input = "L2residuals_pbpbreco_from3Dlxplus_alpha03.root";   // This contains both data and mc and the ratio -> should one
+  string input = "L2residuals_pbpbreco_from3Dlxplus_alpha03_rebin_abs.root";   // This contains both data and mc and the ratio -> should one
   //string input = "L2residuals_ppreco_from3Dlxplus_alpha02.root";   // This contains both data and mc and the ratio -> should one
  
   TFile *file = new TFile(input.c_str(),"READ");
 
-  float alpha = 0.3;
-  int pts[] = {60, 80, 120, 180, 300, 5000}; // Temporary
+  float alpha = 0.2;
+  int pts[] = {40, 55, 80, 120, 170, 1000}; // Temporary
 
   for (int i = 0; i < 5; ++i) {
   int pt1 = pts[i];
@@ -58,7 +58,7 @@ void plotresponses(float h1 = -1.0, float h2 = 0.0, float eta1 = -5.2, float eta
   txt->DrawLatex( 0.2, 0.45, Form("#alpha < %.1f",alpha));
 
   
-   c1->Print(Form("plotformeeting/response_hbin_%.0f_%.0f_eta_%.1f_%.1f_%s.pdf",h1,h2,eta1,eta2,namelabel.c_str()));
+   c1->Print(Form("rebin/response_hbin_%.0f_%.0f_eta_%.1f_%.1f_%s_abs.pdf",h1,h2,eta1,eta2,namelabel.c_str()));
  
   }
 }
