@@ -45,7 +45,7 @@ JME::JetResolutionScaleFactor *_jer_sf(0); */
 
   //void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
 
-void analyse(string inFileName = "testdata/run3_pprefpbpbreco_data_05072024.root", string outputfilename = "testsmallbins.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
+//void analyse(string inFileName = "testdata/run3_pprefpbpbreco_data_05072024.root", string outputfilename = "testsmallbins.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
 
 // void analyse(string inFileName = "/cmshome/martikai/data/run3_ppref_data_04062024.root", string outputfilename = "testoutput.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
 
@@ -58,12 +58,12 @@ void analyse(string inFileName = "testdata/run3_pprefpbpbreco_data_05072024.root
 
 // LXPLUS
 // DATA 
-//void analyse(string inFileName = "/eos/user/l/lamartik/run3_pprefpbpbreco_data_05072024.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/pbpbreco_DATA_lxplus.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
-//void analyse(string inFileName = "/eos/user/l/lamartik/run3_ppref_data_04062024.root", string outputfilename = "/eos/user/l/lamartik/ppreco_DATA_lxplus.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
+//void analyse(string inFileName = "/eos/user/l/lamartik/run3_pprefpbpbreco_data_05072024.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/rebin/pbpbreco_DATA_lxplus.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
+void analyse(string inFileName = "/eos/user/l/lamartik/run3_ppref_data_04062024.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/rebin/ppreco_DATA_lxplus.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
 
   // MC
-//void analyse(string inFileName = "/eos/cms/store/group/phys_heavyions/lamartik/tuples/MC_pprefwpbpbreco_privateforjec.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/pbpbreco_MC_lxplus.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
-void analyse(string inFileName = "/eos/cms/store/group/phys_heavyions/lamartik/tuples/MC_ppref_privateforjec.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/ppreco_MC_lxplus.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
+//void analyse(string inFileName = "/eos/cms/store/group/phys_heavyions/lamartik/tuples/MC_pprefwpbpbreco_privateforjec.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/rebin/pbpbreco_MC_lxplus.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
+//void analyse(string inFileName = "/eos/cms/store/group/phys_heavyions/lamartik/tuples/MC_ppref_privateforjec.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/rebin/ppreco_MC_lxplus.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
 
 
 //void analyse(string inFileName = "/home/laura/Data/jecmc/MC_ppref_privateforjec.root", string outputfilename = "ppreco_MC_test3D.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
