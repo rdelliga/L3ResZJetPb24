@@ -122,20 +122,28 @@ void analyse(string inFileName = "/eos/cms/store/group/phys_heavyions/lamartik/t
 
   Int_t HLT_AK4PFJet60_v1, HLT_AK4PFJet80_v1, HLT_AK4PFJet100_v1, HLT_AK4PFJet120_v1;
   Int_t HLT_AK4CaloJet60_v1, HLT_AK4CaloJet80_v1, HLT_AK4CaloJet100_v1, HLT_AK4CaloJet120_v1;
-
+  // In MC with PbPb different trigger setting
+  Int_t HLT_HIPuAK4CaloJet60_Eta5p1_MinBiasHF1AND_v2;
+  
   auto triggerTree = (TTree*)inFile->Get(triggerPath.c_str());
 
-  triggerTree->SetBranchAddress("HLT_AK4PFJet60_v1",&HLT_AK4PFJet60_v1); 
-  triggerTree->SetBranchAddress("HLT_AK4PFJet80_v1",&HLT_AK4PFJet80_v1); 
-  triggerTree->SetBranchAddress("HLT_AK4PFJet100_v1",&HLT_AK4PFJet100_v1);
-  triggerTree->SetBranchAddress("HLT_AK4PFJet120_v1",&HLT_AK4PFJet120_v1);
+  if (!ismc) {
+    triggerTree->SetBranchAddress("HLT_AK4PFJet60_v1",&HLT_AK4PFJet60_v1); 
+    triggerTree->SetBranchAddress("HLT_AK4PFJet80_v1",&HLT_AK4PFJet80_v1); 
+    triggerTree->SetBranchAddress("HLT_AK4PFJet100_v1",&HLT_AK4PFJet100_v1);
+    triggerTree->SetBranchAddress("HLT_AK4PFJet120_v1",&HLT_AK4PFJet120_v1);
   
-  triggerTree->SetBranchAddress("HLT_AK4CaloJet60_v1",&HLT_AK4CaloJet60_v1); 
-  triggerTree->SetBranchAddress("HLT_AK4CaloJet80_v1",&HLT_AK4CaloJet80_v1); 
-  triggerTree->SetBranchAddress("HLT_AK4CaloJet100_v1",&HLT_AK4CaloJet100_v1);
-  triggerTree->SetBranchAddress("HLT_AK4CaloJet120_v1",&HLT_AK4CaloJet120_v1);
-  
- 
+    triggerTree->SetBranchAddress("HLT_AK4CaloJet60_v1",&HLT_AK4CaloJet60_v1); 
+    triggerTree->SetBranchAddress("HLT_AK4CaloJet80_v1",&HLT_AK4CaloJet80_v1); 
+    triggerTree->SetBranchAddress("HLT_AK4CaloJet100_v1",&HLT_AK4CaloJet100_v1);
+    triggerTree->SetBranchAddress("HLT_AK4CaloJet120_v1",&HLT_AK4CaloJet120_v1);
+  }
+  else {
+    triggerTree->SetBranchAddress("HLT_AK4PFJet60_v1",&HLT_HIPuAK4CaloJet60_Eta5p1_MinBiasHF1AND_v2); 
+  }
+      
+
+
   triggerTree->SetBranchStatus("*",0);
   if (!usecalotrig) {  cout << "Use PF triggers" << endl;
 
