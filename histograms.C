@@ -59,9 +59,10 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
     genjet_phi = new TH1D("gen jet phi"," gen jet #phi; gen jet #phi;", 20, -2.5, 2.5);
 
 
-// Residuals
+// TODO: Add jet responses in correct format to study JER; bins of eta, pT; for this could technically just use zero bias triggers from simulation?
     jetresponse = new TProfile("response","",100,100,1000);
 
+// Residuals
 // Definition: (reco-true)/true
     ptres = new TH1D("pT res"," pT ; (pT_reco-pT_gen)/pT_gen;", 40, -2, 2);
  
