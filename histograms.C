@@ -99,7 +99,8 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
 
   if ((this->etamin - this->etamax) < -10) {
     dijetasymmetry3D = new TProfile3D("dijetasymmetry3D", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0], nalphavalues, &alphavalues[0]); 
-    dijetasymmetry3Dabseta = new TProfile3D("dijetasymmetry3Dabseta", ";;", nptforjec, &ptforjec[0], nwabsetas, &wabsetarange[0], nalphavalues, &alphavalues[0]); 
+    dijetasymmetry3Dabseta = new TProfile3D("dijetasymmetry3Dabseta", ";;", nptforjec, &ptforjec[0], nwabsetas, &wabsetarange[0], nalphavalues, &alphavalues[0]);
+    dijetasymmetry3Dabsetawide = new TProfile3D("dijetasymmetry3Dabsetawide", ";;", nptforjec, &ptforjec[0], ndwabsetas, &dwabsetarange[0], nalphavalues, &alphavalues[0]); 
 
     dijetasymmetry3Dnarrow = new TProfile3D("dijetasymmetry3Dnarrow", ";;", nptforjec, &ptforjec[0], netas, &etarange[0], nalphavalues, &alphavalues[0]); 
     dijetasymmetry3Dabsetanarrow = new TProfile3D("dijetasymmetry3Dabsetanarrow", ";;", nptforjec, &ptforjec[0], nabsetas, &absetarange[0], nalphavalues, &alphavalues[0]); 

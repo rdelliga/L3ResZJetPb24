@@ -111,9 +111,11 @@ class histograms {
 
   // 3D profile for the derivation 
   TProfile3D* dijetasymmetry3D;
+  TProfile3D* dijetasymmetry3Dwide;
   TProfile3D* dijetasymmetry3Dnarrow;
 
   TProfile3D* dijetasymmetry3Dabseta;
+  TProfile3D* dijetasymmetry3Dabsetawide;
   TProfile3D* dijetasymmetry3Dabsetanarrow;
 
 
@@ -147,6 +149,10 @@ class histograms {
   static constexpr double wabsetarange[] = {0.0, 0.261,  0.522,  0.783,  1.044,  1.305, 1.479, 1.653, 1.93, 2.172, 2.322,  2.5,  2.65, 2.853, 2.964, 3.139, 3.489, 3.839, 5.191
   };
   static constexpr unsigned int nwabsetas = sizeof(wabsetarange)/sizeof(wabsetarange[0])-1;
+
+  static constexpr double dwabsetarange[] = {0.0, 0.522, 1.044,  1.479, 1.93, 2.322,  2.65, 2.964, 5.191 // Super wide binning for 2023 PbPb JEC in high pT
+  };
+  static constexpr unsigned int ndwabsetas = sizeof(dwabsetarange)/sizeof(dwabsetarange[0])-1;
 
 
   
