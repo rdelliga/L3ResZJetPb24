@@ -58,11 +58,11 @@ JME::JetResolutionScaleFactor *_jer_sf(0); */
 
 // LXPLUS
 // DATA 
-//void analyse(string inFileName = "/eos/user/l/lamartik/run3_pprefpbpbreco_data_05072024.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/rebin/pbpbreco_DATA_lxplus.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
-void analyse(string inFileName = "/eos/user/l/lamartik/run3_ppref_data_04062024.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/rebin/ppreco_DATA_lxplus.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
+//void analyse(string inFileName = "/eos/user/l/lamartik/run3_pprefpbpbreco_data_05072024.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/rebin/pbpbreco_DATA_wideeta_lxplus.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
+//void analyse(string inFileName = "/eos/user/l/lamartik/run3_ppref_data_04062024.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/rebin/ppreco_DATA_lxplus.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
 
   // MC
-//void analyse(string inFileName = "/eos/cms/store/group/phys_heavyions/lamartik/tuples/MC_pprefwpbpbreco_privateforjec.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/rebin/pbpbreco_MC_lxplus.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
+void analyse(string inFileName = "/eos/cms/store/group/phys_heavyions/lamartik/tuples/MC_pprefwpbpbreco_privateforjec.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/rebin/pbpbreco_MC_wideeta_lxplus.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
 //void analyse(string inFileName = "/eos/cms/store/group/phys_heavyions/lamartik/tuples/MC_ppref_privateforjec.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/rebin/ppreco_MC_lxplus.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
 
 
@@ -394,6 +394,7 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
 
 		   h->dijetasymmetry3Dnarrow->Fill(ptavgtp, probeeta, 0.1-0.0001, asymmtp/2./ptavgtp);
 		   h->dijetasymmetry3Dabsetanarrow->Fill(ptavgtp, abs(probeeta), 0.1-0.0001, asymmtp/2./ptavgtp);
+		   h->dijetasymmetry3Dabsetawide->Fill(ptavgtp, abs(probeeta), 0.1-0.0001, asymmtp/2./ptavgtp);
 
 		   h->dijetasymmetry2D_a01->Fill(ptavgtp, probeeta, asymmtp/2./ptavgtp);
 		 }
@@ -404,6 +405,7 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
 
 		   h->dijetasymmetry3Dnarrow->Fill(ptavgtp, probeeta, 0.15-0.0001, asymmtp/2./ptavgtp);
 		   h->dijetasymmetry3Dabsetanarrow->Fill(ptavgtp, abs(probeeta), 0.15-0.0001, asymmtp/2./ptavgtp);
+		   h->dijetasymmetry3Dabsetawide->Fill(ptavgtp, abs(probeeta), 0.15-0.0001, asymmtp/2./ptavgtp);
 }
 		 if (alpha < 0.2)  {
 		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.2-0.0001, asymmtp/2./ptavgtp);
@@ -411,6 +413,7 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
 
 		   h->dijetasymmetry3Dnarrow->Fill(ptavgtp, probeeta, 0.2-0.0001, asymmtp/2./ptavgtp);
 		   h->dijetasymmetry3Dabsetanarrow->Fill(ptavgtp, abs(probeeta), 0.2-0.0001, asymmtp/2./ptavgtp);
+		   h->dijetasymmetry3Dabsetawide->Fill(ptavgtp, abs(probeeta), 0.2-0.0001, asymmtp/2./ptavgtp);
 
 		   h->dijetasymmetry2D_a02->Fill(ptavgtp, probeeta, asymmtp/2./ptavgtp);
 		 }
@@ -421,6 +424,7 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
 
 		   h->dijetasymmetry3Dnarrow->Fill(ptavgtp, probeeta, 0.25-0.0001, asymmtp/2./ptavgtp);
 		   h->dijetasymmetry3Dabsetanarrow->Fill(ptavgtp, abs(probeeta), 0.25-0.0001, asymmtp/2./ptavgtp);
+		   h->dijetasymmetry3Dabsetawide->Fill(ptavgtp, abs(probeeta), 0.25-0.0001, asymmtp/2./ptavgtp);
 
 		 }
 		 if (alpha < 0.3)  {
@@ -433,6 +437,7 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
 
 		   h->dijetasymmetry3Dnarrow->Fill(ptavgtp, probeeta, 0.3-0.0001, asymmtp/2./ptavgtp);
 		   h->dijetasymmetry3Dabsetanarrow->Fill(ptavgtp, abs(probeeta), 0.3-0.0001, asymmtp/2./ptavgtp);
+		   h->dijetasymmetry3Dabsetawide->Fill(ptavgtp, abs(probeeta), 0.3-0.0001, asymmtp/2./ptavgtp);
 }
 		 //else if (alpha < 0.35)   h->dijetasymmetry2D_a035->Fill(ptavgtp, probeeta, asymmtp/2./ptavgtp);
 		 if (alpha < 0.35) {
@@ -441,6 +446,7 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
 
 		   h->dijetasymmetry3Dnarrow->Fill(ptavgtp, probeeta, 0.35-0.0001, asymmtp/2./ptavgtp);
 		   h->dijetasymmetry3Dabsetanarrow->Fill(ptavgtp, abs(probeeta), 0.35-0.0001, asymmtp/2./ptavgtp);
+		   h->dijetasymmetry3Dabsetawide->Fill(ptavgtp, abs(probeeta), 0.35-0.0001, asymmtp/2./ptavgtp);
 
 		 }
 		 if (alpha < 0.4)   {
@@ -450,6 +456,7 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
 
 		   h->dijetasymmetry3Dnarrow->Fill(ptavgtp, probeeta, 0.4-0.0001, asymmtp/2./ptavgtp); // These should match with bins?
 		   h->dijetasymmetry3Dabsetanarrow->Fill(ptavgtp, abs(probeeta), 0.4-0.0001, asymmtp/2./ptavgtp);
+		   h->dijetasymmetry3Dabsetawide->Fill(ptavgtp, abs(probeeta), 0.4-0.0001, asymmtp/2./ptavgtp);
 		 }
 
 		 if (alpha < 0.45) {
@@ -458,6 +465,7 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
 
 		   h->dijetasymmetry3Dnarrow->Fill(ptavgtp, probeeta, 0.45-0.0001, asymmtp/2./ptavgtp);
 		   h->dijetasymmetry3Dabsetanarrow->Fill(ptavgtp, abs(probeeta), 0.45-0.0001, asymmtp/2./ptavgtp);
+		   h->dijetasymmetry3Dabsetawide->Fill(ptavgtp, abs(probeeta), 0.45-0.0001, asymmtp/2./ptavgtp);
 		 }
 		 
 		 if (alpha < 0.5) {
@@ -467,12 +475,14 @@ for (int i = 0; i < jetTree->GetEntries(); ++i) {
 
 		   h->dijetasymmetry3Dnarrow->Fill(ptavgtp, probeeta, 0.5-0.0001, asymmtp/2./ptavgtp); // These should match with bins?
 		   h->dijetasymmetry3Dabsetanarrow->Fill(ptavgtp, abs(probeeta), 0.5-0.0001, asymmtp/2./ptavgtp);
+		   h->dijetasymmetry3Dabsetawide->Fill(ptavgtp, abs(probeeta), 0.5-0.0001, asymmtp/2./ptavgtp);
 
 		 }
 		 if (alpha < 0.6) {
 		   h->dijetasymmetry2D_a06->Fill(ptavgtp, probeeta, asymmtp/2./ptavgtp);
 		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.6-0.0001, asymmtp/2./ptavgtp); // These should match with bins?
 		   h->dijetasymmetry3Dabseta->Fill(ptavgtp, abs(probeeta), 0.6-0.0001, asymmtp/2./ptavgtp);
+		   h->dijetasymmetry3Dabsetawide->Fill(ptavgtp, abs(probeeta), 0.6-0.0001, asymmtp/2./ptavgtp);
 		 }
 	       }
 		 // Second: alpha < 1
