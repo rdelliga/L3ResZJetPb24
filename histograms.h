@@ -118,6 +118,10 @@ class histograms {
   TProfile3D* dijetasymmetry3Dabsetawide;
   TProfile3D* dijetasymmetry3Dabsetanarrow;
 
+  // 3D histograms for JER
+  TH3D* responses3D;
+  TH3D* asymmadist3D;
+
 
 // PF composition?
   

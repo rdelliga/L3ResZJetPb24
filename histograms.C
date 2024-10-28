@@ -122,6 +122,10 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   ptgenvsweight = new TH2D("ptgenvsweight","",200,0,1500,200,0,0.1);
 
 
+  // JER STUFF
+  if (ismc) responses3D = new TH3D("responsed3D",";;", nptforjec, &ptforjec[0], 6, 0., 3., 100, 0., 2.);
+  asymmadist3D = new TH3D("asymmdist3D",";;", nptforjec, &ptforjec[0], 6, 0., 3., 100, 0., 2.);
+
 // JES related controls etc
 
 
