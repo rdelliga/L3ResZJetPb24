@@ -123,8 +123,8 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
 
 
   // JER STUFF
-  if (ismc) responses3D = new TH3D("responsed3D",";;", nptforjec, &ptforjec[0], 6, 0., 3., 100, 0., 2.);
-  asymmadist3D = new TH3D("asymmdist3D",";;", nptforjec, &ptforjec[0], 6, 0., 3., 100, 0., 2.);
+  // if (ismc) responses3D = new TH3D("responsed3D",";;", nptforjec, &ptforjec[0], 6, 0., 3., 100, 0., 2.);
+  // asymmadist3D = new TH3D("asymmdist3D",";;", nptforjec, &ptforjec[0], 6, 0., 3., 100, 0., 2.);
 
 // JES related controls etc
 
