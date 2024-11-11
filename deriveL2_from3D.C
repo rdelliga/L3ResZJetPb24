@@ -3,24 +3,10 @@
 //#include settings.h
 #include "histograms.h"
 
-// How stat errors actually work in this case?
-/*
-  string intputMC = "results/pbpbreco_witholdmctruth_abseta.root";
-  string inputData = "results/ppreco_witholdmctruth_abseta.root";
-*/
 
-// Want to
-// - fill 1-A/1+A histograms
-// - calculate responses
-// - these are done in bins of pt and eta
-// - do alpha-extrapolation
-// - need both data and MC
-
-
-//void deriveL2(string inFileName = "results/pbpbreco_witholdmctruth_abseta.root", string outfilename = "L2residuals_pbpbreco.root") {
-//void deriveL2_from3D(string inFileName = "ppreco_MC_test3D.root", string outfilename = "L2residuals_ppreco_from3D.root", bool dodt = true) {
-
-void deriveL2_from3D(string inFileName = "HIJEC_results/rebin/pbpbreco_MC_lxplus.root",string inFileNameDT = "HIJEC_results/rebin/pbpbreco_DATA_lxplus.root", string outfilename = "L2residuals_pbpbreco_from3Dlxplus_alpha03_rebin_abs.root", bool dodt = true,   int alphabin = 3, bool useabs = true) {
+//void deriveL2_from3D(string inFileName = "HIJEC_results/rebin/pbpbreco_MC_wideeta_lxplus.root",string inFileNameDT = "HIJEC_results/rebin/pbpbreco_DATA_wideeta_lxplus.root", string outfilename = "L2residuals_pbpbreco_from3Dlxplus_alpha03_rebin_abs_wideeta.root", bool dodt = true,   int alphabin = 3, bool useabs = false, bool usewideabs = true) {
+//void deriveL2_from3D(string inFileName = "HIJEC_results/rebin/pbpbreco_MC_wideeta_lxplus.root",string inFileNameDT = "HIJEC_results/closure/pbpbreco_DATA_ptcut.root", string outfilename = "L2residuals_pbpbreco_from3Dlxplus_alpha03_rebin_abs_closure_ptcut.root", bool dodt = true,   int alphabin = 3, bool useabs = true, bool usewideabs = false) {
+void deriveL2_from3D(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbreco_MC.root",string inFileNameDT = "HIJEC_results/debugged_plus_JER/pbpbreco_DATA_closureandJER.root", string outfilename = "L2residuals_pbpbreco_from3Dlxplus_alpha03_closure_ptlims.root", bool dodt = true,   int alphabin = 3, bool useabs = true, bool usewideabs = false) {
 
 //void deriveL2_from3D(string inFileName = "HIJEC_results/ppreco_MC_lxplus.root",string inFileNameDT = "HIJEC_results/ppreco_DATA_lxplus.root", string outfilename = "test.root", bool dodt = true,   int alphabin = 2) {
 
@@ -69,6 +55,16 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/rebin/pbpbreco_MC_lxplus
 
     asymm3d[etabins[i].c_str()] = (TProfile*)inFile->Get("hibin_-1.0_0.0/eta_-5.2_5.2/dijetasymmetry3Dabseta"); // Bins in order: pT, eta, alpha
     data3d[etabins[i].c_str()] = (TProfile*)inFileDT->Get("hibin_-1.0_0.0/eta_-5.2_5.2/dijetasymmetry3Dabseta"); // Bins in order: pT, eta, alpha
+  }
+  else if (usewideabs) {  
+    vseta_nom = new TH1D("vseta_nom","  ; ;",  histograms::ndwabsetas, &histograms::dwabsetarange[0]);
+    vseta_denom = new TH1D("vseta_denom","  ; ;",  histograms::ndwabsetas, &histograms::dwabsetarange[0]);
+
+    vseta_nom_data = new TH1D("vseta_nom_data","  ; ;",  histograms::ndwabsetas, &histograms::dwabsetarange[0]);
+    vseta_denom_data = new TH1D("vseta_denom_data","  ; ;",  histograms::ndwabsetas, &histograms::dwabsetarange[0]);
+
+    asymm3d[etabins[i].c_str()] = (TProfile*)inFile->Get("hibin_-1.0_0.0/eta_-5.2_5.2/dijetasymmetry3Dabsetawide"); // Bins in order: pT, eta, alpha
+    data3d[etabins[i].c_str()] = (TProfile*)inFileDT->Get("hibin_-1.0_0.0/eta_-5.2_5.2/dijetasymmetry3Dabsetawide"); // Bins in order: pT, eta, alpha
   }
   else {
 
@@ -141,6 +137,8 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/rebin/pbpbreco_MC_lxplus
     }
 
   // First part of the correction is the ratio of these
+  // TODO: rebins, here can just merge two bins if ptbin = 5
+    
   TH1D* resp_eta_data = (TH1D*)vseta_nom_data->Clone("resp_eta_data");
     resp_eta_data->Divide(vseta_denom_data);
     resp_eta_data->SetLineColor(kRed);
@@ -161,13 +159,11 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/rebin/pbpbreco_MC_lxplus
     //   responses[Form("ratio_pt%s_%s",ptstr.c_str(),alphastr.c_str())]->Write(Form("ratio_pt%s_%s",ptstr.c_str(),alphastr.c_str()));   // This is the reference for the fit
     respETA[ptbin]->Write(Form("ratio_pt%s_%s",ptstr.c_str(),alphastr.c_str()));   // This is the reference for the fit
 
-  //  Form("mc_%s_%s",ptstr.c_str(),alphastr.c_str())
-
+ 
   }
 
   /// HERE THE ISR/FSR CORRECTIONS; need to get the responses in bins of pt, eta
-  // TODO: check alpha logic
-   cout << "number of alpha bins: " << asymm3d[etabins[i].c_str()]->GetZaxis()->GetNbins() << endl;
+  cout << "number of alpha bins: " << asymm3d[etabins[i].c_str()]->GetZaxis()->GetNbins() << endl;
 
    
   // loop over bin in pt
@@ -176,39 +172,43 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/rebin/pbpbreco_MC_lxplus
      cout << "NEW PT BIN " << ptbin << endl;
      for (int etabin = 1; etabin <= data3d[etabins[i].c_str()]->GetYaxis()->GetNbins(); ++etabin) {
        cout << "NEW ETA BIN " << data3d[etabins[i].c_str()]->GetYaxis()->GetBinLowEdge(etabin) << " " << data3d[etabins[i].c_str()]->GetYaxis()->GetBinLowEdge(etabin+1) <<  endl;
-  // loop over alphas and save in histogram            -            get from ratio or get from data and mc separately and get ratio?
-  //     TH1D* respvsalpha = new TH1D("vsa", nalphavalues, &alphavalues[0]);
+  
        
        for (int alphabin = 1; alphabin <= asymm3d[etabins[i].c_str()]->GetZaxis()->GetNbins(); ++alphabin) { // TODO: check bins
 	 double val = asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,alphabin);
 	 double err = asymm3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,alphabin);
 	 
-	       vsalpha_nom->SetBinContent(alphabin, 1+val); 
-	       vsalpha_nom->SetBinError(alphabin, err);
+	 vsalpha_nom->SetBinContent(alphabin, 1+val); 
+	 vsalpha_nom->SetBinError(alphabin, err);
 
-	       vsalpha_denom->SetBinContent(alphabin, 1-val);
-	       vsalpha_denom->SetBinError(alphabin, err); 
+	 vsalpha_denom->SetBinContent(alphabin, 1-val);
+	 vsalpha_denom->SetBinError(alphabin, err); 
 
 	 double valdt = data3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,alphabin);
 	 double errdt = data3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,alphabin);
 	 
-	       vsalpha_nom_data->SetBinContent(alphabin, 1+valdt); 
-	       vsalpha_nom_data->SetBinError(alphabin, errdt);
+	 vsalpha_nom_data->SetBinContent(alphabin, 1+valdt); 
+	 vsalpha_nom_data->SetBinError(alphabin, errdt);
 
-	       vsalpha_denom_data->SetBinContent(alphabin, 1-valdt);
-	       vsalpha_denom_data->SetBinError(alphabin, errdt); 
+	 vsalpha_denom_data->SetBinContent(alphabin, 1-valdt);
+	 vsalpha_denom_data->SetBinError(alphabin, errdt); 
 
-	       //cout <<  alphabin << " " << val << endl;
+	 //cout <<  alphabin << " " << val << endl;
 
       }
+       
      vsalpha_nom->Divide(vsalpha_denom);
+     vsalpha_nom->Write(Form("Respvsa_nom_mc_%d_%d",ptbin,etabin));
+
      vsalpha_nom_data->Divide(vsalpha_denom_data);
+     vsalpha_nom_data->Write(Form("Respvsa_denom_data_%d_%d",ptbin,etabin));
 
      vsalpha_nom->Divide(vsalpha_nom_data); // This is the MC/Data responses in bin of alpha
      vsalpha_nom->Write(Form("Respvsa_%d_%d",ptbin,etabin));
 
      TH1D* vsalpha_norm = (TH1D*)vsalpha_nom->Clone(Form("vsalpha_norm_%d_%d",ptbin,etabin));
      for (int bin = 1; bin <= vsalpha_nom->GetXaxis()->GetNbins(); ++bin) {
+       
          double val =  vsalpha_nom->GetBinContent(bin);
       	 double err = vsalpha_nom->GetBinError(bin);
 
@@ -219,25 +219,12 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/rebin/pbpbreco_MC_lxplus
 	 vsalpha_norm->SetBinError(bin,err/norm); // TODO: check this is correct
 
 	 cout << "in alphabin " << alphabin << " norm " << norm << " lowedge " <<   vsalpha_norm->GetBinLowEdge(bin) << endl;
-
+     }
+     vsalpha_norm->Write(Form("Respvsa_norm_%d_%d",ptbin,etabin)); // This is a histogram that will be eventually fitted if looking purely at the radiation corrections
        
      }
-     vsalpha_norm->Write(Form("Respvsa_norm_%d_%d",ptbin,etabin)); // This is a histogram that will be eventually fitted
-     //    vsalpha_norm->Fit("pol1","","",0.2,0.5);  // Fit all pt bin at once?
-  // fit histogram - do we fit all bins of pt at once actually?
-  // save fits?
-  // Save value at alpha = 0 in a histogram?
-  // Should one actually put in tgraph of smth? for the fit
-       
-   }
 
    }
-
-
-    // Linear fit -> But this is just A, need to calculate response and Data/MC ratio first, and determine value at alpha = 0.2 / 0.3 (Which one is proper working point?)
-    // vsalpha->Fit("pol1","","",0.2,1);      // f, "", "", lower range, upper range
-    // TODO: save extrapolation to alpha -> 0 in own histograms, with values of eta
- 
 
    
 }
