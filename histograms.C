@@ -1,14 +1,8 @@
 #include "histograms.h"
 
 
-// Could to something similar as in jetphys what comes to directories, just replace etas with pTs
-// Need to have the rho stuff?
-// Versions with Btagging will be needed too
-
-
 histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinmin, float hibinmax, bool ismc) {
   //histograms::histograms(float ptmin, float ptmax, bool ismc) {
-  // Do we need a directory too?
 
   TDirectory *curdir = gDirectory;
   bool enter = dir->cd();
@@ -22,19 +16,17 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   this->hibinmin = hibinmin;
   this->hibinmax = hibinmax;
 
-// Weight vs reco pT profile? scatter plot? reco pt vs weight and gen pt vs. weight?
-
 // Jet histograms
-// TODO: UPDATE TO JERC BINS
-  
+
   jet_pt = new TH1D("reco jet pT", "reco jet p_{T}; reco jet p_{T};", 100, 15, 1000);
+  jet_pt_now = new TH1D("reco jet pT, no evt w", "reco jet p_{T}; reco jet p_{T};", 100, 15, 1000);
   jet_uncorr_pt = new TH1D("reco jet pT uncorr", "reco jet p_{T}; reco jet p_{T};", 100, 15, 1000);
   jet_pt_genweight = new TH1D("reco jet pT, gen w", "reco jet p_{T}, gen weight only; reco jet p_{T};", 100, 100, 1000);
   jet_eta = new TH1D("reco jet eta"," reco jet #eta; reco jet #eta;", 40, -5.2, 5.2);
   jet_phi = new TH1D("reco jet phi"," reco jet #phi; reco jet #phi;", 25, -3.1415926535, 3.1415926535);
 
 
-  // Triggers - could technically use fwd? what bins to use?
+  // Trigger checks
   HLT60 = new TH1D("HLT60", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
   HLT80 = new TH1D("HLT80", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
   HLT100 = new TH1D("HLT100", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
@@ -58,8 +50,6 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
     genjet_eta = new TH1D("gen jet eta"," gen jet #eta; gen jet #eta;", 20, -2.5, 2.5);
     genjet_phi = new TH1D("gen jet phi"," gen jet #phi; gen jet #phi;", 20, -2.5, 2.5);
 
-
-// TODO: Add jet responses in correct format to study JER; bins of eta, pT; for this could technically just use zero bias triggers from simulation?
     jetresponse = new TProfile("response","",100,100,1000);
 
 // Residuals
@@ -70,6 +60,7 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
 
   // Dijets
   dijetasymmetry = new TH1D("dijetasymmetry","  ; asymmetry;", 40, 0, 1);
+  dijetasymmetry_now = new TH1D("dijetasymmetry_now","  ; asymmetry;", 40, 0, 1);
   dijetdeltaphi  = new TH1D("dijetdeltaphi"," ; delta phi;", 40, 0, 3.1415926535);
   dijetdeltaeta  = new TH1D("dijetdeltaeta"," ; delta eta;", 40, 0, 5.2);
 
@@ -114,21 +105,43 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
     dijetasymmetry2D_a06 = new TProfile2D("dijetasymmetry2D_a06", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
   }
 
-
-  // Add: dijet respone in different bins?
-
   ptgenvsptreco = new TH2D("ptgenvsptreco","",200,0,1500,200,0,1500);
   ptrecovsweight = new TH2D("ptrecovsweight","",200,0,1500,200,0,0.1);
   ptgenvsweight = new TH2D("ptgenvsweight","",200,0,1500,200,0,0.1);
 
 
-  // JER STUFF
-  if (ismc) responses3D = new TH3D("responsed3D",";;", nptforjec, &ptforjec[0], 6, 0., 3., 100, 0., 2.);
-  asymmadist3D = new TH3D("asymmdist3D",";;", nptforjec, &ptforjec[0], 6, 0., 3., 100, 0., 2.);
+  // JER STUFF: TODO: bins
 
-// JES related controls etc
+  vector<double> x(61);
+  for (unsigned int i = 0; i != x.size(); ++i) x[i] = 0.05*i;
+  const int nx = x.size()-1;
 
+  vector<double> y(41);
+  for (unsigned int i = 0; i != y.size(); ++i) y[i] = -1 + 0.05*i;
+  const int ny = y.size()-1;
 
+  if (ismc) responses3D = new TH3D("responses3D",";;", nptforJER, &ptforJER[0], njeretas, &jeretarange[0], nx, &x[0]);
+  absasymmdist3D = new TH3D("absasymmdist3D",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+  asymmdist3D = new TH3D("asymmdist3D",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
+
+  // JER needs asymmetries as function of alpha
+  asymmdist3D_a10 = new TH3D("asymmdist3D_a10",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
+  absasymmdist3D_a10  = new TH3D("absasymmdist3D_a10",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+  asymmdist3D_a15 = new TH3D("asymmdist3D_a15",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
+  absasymmdist3D_a15 = new TH3D("absasymmdist3D_a15",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+  asymmdist3D_a20 = new TH3D("asymmdist3D_a20",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
+  absasymmdist3D_a20 = new TH3D("absasymmdist3D_a20",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+  asymmdist3D_a25 = new TH3D("asymmdist3D_a25",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
+  absasymmdist3D_a25 = new TH3D("absasymmdist3D_a25",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+  asymmdist3D_a30 = new TH3D("asymmdist3D_a30",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
+  absasymmdist3D_a30 = new TH3D("absasymmdist3D_a30",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+  asymmdist3D_a35 = new TH3D("asymmdist3D_a35",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
+  absasymmdist3D_a35 = new TH3D("absasymmdist3D_a35",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+  asymmdist3D_a40 = new TH3D("asymmdist3D_a40",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
+  absasymmdist3D_a40 = new TH3D("absasymmdist3D_a40",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+  asymmdist3D_a45 = new TH3D("asymmdist3D_a45",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
+  absasymmdist3D_a45 = new TH3D("absasymmdist3D_a45",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+   
 }
 
 
