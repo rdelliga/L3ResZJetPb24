@@ -191,13 +191,17 @@ class histograms {
   static constexpr float halfeta[] = {0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0}; // Could just create folders doing these + a wide one
   static constexpr unsigned int nhalfeta = sizeof(halfeta)/sizeof(halfeta[0])-1;
 
+  static constexpr double etaforjer[] = {0.0, 0.5, 0.8, 1.1, 1.3, 1.7, 1.9, 2.1, 2.3, 2.5, 2.8, 3.0}; // Could just create folders doing these + a wide one
+  static constexpr unsigned int netaforjer = sizeof(etaforjer)/sizeof(etaforjer[0])-1;
+
   // Should one try narrower bins first too?
   //   static constexpr double ptforjec[] = {40, 60, 80, 100, 120, 140, 180, 220, 300, 500, 700, 5000};
   //  static constexpr double ptforjec[] = {40, 55, 80, 120, 170, 1000};
   static constexpr double ptforjec[] = {15 , 25, 55, 80, 120, 170, 1000};   // Low pT as Nick
   static constexpr unsigned int nptforjec = sizeof(ptforjec)/sizeof(ptforjec[0])-1;
 
-  static constexpr double ptforJER[] = {15, 21, 28, 37, 49, 64, 84, 114, 153, 196, 245, 300, 362, 430, 507, 592, 686, 790, 905, 1032, 1172, 1327, 1497, 1684, 1890, 2238};
+  //  static constexpr double ptforJER[] = {15, 21, 28, 37, 49, 64, 84, 114, 153, 196, 245, 300, 362, 430, 507, 592, 686, 790, 905, 1032, 2238};
+  static constexpr double ptforJER[] = {15, 21, 28, 37, 49, 64, 84, 114, 153, 196, 245, 300, 362, 430, 592, 790, 1032, 2238};
   static constexpr unsigned int nptforJER = sizeof(ptforJER)/sizeof(ptforJER[0])-1;
 
   // Wider bins

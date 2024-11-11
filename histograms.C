@@ -120,7 +120,7 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   for (unsigned int i = 0; i != y.size(); ++i) y[i] = -1 + 0.05*i;
   const int ny = y.size()-1;
 
-  if (ismc) responses3D = new TH3D("responses3D",";;", nptforJER, &ptforJER[0], njeretas, &jeretarange[0], nx, &x[0]);
+  if (ismc) responses3D = new TH3D("responses3D",";;", nptforJER, &ptforJER[0], netaforjer, &etaforjer[0], nx, &x[0]);
   absasymmdist3D = new TH3D("absasymmdist3D",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
   asymmdist3D = new TH3D("asymmdist3D",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
 
