@@ -191,7 +191,10 @@ class histograms {
   static constexpr float halfeta[] = {0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0}; // Could just create folders doing these + a wide one
   static constexpr unsigned int nhalfeta = sizeof(halfeta)/sizeof(halfeta[0])-1;
 
-  static constexpr double etaforjer[] = {0.0, 0.5, 0.8, 1.1, 1.3, 1.7, 1.9, 2.1, 2.3, 2.5, 2.8, 3.0}; // Could just create folders doing these + a wide one
+  // 0.000, 0.087, 0.174, 0.261,0.348, 0.435, 0.522, 0.609, 0.696, 0.783, 0.870, 0.957, 1.044, 1.131, 1.218,1.305, 1.392, 1.479, 1.566, 1.653, 1.74, 1.83, 1.93, 2.043, 2.172, 2.322, 2.5,2.65, 2.853, 2.964, 3.139, 3.314, 3.489, 3.664, 3.839, 4.013, 4.191, 4.363,4.538, 4.716, 4.889, 5.191
+  
+  ///  static constexpr double etaforjer[] = {0.0, 0.5, 0.8, 1.1, 1.3, 1.7, 1.9, 2.1, 2.3, 2.5, 2.8, 3.0}; // Could just create folders doing these + a wide one
+  static constexpr double etaforjer[] = {0.0, 0.522, 0.783, 1.044, 1.305, 1.566, 2.043, 2.322, 2.65, 2.853, 3.139, 3.485, 4.013, 4.538, 5.191}; // Above is okayish, this reflects detector plus adds HF
   static constexpr unsigned int netaforjer = sizeof(etaforjer)/sizeof(etaforjer[0])-1;
 
   // Should one try narrower bins first too?
