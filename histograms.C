@@ -1,6 +1,5 @@
 #include "histograms.h"
 
-
 histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinmin, float hibinmax, bool ismc) {
   //histograms::histograms(float ptmin, float ptmax, bool ismc) {
 
@@ -26,14 +25,24 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   jet_phi = new TH1D("reco jet phi"," reco jet #phi; reco jet #phi;", 25, -3.1415926535, 3.1415926535);
 
 
-  // Trigger checks
-  HLT60 = new TH1D("HLT60", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
-  HLT80 = new TH1D("HLT80", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
-  HLT100 = new TH1D("HLT100", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
-  HLT120 = new TH1D("HLT120", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
-  HLT60vs120 = new TH1D("HLT60vs120", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
+  // Trigger checks: TODO: pT bins
+  HLTZB = new TH1D("HLTZB", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
+  HLT40 = new TH1D("HLT40", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
+  HLT60 = new TH1D("HLT60", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
+  HLT80 = new TH1D("HLT80", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
+  HLT100 = new TH1D("HLT100", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
+  HLT120 = new TH1D("HLT120", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
+
+  HLTZB_ptav = new TH1D("HLTZB_ptav", "p_{T,avg}; p_{T,avg};", 100, 0, 1000);
+  HLT40_ptav = new TH1D("HLT40_ptav", "p_{T,avg}; p_{T,avg};", 100, 0, 1000);
+  HLT60_ptav = new TH1D("HLT60_ptav", "p_{T,avg}; p_{T,avg};", 100, 0, 1000);
+  HLT80_ptav = new TH1D("HLT80_ptav", "p_{T,avg}; p_{T,avg};", 100, 0, 1000);
+  HLT100_ptav = new TH1D("HLT100_ptav", "p_{T,avg}; p_{T,avg};", 100, 0, 1000);
+  HLT120_ptav = new TH1D("HLT120_ptav", "p_{T,avg}; p_{T,avg};", 100, 0, 1000);
+
+  /*  HLT60vs120 = new TH1D("HLT60vs120", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
   HLT60vs80 = new TH1D("HLT60vs80", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
-  HLT60vs100 = new TH1D("HLT60vs100", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
+  HLT60vs100 = new TH1D("HLT60vs100", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000); */
   
   // PF composition
   jet_nhf = new TProfile("reco jet nhf", "reco jet nhf; reco jet p_{T};", 100, 15, 1000);
