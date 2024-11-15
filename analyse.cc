@@ -44,10 +44,10 @@ JME::JetResolutionScaleFactor *_jer_sf(0); */
 
 // LXPLUS
 // DATA - HARD PROBES
-// void analyse(string inFileName = "/eos/user/l/lamartik/run3_pprefpbpbreco_data_05072024.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/debugged_plus_JER/trigstudy_test.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", string l2file = "jecfiles/L2residual_2023PbPb.txt", bool isMC = false, bool iszb = false) {
+void analyse(string inFileName = "/eos/user/l/lamartik/run3_pprefpbpbreco_data_05072024.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/debugged_plus_JER/trigstudy_hardprobes_pf.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", string l2file = "jecfiles/L2residual_2023PbPb.txt", bool isMC = false, bool iszb = false) {
 
   // DATA - ZB 
-void analyse(string inFileName = "/eos/user/l/lamartik/HIJEC_ZEROBIAS_TUPLES/zerobias7pbpb.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/debugged_plus_JER/trigstudy_zerobias7.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", string l2file = "jecfiles/L2residual_2023PbPb.txt", bool isMC = false, bool iszb = true) {
+//void analyse(string inFileName = "/eos/user/l/lamartik/HIJEC_ZEROBIAS_TUPLES/zerobias0pbpb.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/debugged_plus_JER/trigstudy_zerobias0.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", string l2file = "jecfiles/L2residual_2023PbPb.txt", bool isMC = false, bool iszb = true) {
 
   
   //void analyse(string inFileName = "/eos/user/l/lamartik/run3_ppref_data_04062024.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/rebin/ppreco_DATA_lxplus.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
@@ -55,7 +55,7 @@ void analyse(string inFileName = "/eos/user/l/lamartik/HIJEC_ZEROBIAS_TUPLES/zer
   // MC
 //void analyse(string inFileName = "/eos/cms/store/group/phys_heavyions/lamartik/tuples/MC_pprefwpbpbreco_privateforjec.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/debugged_plus_JER/pbpbreco_MC_JERHCALbinningHF.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
 
-  bool usecalotrig = true;
+  bool usecalotrig = false;
   bool checkvalidjet = false; // this is for checking valid jet range. now for tightly limited range.TODO: do something smarter  
 
   TRandom3 r;
@@ -102,7 +102,9 @@ void analyse(string inFileName = "/eos/user/l/lamartik/HIJEC_ZEROBIAS_TUPLES/zer
   // Triggger paths in the files
 
   Int_t HLT_ZB, HLT_40, HLT_60, HLT_80, HLT_100, HLT_120;
-  Int_t ZBpsnum = 0, ZBpsdenom = 0;
+  // The prescale stuff is at the moment kinda fixed to 2023 data assumption
+  Int_t ZBpsnum = 0, ZBpsdenom = 0, ZBL1ps = 0;
+  Int_t J40psnum = 0, J40psdenom = 0, J40L1ps = 0;
   
   auto triggerTree = (TTree*)inFile->Get(triggerPath.c_str());
  
@@ -110,10 +112,16 @@ void analyse(string inFileName = "/eos/user/l/lamartik/HIJEC_ZEROBIAS_TUPLES/zer
 
     triggerTree->SetBranchAddress("HLT_PPRefZeroBias_v1_PrescaleNumerator",&ZBpsnum);
     triggerTree->SetBranchAddress("HLT_PPRefZeroBias_v1_PrescaleDenominator",&ZBpsdenom);
+
+    triggerTree->SetBranchAddress("L1_ZeroBias_Prescl",&ZBL1ps);
   
   if (!usecalotrig) {  cout << "Use PF triggers" << endl;
   
     triggerTree->SetBranchAddress("HLT_AK4PFJet40_v1",&HLT_40);
+
+    triggerTree->SetBranchAddress("HLT_AK4PFJet40_v1_PrescaleNumerator",&J40psnum);
+    triggerTree->SetBranchAddress("HLT_AK4PFJet40_v1_PrescaleDenominator",&J40psdenom);
+    
     triggerTree->SetBranchAddress("HLT_AK4PFJet60_v1",&HLT_60); 
     //    triggerTree->SetBranchAddress("HLT_AK4PFJet80_v1",&HLT_80); 
     triggerTree->SetBranchAddress("HLT_AK4PFJet100_v1",&HLT_100);
@@ -123,6 +131,11 @@ void analyse(string inFileName = "/eos/user/l/lamartik/HIJEC_ZEROBIAS_TUPLES/zer
 
     triggerTree->SetBranchStatus("HLT_PPRefZeroBias_v1",1);
     triggerTree->SetBranchStatus("HLT_AK4PFJet40_v1",1);
+    triggerTree->SetBranchStatus("HLT_AK4PFJet40_v1_PrescaleNumerator",1);
+    triggerTree->SetBranchStatus("HLT_AK4PFJet40_v1_PrescaleDenominator",1);
+
+
+
     triggerTree->SetBranchStatus("HLT_AK4PFJet60_v1",1);
     // triggerTree->SetBranchStatus("HLT_AK4PFJet80_v1",1);
     triggerTree->SetBranchStatus("HLT_AK4PFJet100_v1",1);
@@ -130,6 +143,8 @@ void analyse(string inFileName = "/eos/user/l/lamartik/HIJEC_ZEROBIAS_TUPLES/zer
 
     triggerTree->SetBranchStatus("HLT_PPRefZeroBias_v1_PrescaleNumerator",1);
     triggerTree->SetBranchStatus("HLT_PPRefZeroBias_v1_PrescaleDenominator",1);
+
+    triggerTree->SetBranchStatus("L1_ZeroBias_Prescl",1);
 
   }
    else {    cout << "Use Calo triggers" << endl;
@@ -152,6 +167,8 @@ void analyse(string inFileName = "/eos/user/l/lamartik/HIJEC_ZEROBIAS_TUPLES/zer
     triggerTree->SetBranchStatus("HLT_PPRefZeroBias_v1_PrescaleNumerator",1);
     triggerTree->SetBranchStatus("HLT_PPRefZeroBias_v1_PrescaleDenominator",1);
 
+    triggerTree->SetBranchStatus("L1_ZeroBias_Prescl",1);
+    
    }
 
   // Get to JETS 
@@ -255,9 +272,8 @@ vector<JetCorrectorParameters> vpar;
    cout << "Number of entries :" <<  jetTree->GetEntries()  << endl; 
 
  for (int i = 0; i < jetTree->GetEntries(); ++i) {
-   //    for (int i = 0; i < 10000; ++i) {
+   // for (int i = 0; i < 10000; ++i) {
      evtTree->GetEntry(i);
-     
      triggerTree->GetEntry(i);
 
      // TODO: something smarter
@@ -274,7 +290,8 @@ vector<JetCorrectorParameters> vpar;
      }
      if (iszb) {
        evtwt *= ZBpsnum;
-       evtwt *= ZBpsdenom;
+       evtwt /= ZBpsdenom;
+       evtwt *= ZBL1ps;
      }
      // cout << weight << " " << evtwt << endl;
           
@@ -389,7 +406,7 @@ vector<JetCorrectorParameters> vpar;
 	       if ((h->etamin - h->etamax) < -10) {
 
 		 if (HLT_ZB) h->HLTZB_ptav->Fill(ptavgtp, evtwt);
-		 if (HLT_40) h->HLT40_ptav->Fill(ptavgtp, evtwt);
+		 if (HLT_40) h->HLT40_ptav->Fill(ptavgtp, evtwt*J40psnum/J40psdenom);
 		 if (HLT_60) h->HLT60_ptav->Fill(ptavgtp, evtwt);
 		 if (HLT_100) h->HLT100_ptav->Fill(ptavgtp, evtwt);
 		 if (HLT_120) h->HLT120_ptav->Fill(ptavgtp, evtwt);
@@ -538,6 +555,7 @@ vector<JetCorrectorParameters> vpar;
 	       if (j == 0) {
 		 // Trigger checks; leading jet pt
 		 if (HLT_ZB) h->HLTZB->Fill(jtpt[0],evtwt);
+		 if (HLT_40) h->HLT40->Fill(jtpt[0],evtwt*J40psnum/J40psdenom);
 		 if (HLT_60) h->HLT60->Fill(jtpt[0],evtwt);
 		 if (HLT_80) h->HLT80->Fill(jtpt[0],evtwt);
 		 if (HLT_100) h->HLT100->Fill(jtpt[0],evtwt);
