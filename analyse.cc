@@ -38,19 +38,21 @@ JME::JetResolutionScaleFactor *_jer_sf(0); */
 
 // 2023ppwithpbpb_MC_L2Relative_AK4PF.txt  2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt  2023ppwithpp_MC_L2Relative_AK4PF.txt  2023ppwithpp_old_MC_L2Relative_AK4PF.txt
 
-//void analyse(string inFileName = "testdata/run3_pprefpbpbreco_data_05072024.root", string outputfilename = "testsmallbins.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
+void analyse(string inFileName = "testdata/run3_pprefpbpbreco_data_05072024.root", string outputfilename = "testIDsandtrig.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = false, bool iszb = false) {
+
+//void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", string outputfilename = "testIDsandtrig_pprec.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false, bool iszb = false) {
 
 //void analyse(string inFileName = "/home/laura/Data/jecmc/MC_pprefwpbpbreco_privateforjec.root", string outputfilename = "pbpbreco_MC.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
 
 // LXPLUS
 // DATA - HARD PROBES
-void analyse(string inFileName = "/eos/user/l/lamartik/run3_pprefpbpbreco_data_05072024.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/debugged_plus_JER/trigstudy_hardprobes_pf.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", string l2file = "jecfiles/L2residual_2023PbPb.txt", bool isMC = false, bool iszb = false) {
+//void analyse(string inFileName = "/eos/user/l/lamartik/run3_pprefpbpbreco_data_05072024.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/debugged_plus_JER/trigstudy_hardprobes_pf.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", string l2file = "jecfiles/L2residual_2023PbPb.txt", bool isMC = false, bool iszb = false) {
 
   // DATA - ZB 
 //void analyse(string inFileName = "/eos/user/l/lamartik/HIJEC_ZEROBIAS_TUPLES/zerobias0pbpb.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/debugged_plus_JER/trigstudy_zerobias0.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", string l2file = "jecfiles/L2residual_2023PbPb.txt", bool isMC = false, bool iszb = true) {
 
   
-  //void analyse(string inFileName = "/eos/user/l/lamartik/run3_ppref_data_04062024.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/rebin/ppreco_DATA_lxplus.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
+//void analyse(string inFileName = "/eos/user/l/lamartik/run3_ppref_data_04062024.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/rebin/ppreco_DATA_lxplus.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
 
   // MC
 //void analyse(string inFileName = "/eos/cms/store/group/phys_heavyions/lamartik/tuples/MC_pprefwpbpbreco_privateforjec.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/debugged_plus_JER/pbpbreco_MC_JERHCALbinningHF.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
@@ -123,7 +125,7 @@ void analyse(string inFileName = "/eos/user/l/lamartik/run3_pprefpbpbreco_data_0
     triggerTree->SetBranchAddress("HLT_AK4PFJet40_v1_PrescaleDenominator",&J40psdenom);
     
     triggerTree->SetBranchAddress("HLT_AK4PFJet60_v1",&HLT_60); 
-    //    triggerTree->SetBranchAddress("HLT_AK4PFJet80_v1",&HLT_80); 
+    triggerTree->SetBranchAddress("HLT_AK4PFJet80_v1",&HLT_80); 
     triggerTree->SetBranchAddress("HLT_AK4PFJet100_v1",&HLT_100);
     triggerTree->SetBranchAddress("HLT_AK4PFJet120_v1",&HLT_120);
  
@@ -189,6 +191,9 @@ void analyse(string inFileName = "/eos/user/l/lamartik/run3_pprefpbpbreco_data_0
   Float_t   jtnef[MAXJETS];
   Float_t   jtcef[MAXJETS];
   Float_t   jtmuf[MAXJETS];
+
+  Float_t   jtchm[MAXJETS]; // charged multi
+  Float_t   jtn[MAXJETS];
  
   jetTree->SetBranchAddress("evt", &evt);
   jetTree->SetBranchAddress("nref", &nref);
@@ -201,6 +206,8 @@ void analyse(string inFileName = "/eos/user/l/lamartik/run3_pprefpbpbreco_data_0
   jetTree->SetBranchAddress("jtPfNEF", &jtnef);
   jetTree->SetBranchAddress("jtPfCEF", &jtcef);
   jetTree->SetBranchAddress("jtPfMUF", &jtmuf);
+
+  jetTree->SetBranchAddress("jtPfCHM", &jtchm);
   
   Float_t leadpt = 0;
   Float_t subleadpt = 0;
@@ -271,14 +278,14 @@ vector<JetCorrectorParameters> vpar;
  // Start event loop to fill histograms:
    cout << "Number of entries :" <<  jetTree->GetEntries()  << endl; 
 
- for (int i = 0; i < jetTree->GetEntries(); ++i) {
-   // for (int i = 0; i < 10000; ++i) {
+   //for (int i = 0; i < jetTree->GetEntries(); ++i) {
+    for (int i = 0; i < jetTree->GetEntries(); ++i) {
+   //for (int i = 0; i < 50000; ++i) {
+   // for (int i = 50000; i < 500000; ++i) {
      evtTree->GetEntry(i);
      triggerTree->GetEntry(i);
 
      // TODO: something smarter
-     //     if (usecalotrig) trigger = (HLT_AK4CaloJet60_v1 or HLT_AK4CaloJet80_v1 or HLT_AK4CaloJet100_v1 or HLT_AK4CaloJet120_v1);
-     // else trigger = (HLT_AK4PFJet60_v1 or HLT_AK4PFJet80_v1 or HLT_AK4PFJet100_v1 or HLT_AK4PFJet120_v1);
      trigger = HLT_ZB or HLT_40 or HLT_60;
      if (isMC) trigger = true; // TEMPORARY FIX
 
@@ -302,11 +309,13 @@ vector<JetCorrectorParameters> vpar;
      }
      jetTree->GetEntry(i);
 
+     // Filter out events without jets with pt > 10 GeV (should be raw pt)
      if (nref < 1) continue;
-     if (jtpt[0] < jtptmin) continue;
+     if (jtpt[0] < jtptmin) {
+       continue;
+     }
      
-     //     cout << "TEST " << nref << " " << jtpt[0] << " " << jtpt[1] << " " << jtpt[2] << endl;
-	  
+     	  
      //MC: JER resmear
      // _jer = new JME::JetResolution(resolutionFile);
      // _jer_sf = new JME::JetResolutionScaleFactor(scaleFactorFile);
@@ -320,7 +329,7 @@ vector<JetCorrectorParameters> vpar;
      double asymmtp;
      double djrespasymm; 
 
-     if (checkvalidjet) {
+     if (checkvalidjet) {   // This is based on validity of JEC
        for (int j = 0; j < nref; ++j ) {
 	 if (abs(jteta[j]) > 2.964) jtpt[j] = 0;   // Always invalid jets
 	 
@@ -333,7 +342,48 @@ vector<JetCorrectorParameters> vpar;
 	 // 170-1000 < 1.93
        }
      }
- 
+
+     // JET ID - this is 2023 AK4CHS jet selection 12/2024
+     // fill passjteta for all jets in the event?
+     // TODO: charged multiplicity
+     bool passjetid[nref];
+     bool checkjetid = false;
+     for (int j = 0; j < nref; ++j) {
+       passjetid[j] = true;
+       if (checkjetid) {
+	   // TODO: the other way around; start with true, turn false if needed
+	   if (abs(jteta[j]) <= 2.6) {
+	        if (jtnhf[j] >= 0.99) passjetid[j] = false;
+		if (jtnef[j] >= 0.9) passjetid[j] = false;
+		if (jtchf[j] <= 0.01) passjetid[j] = false;
+		if (jtcef[j] >= 0.8) passjetid[j] = false;
+		if (jtmuf[j] >= 0.8) passjetid[j] = false;
+		if (jtchm[j] <= 0) passjetid[j] = false;
+
+		// TODO: constituents
+	  }
+	  else if (abs(jteta[j]) <= 2.7) {
+             if (jtnhf[j] >= 0.9) passjetid[j] = false;
+	     if (jtnef[j] >= 0.99) passjetid[j] = false;
+	     if (jtmuf[j] >= 0.8) passjetid[j] = false;
+	     if (jtcef[j] >= 0.8) passjetid[j] = false;
+
+          }  
+          else if (abs(jteta[j]) <= 3.0) {
+               if (jtnhf[j] >= 0.99) passjetid[j] = false;
+	       if (jtnef[j] >= 0.99) passjetid[j] = false;
+	       // number of neutral particles
+          }
+          else if (abs(jteta[j]) <= 5.0)  {
+	    if (jtnef[j] >= 0.4) passjetid[j] = false;
+	    // number of neutral particles
+
+          }
+	   //  if (passjetid[j] < 2 and nref > 2  and jtpt[j] > 70  and jtpt[1] > 40) cout << "Pass jetid: " << passjetid[j] << " pt: " << jtpt[j] << " " << jteta[j] << " " << j << " " << i <<  endl;
+	 }
+       }
+
+     
      // Apply JEC
      for (int j = 0; j < nref; ++j ) {
  	 jtpt_uncorr[j] = jtpt[j];
@@ -352,6 +402,8 @@ vector<JetCorrectorParameters> vpar;
 #endif
      }
 
+     // TODO: jet new leading jet?
+     
     // Get dijet system (do not impose any cuts here)
      if (nref > 1) {
        dphi = DPhi(jtphi[0],jtphi[1]);
@@ -365,18 +417,63 @@ vector<JetCorrectorParameters> vpar;
      }     
 
      //     if (nref > 1 and doTPdijet) {
+
+     int ind1 = -1, ind2 = -1, ind3 = -1;
+     int ind[3] = {0, 1, -1};
+     
      if (nref > 1) {
     
        int tagind = -1;
-      
-       if (abs(jteta[0]) > 1.3 and abs(jteta[1]) <= 1.3)  tagind = 1;
+
+       // TODO: passjetid
+       // Find three hardest jets to pass the selection
+
+       int counter = 0, k = 0;
+
+       while (counter < 3 and k < nref) {
+	 if (passjetid[k] == 1)  {
+	   ind[counter] = k;
+	   counter++;
+	 }
+	 k++;
+       }
+       //   cout << ind[0] << " " << ind[1] << " " << ind[2] << " " << endl;
+       if (jtpt[ind[0]] < jtpt[ind[1]]) cout << "Corr before:" << jtpt[0] << " " << jtpt[1] << " " << jtpt[2] << " nref " << nref << "counter " << counter << endl;
+       if (jtpt[ind[0]] < jtpt[ind[1]]) cout << "Pass ID:" << passjetid[0] << " " << passjetid[1] << " " << passjetid[2] << " nref " << nref << "counter " << counter << endl;
+       if (jtpt[ind[0]] < jtpt[ind[1]]) cout << "Corr:" << jtpt[ind[0]] << " " << jtpt[ind[1]] << " " << jtpt[ind[2]] << " nref " << nref << "counter " << counter << endl;
+       if (jtpt[ind[0]] < jtpt[ind[1]]) cout <<  "Raw: " << jtpt_uncorr[ind[0]] << " " << jtpt_uncorr[ind[1]] << " " << jtpt_uncorr[ind[2]] << " " << endl; 
+
+       if (counter < 2) continue; // Ditch events with only 1 good jet
+       // cout << "Good corr:" << jtpt[ind[0]] << " " << jtpt[ind[1]] << " " << jtpt[ind[2]] << " nref " << nref << "counter " << counter << endl;
+       
+       // Reorder them
+       if (counter > 2 and jtpt[ind[1]] < jtpt[ind[2]]) swap(ind[1],ind[2]);
+       
+       if (jtpt[ind[0]] < jtpt[ind[1]]) {
+	   swap(ind[0],ind[1]);
+	   //	   cout << "swapped " << ind[0] << " " << ind[1] << " " << ind[2] << " " << endl;
+	   // cout << "swapped " << jtpt[ind[0]] << " " << jtpt[ind[1]] << " " << jtpt[ind[2]] << " nref " << nref << endl;
+	 }
+
+       if (jtpt_uncorr[ind[0]] < jtptmin or jtpt_uncorr[ind[1]] < jtptmin) continue; // Didn't with dijets with good pt
+       
+       // Define tag and probe - TODO: change to above defined indices
+       /*    if (abs(jteta[0]) > 1.3 and abs(jteta[1]) <= 1.3)  tagind = 1;
        else if (abs(jteta[1]) > 1.3 and abs(jteta[0]) <= 1.3)  tagind = 0;
        else if (abs(jteta[0]) <= 1.3 and abs(jteta[1]) <= 1.3)  {
 	 const auto rand = r.Rndm();
 	 if (rand < 0.5) tagind = 1;
 	 else tagind = 0;
        }
-       if (jtpt[0] < 1 or jtpt[1] < 1) tagind = -1;
+       if (jtpt[0] < 1 or jtpt[1] < 1) tagind = -1; */
+
+       if (abs(jteta[ind[0]]) > 1.3 and abs(jteta[ind[1]]) <= 1.3)  tagind = ind[1];
+       else if (abs(jteta[ind[1]]) > 1.3 and abs(jteta[ind[0]]) <= 1.3)  tagind = ind[0];
+       else if (abs(jteta[ind[0]]) <= 1.3 and abs(jteta[ind[1]]) <= 1.3)  {
+	 const auto rand = r.Rndm();
+	 if (rand < 0.5) tagind = ind[1];
+	 else tagind = ind[0];
+       }
 
        int probeind = 1-tagind;
        tagpt = jtpt[tagind];
@@ -390,10 +487,10 @@ vector<JetCorrectorParameters> vpar;
 	 ptavgtp = 0.5*(tagpt  + probept);
 	 asymmtp = probept - tagpt;
 	 
-	 if (nref > 2) alpha = jtpt[2]/ptavgtp;
+	 if (counter > 2) alpha = jtpt[ind[2]]/ptavgtp;
 	 else alpha = 0; // In case only two jets
 	 
-	 // cout << jtpt[0] << " " << jtpt[1] << " " << jtpt[2] << " " << tagpt << endl;
+	 // cout << "TP:" << tagpt << " " << probept << " " << alpha << endl;
 	 //	 if (asymmtp/.2/ptavgtp > 0.9) cout << "probeeta " << probeeta << " tagpt " << tagpt << " ptavg " << ptavgtp << " nref " << nref << endl;
 	 // Fill in average pT, eta bin from probeeta
 	 
@@ -401,6 +498,8 @@ vector<JetCorrectorParameters> vpar;
 	   for (auto &h : histrange.second) {
 	     
 	     if (probeeta >= h->etamin and probeeta < h->etamax and hiBin >= h->hibinmin and hiBin < h->hibinmax and dphitp > 2.7  and nref >= 2 and tagind > -1) {
+
+	       //   if (ptavgtp > 70) cout << " passjetid " << passjetid[0] << " " << passjetid[1] << " " << ptavgtp << " " << probeeta << endl;
 
 	       // This is the full eta range, actual derivation
 	       if ((h->etamin - h->etamax) < -10) {
@@ -549,17 +648,23 @@ vector<JetCorrectorParameters> vpar;
 	   for (auto &h : histrange.second) {
 	     //	     if (jteta[j] >= h->etamin and jteta[j] < h->etamax and hiBin >= h->hibinmin and hiBin < h->hibinmax) {
 	     if (jteta[j] >= h->etamin and jteta[j] < h->etamax and hiBin >= h->hibinmin and hiBin < h->hibinmax) {
+
+	       if (checkjetid and passjetid[j] == 0) continue;
+	       
 	       h->jetetaphi->Fill(jteta[j],jtphi[j],weight);
 
-
-	       if (j == 0) {
+	       
+	       if (j == 0 and passjetid[0]) {
+		 //		 cout << "PS: " << J40psnum << " " << J40psdenom << endl;
 		 // Trigger checks; leading jet pt
-		 if (HLT_ZB) h->HLTZB->Fill(jtpt[0],evtwt);
-		 if (HLT_40) h->HLT40->Fill(jtpt[0],evtwt*J40psnum/J40psdenom);
-		 if (HLT_60) h->HLT60->Fill(jtpt[0],evtwt);
-		 if (HLT_80) h->HLT80->Fill(jtpt[0],evtwt);
-		 if (HLT_100) h->HLT100->Fill(jtpt[0],evtwt);
-		 if (HLT_120) h->HLT120->Fill(jtpt[0],evtwt);
+		 if (HLT_ZB) h->HLTZB->Fill(jtpt[ind[0]],evtwt);
+		 //	 if (HLT_40) h->HLT40->Fill(jtpt[0],evtwt*J40psnum/J40psdenom);
+		 if (HLT_40) h->HLT40->Fill(jtpt[ind[0]],evtwt);
+		 if (HLT_60) h->HLT60->Fill(jtpt[ind[0]],evtwt); //  if (jtpt[0] > 100.) cout << jtpt[0] << "  " << HLT_100 << endl; }
+		 if (HLT_60) h->HLT60a->Fill(jtpt[ind[0]],evtwt); //  if (jtpt[0] > 100.) cout << jtpt[0] << "  " << HLT_100 << endl; }
+		 if (HLT_80) h->HLT80->Fill(jtpt[ind[0]],evtwt);
+		 if (HLT_100) h->HLT100->Fill(jtpt[ind[0]],evtwt);
+		 if (HLT_120) { h->HLT120->Fill(jtpt[ind[0]],evtwt);}
 		 //if (!HLT_AK4CaloJet60_v1 and !HLT_AK4CaloJet80_v1 and !HLT_AK4CaloJet100_v1 and HLT_AK4CaloJet120_v1) h->HLT60vs120->Fill(jtpt[0],evtwt);
 		 // if (!HLT_AK4CaloJet60_v1 and !HLT_AK4CaloJet80_v1 and HLT_AK4CaloJet100_v1 and !HLT_AK4CaloJet120_v1) h->HLT60vs100->Fill(jtpt[0],evtwt);
 		 //if (!HLT_AK4CaloJet60_v1 and HLT_AK4CaloJet80_v1 and !HLT_AK4CaloJet100_v1 and !HLT_AK4CaloJet120_v1) h->HLT60vs80->Fill(jtpt[0],evtwt);
@@ -572,7 +677,7 @@ vector<JetCorrectorParameters> vpar;
 		 h->dijetdeltaeta->Fill(ddeta,evtwt);
 
 	       }
-	     
+
 	       h->jet_pt->Fill(jtpt[j],evtwt);
 	       h->jet_pt_now->Fill(jtpt[j],1);
 	       h->jet_uncorr_pt->Fill(jtpt_uncorr[j],evtwt);
