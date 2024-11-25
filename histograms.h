@@ -33,6 +33,7 @@ class histograms {
   TH1D* HLTZB;
   TH1D* HLT40;
   TH1D* HLT60;
+  TH1D* HLT60a;
   TH1D* HLT80;
   TH1D* HLT100;
   TH1D* HLT120;

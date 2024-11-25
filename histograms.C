@@ -29,6 +29,7 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   HLTZB = new TH1D("HLTZB", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
   HLT40 = new TH1D("HLT40", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
   HLT60 = new TH1D("HLT60", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
+  HLT60a = new TH1D("HLT60a", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
   HLT80 = new TH1D("HLT80", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
   HLT100 = new TH1D("HLT100", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
   HLT120 = new TH1D("HLT120", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
