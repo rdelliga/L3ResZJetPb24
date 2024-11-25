@@ -1,0 +1,27 @@
+
+
+map<string,string> filenames = {
+                   {"zb0", "/eos/user/l/lamartik/zerobias0pbpb.root"},
+		   {"zb1", "/eos/user/l/lamartik/zerobias1pbpb.root"},
+		   {"zb2", "/eos/user/l/lamartik/zerobias2pbpb.root"},
+		   {"zb3", "/eos/user/l/lamartik/zerobias3pbpb.root"},
+		   {"zb4", "/eos/user/l/lamartik/zerobias4pbpb.root"},
+		   {"zb5", "/eos/user/l/lamartik/zerobias5pbpb.root"},
+		   {"zb6", "/eos/user/l/lamartik/zerobias6pbpb.root"},
+		   {"zb7", "/eos/user/l/lamartik/zerobias7pbpb.root"},
+		   {"zb8", "/eos/user/l/lamartik/zerobias8pbpb.root"},
+		   {"zb9", "/eos/user/l/lamartik/zerobias9pbpb.root"},
+		   {"zb10", "/eos/user/l/lamartik/zerobias10pbpb.root"},
+		   {"zb11", "/eos/user/l/lamartik/zerobias11pbpb.root"},
+		   {"zb12", "/eos/user/l/lamartik/zerobias12pbpb.root"},
+		   {"zb13", "/eos/user/l/lamartik/zerobias13pbpb.root"},
+		   {"zb14", "/eos/user/l/lamartik/zerobias14pbpb.root"},
+		   {"zb15", "/eos/user/l/lamartik/zerobias15pbpb.root"},
+		   {"zb16", "/eos/user/l/lamartik/zerobias16pbpb.root"},
+		   {"zb17", "/eos/user/l/lamartik/zerobias17pbpb.root"},
+		   {"zb18", "/eos/user/l/lamartik/zerobias18pbpb.root"},
+		   {"zb19", "/eos/user/l/lamartik/zerobias19pbpb.root"},
+		   {"HP", "testdata/run3_pprefpbpbreco_data_05072024.root"},
+		   {"MC", "/eos/cms/store/group/phys_heavyions/lamartik/tuples/MC_pprefwpbpbreco_privateforjec.root"},
+		   {"localHP", "testdata/run3_pprefpbpbreco_data_05072024.root"}
+                    };
