@@ -38,28 +38,14 @@ map<string, vector<histograms*> > _histos;
 /* JME::JetResolution *_jer(0);
 JME::JetResolutionScaleFactor *_jer_sf(0); */
 
-void analyse(string era = "localHP", string outputfiletag = "testIDsandtrig_AK4_PFTRIG", bool isMC = false, bool checkjetid = false, bool iszb = false, bool dol2res = false, bool dojer = false) {
-
-//void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", string outputfilename = "testIDsandtrig_pprec.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false, bool iszb = false) {
-
-//void analyse(string inFileName = "/home/laura/Data/jecmc/MC_pprefwpbpbreco_privateforjec.root", string outputfilename = "pbpbreco_MC.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
-
-// LXPLUS
-// DATA - HARD PROBES
-//void analyse(string inFileName = "/eos/user/l/lamartik/run3_pprefpbpbreco_data_05072024.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/debugged_plus_JER/trigstudy_hardprobes_pf.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", string l2file = "jecfiles/L2residual_2023PbPb.txt", bool isMC = false, bool iszb = false) {
-
-  // DATA - ZB 
-//void analyse(string inFileName = "/eos/user/l/lamartik/HIJEC_ZEROBIAS_TUPLES/zerobias0pbpb.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/debugged_plus_JER/trigstudy_zerobias0.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", string l2file = "jecfiles/L2residual_2023PbPb.txt", bool isMC = false, bool iszb = true) {
-
-//void analyse(string inFileName = "/eos/user/l/lamartik/run3_ppref_data_04062024.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/rebin/ppreco_DATA_lxplus.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
-
-  // MC
-//void analyse(string inFileName = "/eos/cms/store/group/phys_heavyions/lamartik/tuples/MC_pprefwpbpbreco_privateforjec.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/debugged_plus_JER/pbpbreco_MC_JERHCALbinningHF.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
+//void analyse(string era = "HP", string outputfiletag = "AK4_PFTRIG_jetid", bool isMC = false, bool checkjetid = true, bool iszb = false, bool dol2res = false, bool dojer = false) {
+void analyse(string era = "zb0", string outputfiletag = "AK4_PFTRIG_nojetid", bool isMC = false, bool checkjetid = false, bool iszb = true, bool dol2res = false, bool dojer = false) {
+//void analyse(string era = "MC", string outputfiletag = "AK4_jetid", bool isMC = true, bool checkjetid = true, bool iszb = false, bool dol2res = false, bool dojer = false) {
 
   bool usecalotrig = false;
   bool checkvalidjet = false; // this is for checking valid jet range after applying l2. now for tightly limited range.TODO: do something smarter  
      
-  string outputfilename = Form("%s_%s.root",era.c_str(),outputfiletag.c_str());
+  string outputfilename = Form("/eos/user/l/lamartik/HIJEC_results/rerunall/%s_%s.root",era.c_str(),outputfiletag.c_str());
   
   TRandom3 r;
   // Define and activate branches
@@ -185,8 +171,8 @@ void analyse(string era = "localHP", string outputfiletag = "testIDsandtrig_AK4_
   Float_t   jtcef[MAXJETS];
   Float_t   jtmuf[MAXJETS];
 
-  Float_t   jtchm[MAXJETS]; // charged multi
-  Float_t   jtn[MAXJETS];
+  Int_t   jtchm[MAXJETS]; // charged multi
+  Int_t   jtn[MAXJETS];
  
   jetTree->SetBranchAddress("evt", &evt);
   jetTree->SetBranchAddress("nref", &nref);
@@ -255,7 +241,8 @@ void analyse(string era = "localHP", string outputfiletag = "testIDsandtrig_AK4_
   eventhistograms *eh = new eventhistograms(dir, isMC);
    
   // JEC stuff
-#if REDOJES == 1  
+#if REDOJES == 1
+  cout << "Applying JEC" << endl;
   FactorizedJetCorrector* corr;
   vector<JetCorrectorParameters> vpar;
   // This is MCTruth
@@ -334,7 +321,6 @@ void analyse(string era = "localHP", string outputfiletag = "testIDsandtrig_AK4_
 
      // JET ID - this is 2023 AK4CHS jet selection 12/2024
      // fill passjteta for all jets in the event?
-     // TODO: charged multiplicity
      bool passjetid[nref];
      for (int j = 0; j < nref; ++j) {
        passjetid[j] = true;
@@ -367,6 +353,7 @@ void analyse(string era = "localHP", string outputfiletag = "testIDsandtrig_AK4_
 	    // number of neutral particles
 
           }
+	   //	   if (jtpt[j] > jtptmin)	   cout << passjetid[j] << endl;
 	   //  if (passjetid[j] < 2 and nref > 2  and jtpt[j] > 70  and jtpt[1] > 40) cout << "Pass jetid: " << passjetid[j] << " pt: " << jtpt[j] << " " << jteta[j] << " " << j << " " << i <<  endl;
 	 }
        }
@@ -422,10 +409,10 @@ void analyse(string era = "localHP", string outputfiletag = "testIDsandtrig_AK4_
 	 k++;
        }
        //   cout << ind[0] << " " << ind[1] << " " << ind[2] << " " << endl;
-       if (jtpt[ind[0]] < jtpt[ind[1]]) cout << "Corr before:" << jtpt[0] << " " << jtpt[1] << " " << jtpt[2] << " nref " << nref << "counter " << counter << endl;
+       /*       if (jtpt[ind[0]] < jtpt[ind[1]]) cout << "Corr before:" << jtpt[0] << " " << jtpt[1] << " " << jtpt[2] << " nref " << nref << "counter " << counter << endl;
        if (jtpt[ind[0]] < jtpt[ind[1]]) cout << "Pass ID:" << passjetid[0] << " " << passjetid[1] << " " << passjetid[2] << " nref " << nref << "counter " << counter << endl;
        if (jtpt[ind[0]] < jtpt[ind[1]]) cout << "Corr:" << jtpt[ind[0]] << " " << jtpt[ind[1]] << " " << jtpt[ind[2]] << " nref " << nref << "counter " << counter << endl;
-       if (jtpt[ind[0]] < jtpt[ind[1]]) cout <<  "Raw: " << jtpt_uncorr[ind[0]] << " " << jtpt_uncorr[ind[1]] << " " << jtpt_uncorr[ind[2]] << " " << endl; 
+       if (jtpt[ind[0]] < jtpt[ind[1]]) cout <<  "Raw: " << jtpt_uncorr[ind[0]] << " " << jtpt_uncorr[ind[1]] << " " << jtpt_uncorr[ind[2]] << " " << endl; */
 
        if (counter < 2) continue; // Ditch events with only 1 good jet
        // cout << "Good corr:" << jtpt[ind[0]] << " " << jtpt[ind[1]] << " " << jtpt[ind[2]] << " nref " << nref << "counter " << counter << endl;
