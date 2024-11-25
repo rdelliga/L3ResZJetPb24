@@ -20,6 +20,8 @@ using std::endl;
 
 #include "histograms.h"
 #include "settings.h"
+#include "configurations.h"
+
 #include "eventhistograms.h"
 #include "helpers.h"
 
@@ -36,9 +38,7 @@ map<string, vector<histograms*> > _histos;
 /* JME::JetResolution *_jer(0);
 JME::JetResolutionScaleFactor *_jer_sf(0); */
 
-// 2023ppwithpbpb_MC_L2Relative_AK4PF.txt  2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt  2023ppwithpp_MC_L2Relative_AK4PF.txt  2023ppwithpp_old_MC_L2Relative_AK4PF.txt
-
-void analyse(string inFileName = "testdata/run3_pprefpbpbreco_data_05072024.root", string outputfilename = "testIDsandtrig.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = false, bool iszb = false) {
+void analyse(string era = "localHP", string outputfiletag = "testIDsandtrig_AK4_PFTRIG", bool isMC = false, bool checkjetid = false, bool iszb = false, bool dol2res = false, bool dojer = false) {
 
 //void analyse(string inFileName = "testdata/run3_ppref_data_04062024.root", string outputfilename = "testIDsandtrig_pprec.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false, bool iszb = false) {
 
@@ -51,15 +51,16 @@ void analyse(string inFileName = "testdata/run3_pprefpbpbreco_data_05072024.root
   // DATA - ZB 
 //void analyse(string inFileName = "/eos/user/l/lamartik/HIJEC_ZEROBIAS_TUPLES/zerobias0pbpb.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/debugged_plus_JER/trigstudy_zerobias0.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", string l2file = "jecfiles/L2residual_2023PbPb.txt", bool isMC = false, bool iszb = true) {
 
-  
 //void analyse(string inFileName = "/eos/user/l/lamartik/run3_ppref_data_04062024.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/rebin/ppreco_DATA_lxplus.root", string jecfile = "jecfiles/2023ppwithpp_old_MC_L2Relative_AK4PF.txt", bool isMC = false) {
 
   // MC
 //void analyse(string inFileName = "/eos/cms/store/group/phys_heavyions/lamartik/tuples/MC_pprefwpbpbreco_privateforjec.root", string outputfilename = "/eos/user/l/lamartik/HIJEC_results/debugged_plus_JER/pbpbreco_MC_JERHCALbinningHF.root", string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt", bool isMC = true) {
 
   bool usecalotrig = false;
-  bool checkvalidjet = false; // this is for checking valid jet range. now for tightly limited range.TODO: do something smarter  
-
+  bool checkvalidjet = false; // this is for checking valid jet range after applying l2. now for tightly limited range.TODO: do something smarter  
+     
+  string outputfilename = Form("%s_%s.root",era.c_str(),outputfiletag.c_str());
+  
   TRandom3 r;
   // Define and activate branches
   std::string evtPath = "hiEvtAnalyzer/HiTree";
@@ -68,18 +69,14 @@ void analyse(string inFileName = "testdata/run3_pprefpbpbreco_data_05072024.root
   std::string jetPath = "ak4PFJetAnalyzer/t";
 
   cout << "Opening input file" << endl;
-  TFile *inFile = new TFile(inFileName.c_str(), "READ"); // TODO: safety checks about opening file successfully
+  //  TFile *inFile = new TFile(inFileName.c_str(), "READ"); // TODO: safety checks about opening file successfully
+  TFile *inFile = new TFile(filenames[era.c_str()].c_str(), "READ"); // TODO: safety checks about opening file successfully
   cout << "Opened" << endl;
   auto evtTree = (TTree*)inFile->Get(evtPath.c_str());
   
   // Cuts and weights from event tree
   Int_t       hiBin = -1;
-  Float_t     weight = 1;
-  Float_t     vz = 0;
-  Float_t     pthat = 0;
-  Float_t     evtwt = 1;
-
-  Float_t jtptmin = 10.;
+  Float_t     weight = 1, vz = 0, pthat = 0, evtwt = 1;
   
   evtTree->SetBranchAddress("hiBin", &hiBin);
   evtTree->SetBranchAddress("vz", &vz);
@@ -102,7 +99,6 @@ void analyse(string inFileName = "testdata/run3_pprefpbpbreco_data_05072024.root
   Int_t trigger = 0;
 
   // Triggger paths in the files
-
   Int_t HLT_ZB, HLT_40, HLT_60, HLT_80, HLT_100, HLT_120;
   // The prescale stuff is at the moment kinda fixed to 2023 data assumption
   Int_t ZBpsnum = 0, ZBpsdenom = 0, ZBL1ps = 0;
@@ -136,8 +132,6 @@ void analyse(string inFileName = "testdata/run3_pprefpbpbreco_data_05072024.root
     triggerTree->SetBranchStatus("HLT_AK4PFJet40_v1_PrescaleNumerator",1);
     triggerTree->SetBranchStatus("HLT_AK4PFJet40_v1_PrescaleDenominator",1);
 
-
-
     triggerTree->SetBranchStatus("HLT_AK4PFJet60_v1",1);
     // triggerTree->SetBranchStatus("HLT_AK4PFJet80_v1",1);
     triggerTree->SetBranchStatus("HLT_AK4PFJet100_v1",1);
@@ -170,8 +164,7 @@ void analyse(string inFileName = "testdata/run3_pprefpbpbreco_data_05072024.root
     triggerTree->SetBranchStatus("HLT_PPRefZeroBias_v1_PrescaleDenominator",1);
 
     triggerTree->SetBranchStatus("L1_ZeroBias_Prescl",1);
-    
-   }
+       }
 
   // Get to JETS 
   auto jetTree = (TTree*)inFile->Get(jetPath.c_str());
@@ -263,25 +256,21 @@ void analyse(string inFileName = "testdata/run3_pprefpbpbreco_data_05072024.root
    
   // JEC stuff
 #if REDOJES == 1  
-FactorizedJetCorrector* corr;
-vector<JetCorrectorParameters> vpar;
-// This is MCTruth
- vpar.push_back(JetCorrectorParameters(jecfile.c_str()));
- // L2 residual
- //if (!isMC) vpar.push_back(JetCorrectorParameters(l2file.c_str()));
-
- 
- corr = new FactorizedJetCorrector(vpar);
+  FactorizedJetCorrector* corr;
+  vector<JetCorrectorParameters> vpar;
+  // This is MCTruth
+  vpar.push_back(JetCorrectorParameters(jecfile.c_str()));
+  // L2 residual
+  if (!isMC and dol2res) vpar.push_back(JetCorrectorParameters(l2file.c_str()));
+  corr = new FactorizedJetCorrector(vpar);
 #endif
 
  // jetTree->Print();
  // Start event loop to fill histograms:
    cout << "Number of entries :" <<  jetTree->GetEntries()  << endl; 
 
-   //for (int i = 0; i < jetTree->GetEntries(); ++i) {
-    for (int i = 0; i < jetTree->GetEntries(); ++i) {
-   //for (int i = 0; i < 50000; ++i) {
-   // for (int i = 50000; i < 500000; ++i) {
+   for (int i = 0; i < jetTree->GetEntries(); ++i) {
+     //   for (int i = 0; i < 50; ++i) {
      evtTree->GetEntry(i);
      triggerTree->GetEntry(i);
 
@@ -347,7 +336,6 @@ vector<JetCorrectorParameters> vpar;
      // fill passjteta for all jets in the event?
      // TODO: charged multiplicity
      bool passjetid[nref];
-     bool checkjetid = false;
      for (int j = 0; j < nref; ++j) {
        passjetid[j] = true;
        if (checkjetid) {
@@ -401,8 +389,6 @@ vector<JetCorrectorParameters> vpar;
 	 jtpt[j] *= jes;
 #endif
      }
-
-     // TODO: jet new leading jet?
      
     // Get dijet system (do not impose any cuts here)
      if (nref > 1) {
@@ -415,8 +401,6 @@ vector<JetCorrectorParameters> vpar;
        avgpt = 0.5*(leadpt+subleadpt);
        djetasymm = (leadpt-subleadpt)/(leadpt+subleadpt);
      }     
-
-     //     if (nref > 1 and doTPdijet) {
 
      int ind1 = -1, ind2 = -1, ind3 = -1;
      int ind[3] = {0, 1, -1};
@@ -481,7 +465,7 @@ vector<JetCorrectorParameters> vpar;
 
        tageta = jteta[tagind];
        probeeta = jteta[probeind];
-       //       if (tagpt > 80)       cout << tageta << " " << probeeta << endl;
+
        float dphitp = DPhi(jtphi[tagind],jtphi[probeind]);
 
 	 ptavgtp = 0.5*(tagpt  + probept);
@@ -498,8 +482,6 @@ vector<JetCorrectorParameters> vpar;
 	   for (auto &h : histrange.second) {
 	     
 	     if (probeeta >= h->etamin and probeeta < h->etamax and hiBin >= h->hibinmin and hiBin < h->hibinmax and dphitp > 2.7  and nref >= 2 and tagind > -1) {
-
-	       //   if (ptavgtp > 70) cout << " passjetid " << passjetid[0] << " " << passjetid[1] << " " << ptavgtp << " " << probeeta << endl;
 
 	       // This is the full eta range, actual derivation
 	       if ((h->etamin - h->etamax) < -10) {
