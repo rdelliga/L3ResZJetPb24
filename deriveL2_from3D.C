@@ -3,12 +3,18 @@
 //#include settings.h
 #include "histograms.h"
 
-
+ 
 //void deriveL2_from3D(string inFileName = "HIJEC_results/rebin/pbpbreco_MC_wideeta_lxplus.root",string inFileNameDT = "HIJEC_results/rebin/pbpbreco_DATA_wideeta_lxplus.root", string outfilename = "L2residuals_pbpbreco_from3Dlxplus_alpha03_rebin_abs_wideeta.root", bool dodt = true,   int alphabin = 3, bool useabs = false, bool usewideabs = true) {
 //void deriveL2_from3D(string inFileName = "HIJEC_results/rebin/pbpbreco_MC_wideeta_lxplus.root",string inFileNameDT = "HIJEC_results/closure/pbpbreco_DATA_ptcut.root", string outfilename = "L2residuals_pbpbreco_from3Dlxplus_alpha03_rebin_abs_closure_ptcut.root", bool dodt = true,   int alphabin = 3, bool useabs = true, bool usewideabs = false) {
-void deriveL2_from3D(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbreco_MC.root",string inFileNameDT = "HIJEC_results/debugged_plus_JER/pbpbreco_DATA_closureandJER.root", string outfilename = "L2residuals_pbpbreco_from3Dlxplus_alpha03_closure_ptlims.root", bool dodt = true,   int alphabin = 3, bool useabs = true, bool usewideabs = false) {
+ // void deriveL2_from3D(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbreco_MC.root",string inFileNameDT = "HIJEC_results/debugged_plus_JER/pbpbreco_DATA_closureandJER.root", string outfilename = "L2residuals_pbpbreco_from3Dlxplus_alpha03_closure_ptlims.root", bool dodt = true,   int alphabin = 3, bool useabs = true, bool usewideabs = false) {
 
-//void deriveL2_from3D(string inFileName = "HIJEC_results/ppreco_MC_lxplus.root",string inFileNameDT = "HIJEC_results/ppreco_DATA_lxplus.root", string outfilename = "test.root", bool dodt = true,   int alphabin = 2) {
+//void deriveL2_from3D(string inFileName = "HIJEC_results/rerunall/MC_AK4_jetid.root",string inFileNameDT = "HIJEC_results/rerunall/HP_AK4_PFTRIG_jetid.root", string outfilename = "RERUNALL/L2residuals_pbpbreco_rerunall_HP_PFTRIG_jetid_a3.root", bool dodt = true,   int alphabin = 5, bool useabs = true, bool usewideabs = false) {
+
+// void deriveL2_from3D(string inFileName = "HIJEC_results/rerunall/MC_AK4_nojetid.root",string inFileNameDT = "HIJEC_results/rerunall/HP_AK4_PFTRIG_nojetid.root", string outfilename = "RERUNALL/L2residuals_pbpbreco_rerunall_HP_PFTRIG_nojetid_a3.root", bool dodt = true,   int alphabin = 5, bool useabs = true, bool usewideabs = false) {
+
+   
+void deriveL2_from3D(string inFileName = "HIJEC_results/rerunall/MC_AK4_jetid.root",string inFileNameDT = "HIJEC_results/rerunall/zerobiasall_jetid.root", string outfilename = "RERUNALL/L2residuals_pbpbreco_rerunall_zerobias_jetid.root", bool dodt = true,   int alphabin = 5, bool useabs = true, bool usewideabs = false) {
+
 
   // Open file
   TFile *inFile = new TFile(inFileName.c_str(), "READ"); // TODO: safety checks about opening file successfully
@@ -40,11 +46,14 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbre
   // Here need to switch between eta bins
   
   TH1D* vseta_nom(0);
-  TH1D* vseta_denom(0); // = new TH1D("vseta_denom","  ; ;",  histograms::nwetas, &histograms::wetarange[0]);
+  TH1D* vseta_denom(0);
+
+  TH1D* vseta_nom_data(0); 
+  TH1D* vseta_denom_data(0); 
+
+  TH1D *aerrormc(0), *aerrordt(0);
 
 
-  TH1D* vseta_nom_data(0); // = new TH1D("vseta_nom_data","  ; ;",  histograms::nwetas, &histograms::wetarange[0]);
-  TH1D* vseta_denom_data(0); // = new TH1D("vseta_denom_data","  ; ;",  histograms::nwetas, &histograms::wetarange[0]);
   
   if (useabs) {  
     vseta_nom = new TH1D("vseta_nom","  ; ;",  histograms::nwabsetas, &histograms::wabsetarange[0]);
@@ -53,6 +62,10 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbre
     vseta_nom_data = new TH1D("vseta_nom_data","  ; ;",  histograms::nwabsetas, &histograms::wabsetarange[0]);
     vseta_denom_data = new TH1D("vseta_denom_data","  ; ;",  histograms::nwabsetas, &histograms::wabsetarange[0]);
 
+    aerrormc = new TH1D("aerrormc","  ; ;",  histograms::nwabsetas, &histograms::wabsetarange[0]);
+    aerrordt = new TH1D("aerrrodt","  ; ;",  histograms::nwabsetas, &histograms::wabsetarange[0]);
+
+    
     asymm3d[etabins[i].c_str()] = (TProfile*)inFile->Get("hibin_-1.0_0.0/eta_-5.2_5.2/dijetasymmetry3Dabseta"); // Bins in order: pT, eta, alpha
     data3d[etabins[i].c_str()] = (TProfile*)inFileDT->Get("hibin_-1.0_0.0/eta_-5.2_5.2/dijetasymmetry3Dabseta"); // Bins in order: pT, eta, alpha
   }
@@ -73,6 +86,9 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbre
 
     vseta_nom_data = new TH1D("vseta_nom_data","  ; ;",  histograms::nwetas, &histograms::wetarange[0]);
     vseta_denom_data = new TH1D("vseta_denom_data","  ; ;",  histograms::nwetas, &histograms::wetarange[0]);
+
+    aerrormc = new TH1D("aerrormc","  ; ;",  histograms::nwetas, &histograms::wetarange[0]);
+    aerrordt = new TH1D("aerrordt","  ; ;",  histograms::nwetas, &histograms::wetarange[0]);
      
     asymm3d[etabins[i].c_str()] = (TProfile*)inFile->Get("hibin_-1.0_0.0/eta_-5.2_5.2/dijetasymmetry3D"); // Bins in order: pT, eta, alpha
     data3d[etabins[i].c_str()] = (TProfile*)inFileDT->Get("hibin_-1.0_0.0/eta_-5.2_5.2/dijetasymmetry3D"); // Bins in order: pT, eta, alpha
@@ -80,6 +96,7 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbre
   }
 
   cout << etabins[i] <<  " nptbins  " << asymm3d[etabins[i].c_str()]->GetXaxis()->GetNbins() << endl;
+  cout << etabins[i] <<  " nptbins  " << data3d[etabins[i].c_str()]->GetXaxis()->GetNbins() << endl;
   //data3d[etabins[i].c_str()]->Draw();
 
 ///////////////// Responses against eta in bin of alpha cut, pt
@@ -114,10 +131,19 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbre
       vseta_denom->SetBinContent(etabin, 1-val);
       vseta_denom->SetBinError(etabin, err);
 
+      //aerrormc->SetBinContent(etabin,err);
+      aerrormc->SetBinContent(etabin,(TMath::IsNaN(err) ? 0. : err)*2/((1-val)*(1-val)));
+
     }
 
   TH1D* resp_eta = (TH1D*)vseta_nom->Clone("resp_eta");
   resp_eta->Divide(vseta_denom);
+  for (int bin = 1; bin < resp_eta->GetXaxis()->GetNbins(); ++bin) {
+    float error = aerrormc->GetBinContent(bin);
+    resp_eta->SetBinError(bin, error);
+      
+    }
+  
   resp_eta->Draw();
    
   // This is for Data
@@ -129,36 +155,41 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbre
       double err = data3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,alphabin);
      
       vseta_nom_data->SetBinContent(etabin, 1+val);
-      vseta_nom_data->SetBinError(etabin, err);
+      vseta_nom_data->SetBinError(etabin, (TMath::IsNaN(err) ? 0. : err));
 
       vseta_denom_data->SetBinContent(etabin, 1-val);
-      vseta_denom_data->SetBinError(etabin, err);
+      vseta_denom_data->SetBinError(etabin, (TMath::IsNaN(err) ? 0. : err));
 
+      //cout << "ERROR " << err << " val " << val << " " << (TMath::IsNaN(err) ? 0. : err) << endl;
+
+      aerrordt->SetBinContent(etabin,(TMath::IsNaN(err) ? 0. : err)*2/((1-val)*(1-val)));
+      //aerrordt->SetBinContent(etabin,err);
     }
 
   // First part of the correction is the ratio of these
-  // TODO: rebins, here can just merge two bins if ptbin = 5
     
-  TH1D* resp_eta_data = (TH1D*)vseta_nom_data->Clone("resp_eta_data");
+    TH1D* resp_eta_data = (TH1D*)vseta_nom_data->Clone("resp_eta_data");
     resp_eta_data->Divide(vseta_denom_data);
+
+    for (int bin = 1; bin < resp_eta_data->GetXaxis()->GetNbins(); ++bin) {
+      float error = aerrordt->GetBinContent(bin);
+      resp_eta_data->SetBinError(bin, error);
+    }
+    
     resp_eta_data->SetLineColor(kRed);
     resp_eta_data->Draw("same");
   
     responses[Form("mc_pt%s_%s",ptstr.c_str(),alphastr.c_str())] = resp_eta; 
-
     responses[Form("dt_pt%s_%s",ptstr.c_str(),alphastr.c_str())] = resp_eta_data; 
 
-    // responses[Form("ratio_pt%s_%s",ptstr.c_str(),alphastr.c_str())] = (TH1D*)resp_eta->Clone("ratio"); 
-    //  responses[Form("ratio_pt%s_%s",ptstr.c_str(),alphastr.c_str())]->Divide(resp_eta_data);
     respETA[ptbin] = (TH1D*)resp_eta->Clone("ratio"); 
     respETA[ptbin]->Divide(resp_eta_data);
 
-  // TODO: do this in a smart way
+    // TODO: do this in a smart way
     responses[Form("mc_pt%s_%s",ptstr.c_str(),alphastr.c_str())]->Write(Form("mc_pt%s_%s",ptstr.c_str(),alphastr.c_str()));
     responses[Form("dt_pt%s_%s",ptstr.c_str(),alphastr.c_str())]->Write(Form("dt_pt%s_%s",ptstr.c_str(),alphastr.c_str()));
     //   responses[Form("ratio_pt%s_%s",ptstr.c_str(),alphastr.c_str())]->Write(Form("ratio_pt%s_%s",ptstr.c_str(),alphastr.c_str()));   // This is the reference for the fit
     respETA[ptbin]->Write(Form("ratio_pt%s_%s",ptstr.c_str(),alphastr.c_str()));   // This is the reference for the fit
-
  
   }
 
@@ -191,16 +222,30 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbre
 	 vsalpha_nom_data->SetBinError(alphabin, errdt);
 
 	 vsalpha_denom_data->SetBinContent(alphabin, 1-valdt);
-	 vsalpha_denom_data->SetBinError(alphabin, errdt); 
+	 vsalpha_denom_data->SetBinError(alphabin, errdt);
+
+	 aerrormc->SetBinContent(etabin,(TMath::IsNaN(err) ? 0. : err)*2/((1-val)*(1-val)));
+	 aerrordt->SetBinContent(etabin,(TMath::IsNaN(errdt) ? 0. : errdt)*2/((1-valdt)*(1-valdt)));
 
 	 //cout <<  alphabin << " " << val << endl;
 
       }
-       
+     // TODO: check correct error for responses
      vsalpha_nom->Divide(vsalpha_denom);
+     for (int bin = 1; bin < vsalpha_nom->GetXaxis()->GetNbins(); ++bin) {
+      float error = aerrormc->GetBinContent(bin);
+      vsalpha_nom->SetBinError(bin, error);
+     }
+  
      vsalpha_nom->Write(Form("Respvsa_nom_mc_%d_%d",ptbin,etabin));
 
      vsalpha_nom_data->Divide(vsalpha_denom_data);
+
+     for (int bin = 1; bin < vsalpha_nom_data->GetXaxis()->GetNbins(); ++bin) {
+       float error = aerrordt->GetBinContent(bin);
+       vsalpha_nom_data->SetBinError(bin, error);
+     }
+  
      vsalpha_nom_data->Write(Form("Respvsa_denom_data_%d_%d",ptbin,etabin));
 
      vsalpha_nom->Divide(vsalpha_nom_data); // This is the MC/Data responses in bin of alpha
@@ -218,7 +263,7 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbre
 	 vsalpha_norm->SetBinContent(bin,val/norm);
 	 vsalpha_norm->SetBinError(bin,err/norm); // TODO: check this is correct
 
-	 cout << "in alphabin " << alphabin << " norm " << norm << " lowedge " <<   vsalpha_norm->GetBinLowEdge(bin) << endl;
+	 cout << "in alphabin " << bin << " norm with  " << norm << " lowedge " <<   vsalpha_norm->GetBinLowEdge(bin) << endl;
      }
      vsalpha_norm->Write(Form("Respvsa_norm_%d_%d",ptbin,etabin)); // This is a histogram that will be eventually fitted if looking purely at the radiation corrections
        
