@@ -185,7 +185,7 @@ void analyse(string era = "localHP", string outputfiletag = "testIDsandtrig_AK4_
   Float_t   jtcef[MAXJETS];
   Float_t   jtmuf[MAXJETS];
 
-  Float_t   jtchm[MAXJETS]; // charged multi
+  Int_t   jtchm[MAXJETS]; // charged multi
   Float_t   jtn[MAXJETS];
  
   jetTree->SetBranchAddress("evt", &evt);
@@ -269,8 +269,8 @@ void analyse(string era = "localHP", string outputfiletag = "testIDsandtrig_AK4_
  // Start event loop to fill histograms:
    cout << "Number of entries :" <<  jetTree->GetEntries()  << endl; 
 
-   for (int i = 0; i < jetTree->GetEntries(); ++i) {
-     //   for (int i = 0; i < 50; ++i) {
+   //   for (int i = 0; i < jetTree->GetEntries(); ++i) {
+   for (int i = 0; i < 50; ++i) {
      evtTree->GetEntry(i);
      triggerTree->GetEntry(i);
 
