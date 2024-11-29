@@ -1,7 +1,7 @@
 
 
 map<string,string> filenames = {
-                   {"zb0", "/eos/user/l/lamartik/zerobias0pbpb.root"},
+                   {"zb0", "/eos/user/l/lamartik/HIJEC_ZEROBIAS_TUPLES/zerobias0pbpb.root"},
 		   {"zb1", "/eos/user/l/lamartik/zerobias1pbpb.root"},
 		   {"zb2", "/eos/user/l/lamartik/zerobias2pbpb.root"},
 		   {"zb3", "/eos/user/l/lamartik/zerobias3pbpb.root"},
@@ -21,7 +21,7 @@ map<string,string> filenames = {
 		   {"zb17", "/eos/user/l/lamartik/zerobias17pbpb.root"},
 		   {"zb18", "/eos/user/l/lamartik/zerobias18pbpb.root"},
 		   {"zb19", "/eos/user/l/lamartik/zerobias19pbpb.root"},
-		   {"HP", "testdata/run3_pprefpbpbreco_data_05072024.root"},
+		   {"HP", "/eos/user/l/lamartik/run3_pprefpbpbreco_data_05072024.root"},
 		   {"MC", "/eos/cms/store/group/phys_heavyions/lamartik/tuples/MC_pprefwpbpbreco_privateforjec.root"},
 		   {"localHP", "testdata/run3_pprefpbpbreco_data_05072024.root"}
                     };
