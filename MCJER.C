@@ -1,4 +1,10 @@
-void MCJER(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbreco_MC.root") {
+// TODO: take pts from histograms.h
+// TODO: redu full eta range
+#include "histograms.h"
+
+//void MCJER(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root") {
+//void MCJER(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root") {
+  void MCJER(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbreco_MC_JERHCALbinningHF.root") {
  
   int pts[] = {40, 55, 80, 120, 170, 1000}; // Temporary
   float etabins[] = {0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0}; // Temporary
@@ -9,11 +15,14 @@ void MCJER(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbreco_MC.root
   map<int, TH1D*> ws;
   int cols[]  = {1, 2, 3, 4, 6, 7};
 
-  for (int ebin = 1; ebin <= 6; ++ebin) {
-    ws[ebin] =  new TH1D(Form("widths_%d",ebin),"",3,&ptsforwidths[0]); // TODO: for different bins of eta
+  for (int ebin = 1; ebin <= histograms::netaforjer; ++ebin) {
+     ws[ebin] =  new TH1D(Form("widths_%d",ebin),"",histograms::nptforJER,&histograms::ptforJER[0]); // TODO: for different bins of eta
     }
 
-  TFile *inFile = new TFile(inFileName.c_str(), "READ"); 
+  TFile *inFile = new TFile(inFileName.c_str(), "READ");
+
+  // TODO:
+   TFile *outfile = new TFile("testingMCjer.root","RECREATE");
 
   // Get 3D monster
   TH3D* responseprofile = (TH3D*)inFile->Get("hibin_-1.0_0.0/eta_-5.2_5.2/responses3D");
@@ -23,9 +32,22 @@ void MCJER(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbreco_MC.root
   //cout << responseprofile->GetYaxis()->GetNbins() << endl;
   TCanvas *c1 = new TCanvas("c1","c1",800,600);
 
-  for (int ptbin = 3; ptbin <= responseprofile->GetXaxis()->GetNbins(); ++ptbin) {
+  for (int ptbin = 1; ptbin <= responseprofile->GetXaxis()->GetNbins(); ++ptbin) {
       for (int etabin = 1; etabin <= responseprofile->GetYaxis()->GetNbins(); ++etabin) {
-  
+	// Manually limit bins for 2023
+	if (ptbin == 7 and etabin > 12) continue;
+	if (ptbin == 9 and etabin > 10) continue;
+	if (ptbin == 10 and etabin > 9) continue;
+	if (ptbin == 11 and etabin > 8) continue;
+	if (ptbin == 12 and etabin > 8) continue;
+	if (ptbin == 13 and etabin > 8) continue;
+	if (ptbin == 14 and etabin > 7) continue;
+	if (ptbin == 15 and etabin > 6) continue;
+	if (ptbin == 16 and etabin > 5) continue;
+	if (ptbin == 17 and etabin > 4) continue;
+
+	
+	cout << "etabin " << etabin << endl;
 	responseprofile->GetXaxis()->SetRange(ptbin,ptbin);    // pt axis - 2to5
 	responseprofile->GetYaxis()->SetRange(etabin,etabin);    // eta axis
 
@@ -41,6 +63,7 @@ void MCJER(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbreco_MC.root
 
 	// Iterate?
 	resp->Fit("gaus");
+	// Return to two wits, m \pm sigma
 	
 	c1->SetLogy();
 
@@ -51,16 +74,15 @@ void MCJER(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbreco_MC.root
 	auto txt = new TLatex();
 	txt->SetNDC();
 	txt->SetTextSize(0.03);
-	txt->DrawLatex( 0.2, 0.35, Form("%.1f < |#eta| < %.1f",etabins[etabin-1],etabins[etabin]));
-	txt->DrawLatex( 0.2, 0.4, Form("%d < p_{T,gen} < %d",pts[ptbin-1],pts[ptbin]));
+	txt->DrawLatex( 0.2, 0.35, Form("%.1f < |#eta| < %.1f",histograms::etaforjer[etabin-1],histograms::etaforjer[etabin]));
+	txt->DrawLatex( 0.2, 0.4, Form("%g < p_{T,gen} < %g",histograms::ptforJER[ptbin-1],histograms::ptforJER[ptbin]));
 	txt->DrawLatex( 0.2, 0.45, Form("#sigma = %.5f",fit->GetParameter(2)));
 
-	ws[etabin]->SetBinContent(ptbin-2,fit->GetParameter(2));
-	ws[etabin]->SetBinError(ptbin-2,fit->GetParError(2));
-	ws[etabin]->SetMaximum(0.2);
-       
+	ws[etabin]->SetBinContent(ptbin,fit->GetParameter(2)); // Was ptbin-2?
+	ws[etabin]->SetBinError(ptbin,fit->GetParError(2));
+	//	ws[etabin]->SetMaximum(0.2);       
 
-	c1->Print(Form("mcjerhists/resp_ptbin_%d_etabin_%d.pdf",ptbin,etabin));
+	c1->Print(Form("mcjerhists_new/resp_ptbin_%d_etabin_%d.png",ptbin,etabin));
       }
   }
 
@@ -70,14 +92,22 @@ void MCJER(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbreco_MC.root
   TCanvas *c2 = new TCanvas("c2","c2",800,600);
   c2->SetLogx();
   gStyle->SetOptStat(0);
-  for (int ebin = 1; ebin <= 6; ++ebin) {
+  
+  for (int ebin = 1; ebin <= histograms::netaforjer; ++ebin) {
+    //for (int ebin = 1; ebin <= 5; ++ebin) {
     ws[ebin]->SetLineColor(cols[ebin-1]);
+    ws[ebin]->GetXaxis()->SetRangeUser(15,1500);
+    ws[ebin]->SetMaximum(0.5);
     ws[ebin]->GetXaxis()->SetTitle("p_{T,ptcl}");
     ws[ebin]->GetYaxis()->SetTitle("#sigma");
     ws[ebin]->Draw("same");
     leg->AddEntry(ws[ebin],Form("%d",ebin));
+
+    ws[ebin]->Write();
   }
   leg->Draw();
 
-  c2->Print("mcjerhists/allmcjers.pdf");
+  c2->Print("mcjerhists_new/allmcjers.png");
+
+  ws[6]->Draw();
 }
