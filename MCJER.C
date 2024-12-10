@@ -1,6 +1,5 @@
-// TODO: take pts from histograms.h
-// TODO: redu full eta range
 #include "histograms.h"
+#include "TMath.h"
 
 //void MCJER(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root") {
 //void MCJER(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root") {
@@ -13,7 +12,7 @@
   TH1D* widths = new TH1D("widths","widths",3,&ptsforwidths[0]); // TODO: for different bins of eta
 
   map<int, TH1D*> ws;
-  int cols[]  = {1, 2, 3, 4, 6, 7};
+  int cols[]  = {1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 
   for (int ebin = 1; ebin <= histograms::netaforjer; ++ebin) {
      ws[ebin] =  new TH1D(Form("widths_%d",ebin),"",histograms::nptforJER,&histograms::ptforJER[0]); // TODO: for different bins of eta
@@ -35,7 +34,7 @@
   for (int ptbin = 1; ptbin <= responseprofile->GetXaxis()->GetNbins(); ++ptbin) {
       for (int etabin = 1; etabin <= responseprofile->GetYaxis()->GetNbins(); ++etabin) {
 	// Manually limit bins for 2023
-	if (ptbin == 7 and etabin > 12) continue;
+	if (ptbin == 8 and etabin > 11) continue;
 	if (ptbin == 9 and etabin > 10) continue;
 	if (ptbin == 10 and etabin > 9) continue;
 	if (ptbin == 11 and etabin > 8) continue;
@@ -61,25 +60,32 @@
 	// JER should come from a gaussian fit here
 	resp->Draw();
 
-	// Iterate?
-	resp->Fit("gaus");
-	// Return to two wits, m \pm sigma
+	// Fit twice
+	TF1 *f1 = new TF1("f1", "gaus");
+	f1->SetParameter(0,1.5);
+	resp->Fit("f1");
+
+
+	double c = f1->GetParameter(0);
+	double m = f1->GetParameter(1);
+	double s = f1->GetParameter(2);
+
+	TF1 *f2 = new TF1("f2", "gaus", m-2*s, m+2*s );
+	f2->SetParameters(c,m,s);
+
+	resp->Fit("f2","R");
+
 	
 	c1->SetLogy();
-
-	// Put the labels in
-
-	TF1 *fit = resp->GetFunction("gaus");
-
 	auto txt = new TLatex();
 	txt->SetNDC();
 	txt->SetTextSize(0.03);
 	txt->DrawLatex( 0.2, 0.35, Form("%.1f < |#eta| < %.1f",histograms::etaforjer[etabin-1],histograms::etaforjer[etabin]));
 	txt->DrawLatex( 0.2, 0.4, Form("%g < p_{T,gen} < %g",histograms::ptforJER[ptbin-1],histograms::ptforJER[ptbin]));
-	txt->DrawLatex( 0.2, 0.45, Form("#sigma = %.5f",fit->GetParameter(2)));
+	txt->DrawLatex( 0.2, 0.45, Form("#sigma = %.5f #pm %.5f",f2->GetParameter(2), f2->GetParError(2)));
 
-	ws[etabin]->SetBinContent(ptbin,fit->GetParameter(2)); // Was ptbin-2?
-	ws[etabin]->SetBinError(ptbin,fit->GetParError(2));
+	ws[etabin]->SetBinContent(ptbin,f2->GetParameter(2)); // Was ptbin-2?
+	ws[etabin]->SetBinError(ptbin,f2->GetParError(2));
 	//	ws[etabin]->SetMaximum(0.2);       
 
 	c1->Print(Form("mcjerhists_new/resp_ptbin_%d_etabin_%d.png",ptbin,etabin));
@@ -101,13 +107,21 @@
     ws[ebin]->GetXaxis()->SetTitle("p_{T,ptcl}");
     ws[ebin]->GetYaxis()->SetTitle("#sigma");
     ws[ebin]->Draw("same");
-    leg->AddEntry(ws[ebin],Form("%d",ebin));
+    leg->AddEntry(ws[ebin],Form("%.3f < |#eta| < %.3f",histograms::etaforjer[ebin-1],histograms::etaforjer[ebin]));
 
     ws[ebin]->Write();
+
+    // Fit NSC: sqrt([0]*abs([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])
+    TF1 *nsc = new TF1("nsc", "sqrt([0]*abs([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])");
+    nsc->SetLineColor(cols[ebin-1]);
+    ws[ebin]->Fit("nsc");
+
+    nsc->Draw("same");
+    nsc->Write(Form("fit_eta_%.3fto%.3f",histograms::etaforjer[ebin-1],histograms::etaforjer[ebin]));
+    
   }
   leg->Draw();
 
   c2->Print("mcjerhists_new/allmcjers.png");
 
-  ws[6]->Draw();
 }
