@@ -3,13 +3,12 @@
 // TODO: save sigmas as function of alpha for DT and MC
 // TODO: zero bias for low pT:s
 
-
-//void deriveL2_from3D(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root",string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr.root", string outfilename = "RERUNALL_combinedbins/L2residuals_pbpbreco_rerunall_HP_jetid_l2closure.root", bool dodt = true,   int alphabin = 5, bool useabs = true, bool usewideabs = false) {
-// zerobiasall_jetid_l2corr.root
+#include "histograms.h"
+string outfilename = "JERSF_sigmas_fits.root";
 
 
 //void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr.root") {
-void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr.root") {
+void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr.root") {
 
   //  int pts[] = {40, 55, 80, 120, 170, 1000}; // Temporary
   int pts[] = {15, 25, 80, 120, 1000}; // Temporary
@@ -17,27 +16,34 @@ void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_
   float etabins[] = {0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0}; // Temporary
   
   TFile *inFile = new TFile(inFileName.c_str(), "READ");
-  TFile *inFileDT = new TFile(inFileNameDT.c_str(), "READ"); 
+  TFile *inFileDT = new TFile(inFileNameDT.c_str(), "READ");
+  TFile *inFileZB = new TFile(inFileNameZB.c_str(), "READ"); 
 
-  // Get 3D monsters: TODO: EDIT: maybe map to different alphas
-  TH3D* asymmMC = (TH3D*)inFile->Get("hibin_-1.0_0.0/eta_-5.2_5.2/asymmdist3D");
-  TH3D* asymmDT = (TH3D*)inFileDT->Get("hibin_-1.0_0.0/eta_-5.2_5.2/asymmdist3D");
-
-  map<int, TH3D*> asymmMCs;
-  map<int, TH3D*> asymmDTs; // _a10 to a55?
+  map<int, TH3D*> asymmMCs, asymmDTs, asymmZBs; // _a10 to a55?
   int alphabins[] = {10, 15, 20, 25, 30, 35, 40, 45};
-  // Loop over alphas?
 
+  TFile *outfile = new TFile(outfilename.c_str(),"RECREATE");
   TCanvas *c1 = new TCanvas("c1","c1",800,600);
-  
+
+  // Outputs
+  map<int, map<int, TH1D*>> sigmasMCmap, sigmasDTmap;
+
+  TH3D* asymmDT = (TH3D*)inFileDT->Get("hibin_-1.0_0.0/eta_-5.2_5.2/asymmdist3D");
+  for (int ptbin = 2; ptbin <= asymmDT->GetXaxis()->GetNbins(); ++ptbin) {
+    for (int etabin = 1; etabin <= asymmDT->GetYaxis()->GetNbins(); ++etabin) {
+      sigmasMCmap[ptbin][etabin] = new TH1D(Form("sigmasMCpt%deta%d",ptbin,etabin),"; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
+      sigmasDTmap[ptbin][etabin] = new TH1D(Form("sigmasDTpt%deta%d",ptbin,etabin),"; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
+    }
+  }
+    
   int nalphas= 7;
   for (int i = 0; i < nalphas; ++i) {
+    int alphabin = i +1;
     cout << "alpha: " << alphabins[i] << " " << Form("hibin_-1.0_0.0/eta_-5.2_5.2/asymmdist3D_a%d",alphabins[i]) <<  " file " << inFileNameDT.c_str() << endl;
     asymmMCs[i] = (TH3D*)inFile->Get(Form("hibin_-1.0_0.0/eta_-5.2_5.2/asymmdist3D_a%d",alphabins[i]));
-    asymmDTs[i] = (TH3D*)inFile->Get(Form("hibin_-1.0_0.0/eta_-5.2_5.2/asymmdist3D_a%d",alphabins[i]));
+    asymmDTs[i] = (TH3D*)inFileDT->Get(Form("hibin_-1.0_0.0/eta_-5.2_5.2/asymmdist3D_a%d",alphabins[i]));
+    asymmZBs[i] = (TH3D*)inFileZB->Get(Form("hibin_-1.0_0.0/eta_-5.2_5.2/asymmdist3D_a%d",alphabins[i]));
 
-  // Need to fit these histograms and get the width; is it iterative?
-  // trunct. RMS: 98.5% of events in the core
 
     for (int ptbin = 2; ptbin <= asymmDTs[i]->GetXaxis()->GetNbins(); ++ptbin) {
       for (int etabin = 1; etabin <= asymmDTs[i]->GetYaxis()->GetNbins(); ++etabin) {
@@ -46,8 +52,11 @@ void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_
 	// 	TH1D* asMC = (TH1D*)asymmMC->ProjectionZ("MC",ptbin,ptbin,etabin,etabin);
 	//TH1D* asDT = (TH1D*)asymmDT->ProjectionZ("DT",ptbin,ptbin,etabin,etabin);
 	TH1D* asMC = (TH1D*)asymmMCs[i]->ProjectionZ("MC",ptbin,ptbin,etabin,etabin);
-	TH1D* asDT = (TH1D*)asymmDTs[i]->ProjectionZ("DT",ptbin,ptbin,etabin,etabin);
+	TH1D* asDT(0);
 
+	// Take HP instead of ZB; TODO: be more flexible for 2024
+	if ( ptbin > 3 ) asDT = (TH1D*)asymmDTs[i]->ProjectionZ("DT",ptbin,ptbin,etabin,etabin);
+	else asDT = (TH1D*)asymmZBs[i]->ProjectionZ("DT",ptbin,ptbin,etabin,etabin);
 	
 	//	asDT->Scale(1./asDT->Integral(),"width"); // For some reason using "scale" leads to histograms not plotted with error bars after the first iteration
 	asDT->SetTitle("");
@@ -57,15 +66,20 @@ void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_
 	//	cout << asymmDT->GetBinContent(ptbin,etabin,20) << " " <<  asymmDT->GetBinError(ptbin,etabin,20) << endl;
 	//      cout << asDT->GetBinContent(20) << " " <<  asDT->GetBinError(20) << endl;
 	asDT->Draw("E0");
-	asDT->Fit("gaus");
+	asDT->Fit("gaus"); // TODO: fit twice?
 
 	TF1 *fit = asDT->GetFunction("gaus");
+
+	double sigmaDT = fit->GetParameter(2);
+	sigmasDTmap[ptbin][etabin]->SetBinContent(alphabin,sigmaDT);
+
+	
 	auto txt = new TLatex();
 	txt->SetNDC();
 	txt->SetTextSize(0.03);
 	txt->DrawLatex( 0.2, 0.35, Form("%.1f < |#eta| < %.1f",etabins[etabin-1],etabins[etabin]));
 	txt->DrawLatex( 0.2, 0.4, Form("%d < p_{T,avg} < %d",pts[ptbin-1],pts[ptbin]));
-	txt->DrawLatex( 0.2, 0.45, Form("#sigma = %.5f",fit->GetParameter(2)));
+	txt->DrawLatex( 0.2, 0.45, Form("#sigma = %.5f",sigmaDT));
        
 	c1->SetLogy();
         c1->Print(Form("jersfhists_L2_rerunall/asymm_DT_ptbin_%d_etabin_%d_a%d.png",ptbin,etabin,i));
@@ -100,19 +114,27 @@ void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_
 	TF1 *fit = asMC->GetFunction("gaus");
      	//  cout << fit->GetParameter(1) << endl;    //Mean, sigma is 2
 
+	double sigmaMC = fit->GetParameter(2);
+	sigmasMCmap[ptbin][etabin]->SetBinContent(alphabin,sigmaMC);
+
+
 	auto txt = new TLatex();
 	txt->SetNDC();
 	txt->SetTextSize(0.03);
 	txt->DrawLatex( 0.2, 0.35, Form("%.1f < |#eta| < %.1f",etabins[etabin-1],etabins[etabin]));
 	txt->DrawLatex( 0.2, 0.4, Form("%d < p_{T,avg} < %d",pts[ptbin-1],pts[ptbin]));
-	txt->DrawLatex( 0.2, 0.45, Form("#sigma = %.5f",fit->GetParameter(2)));
+	txt->DrawLatex( 0.2, 0.45, Form("#sigma = %.5f",sigmaMC));
        
 	c1->Print(Form("jersfhists_L2_rerunall/asymm_MC_ptbin_%d_etabin_%d_a%d.png",ptbin,etabin,i));
       }
   }
   }
-  
-  // SAVE: old: jersfsigmas.root"
-  // We want to save the sigmas as function of alphe for both MC and DT
-  
+
+  for (int ptbin = 2; ptbin <= asymmDT->GetXaxis()->GetNbins(); ++ptbin) {
+    for (int etabin = 1; etabin <= asymmDT->GetYaxis()->GetNbins(); ++etabin) {
+      sigmasMCmap[ptbin][etabin]->Write(Form("sigmasMCpt%deta%d",ptbin,etabin));
+      sigmasDTmap[ptbin][etabin]->Write(Form("sigmasDTpt%deta%d",ptbin,etabin));
+    }
+  }
+    
 }

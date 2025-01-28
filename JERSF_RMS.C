@@ -1,5 +1,6 @@
+#include "histograms.h"
+
 // Do the fits as function of alpha
-// TODO: version with trunct. RMS?
 // TODO: save sigmas as function of alpha for DT and MC
 // TODO: zero bias for low pT:s
 
@@ -10,13 +11,10 @@ double GetRootMeanSquare( const TH1* h1) {
    return (stats[0] > 0) ? std::sqrt(stats[3]/stats[0]) : 0;
 }
 
+string outfilename = "JERSF_sigmas_RMS.root";
 
-//void deriveL2_from3D(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root",string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr.root", string outfilename = "RERUNALL_combinedbins/L2residuals_pbpbreco_rerunall_HP_jetid_l2closure.root", bool dodt = true,   int alphabin = 5, bool useabs = true, bool usewideabs = false) {
-// zerobiasall_jetid_l2corr.root
-
-
-//void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr.root") {
-void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr.root") {
+void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr.root") {
+ 
   float cut = 0.985; // cut for trunctuating the |A| histograms
   
   //  int pts[] = {40, 55, 80, 120, 170, 1000}; // Temporary
@@ -25,17 +23,33 @@ void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_j
   float etabins[] = {0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0}; // Temporary
   
   TFile *inFile = new TFile(inFileName.c_str(), "READ");
-  TFile *inFileDT = new TFile(inFileNameDT.c_str(), "READ"); 
+  TFile *inFileDT = new TFile(inFileNameDT.c_str(), "READ");
+  TFile *inFileZB = new TFile(inFileNameZB.c_str(), "READ"); 
 
   // Get 3D monsters: TODO: EDIT: maybe map to different alphas
   TH3D* asymmMC = (TH3D*)inFile->Get("hibin_-1.0_0.0/eta_-5.2_5.2/asymmdist3D");
   TH3D* asymmDT = (TH3D*)inFileDT->Get("hibin_-1.0_0.0/eta_-5.2_5.2/asymmdist3D");
+  TH3D* asymmZB = (TH3D*)inFileZB->Get("hibin_-1.0_0.0/eta_-5.2_5.2/asymmdist3D");
 
   map<int, TH3D*> asymmMCs;
-  map<int, TH3D*> asymmDTs; // _a10 to a55?
+  map<int, TH3D*> asymmDTs, asymmZBs; // _a10 to a55?
   int alphabins[] = {10, 15, 20, 25, 30, 35, 40, 45};
   // Loop over alphas?
 
+  // Outputs
+  map<int, map<int, TH1D*>> sigmasMCmap, sigmasDTmap;
+
+  TH1D* sigmasMC = new TH1D("sigmasMC","; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
+  TH1D* sigmasDT = new TH1D("sigmasDT","; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
+
+  for (int ptbin = 2; ptbin <= asymmDT->GetXaxis()->GetNbins(); ++ptbin) {
+    for (int etabin = 1; etabin <= asymmDT->GetYaxis()->GetNbins(); ++etabin) {
+      sigmasMCmap[ptbin][etabin] = new TH1D(Form("sigmasMCpt%deta%d",ptbin,etabin),"; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
+      sigmasDTmap[ptbin][etabin] = new TH1D(Form("sigmasDTpt%deta%d",ptbin,etabin),"; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
+    }
+  }
+
+  TFile *outfile = new TFile(outfilename.c_str(),"RECREATE");
   TCanvas *c1 = new TCanvas("c1","c1",600,600);
   
   int nalphas= 7;
@@ -43,20 +57,28 @@ void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_j
     cout << "alpha: " << alphabins[i] << " " << Form("hibin_-1.0_0.0/eta_-5.2_5.2/absasymmdist3D_a%d",alphabins[i]) <<  " file " << inFileNameDT.c_str() << endl;
     asymmMCs[i] = (TH3D*)inFile->Get(Form("hibin_-1.0_0.0/eta_-5.2_5.2/absasymmdist3D_a%d",alphabins[i]));
     asymmDTs[i] = (TH3D*)inFileDT->Get(Form("hibin_-1.0_0.0/eta_-5.2_5.2/absasymmdist3D_a%d",alphabins[i]));
+    asymmZBs[i] = (TH3D*)inFileZB->Get(Form("hibin_-1.0_0.0/eta_-5.2_5.2/absasymmdist3D_a%d",alphabins[i]));
 
+
+    
     // if (i != 0) break; // debug
 
   // Need to fit these histograms and get the width; is it iterative?
   // trunct. RMS: 98.5% of events in the core
-
+    int alphabin = i + 1;// binning in array vs. histogram
     for (int ptbin = 2; ptbin <= asymmDTs[i]->GetXaxis()->GetNbins(); ++ptbin) {
       for (int etabin = 1; etabin <= asymmDTs[i]->GetYaxis()->GetNbins(); ++etabin) {
+
 	//	cout << asymmDT->GetBinContent(ptbin,etabin,20) << " " <<  asymmDT->GetBinError(ptbin,etabin,20) << endl;
   
 	// 	TH1D* asMC = (TH1D*)asymmMC->ProjectionZ("MC",ptbin,ptbin,etabin,etabin);
 	//TH1D* asDT = (TH1D*)asymmDT->ProjectionZ("DT",ptbin,ptbin,etabin,etabin);
-	TH1D* asDT = (TH1D*)asymmDTs[i]->ProjectionZ(Form("DT_%d%d%d",ptbin,etabin,i),ptbin,ptbin,etabin,etabin);
-	TH1D* asMC = (TH1D*)asymmMCs[i]->ProjectionZ(Form("MC_%d%d%d",ptbin,etabin,i),ptbin,ptbin,etabin,etabin);
+	TH1D* asDT(0); 
+	// Take HP instead of ZB; TODO: be more flexible for 2024
+	if ( ptbin > 3 ) asDT = (TH1D*)asymmDTs[i]->ProjectionZ(Form("DT_%d%d%d",ptbin,etabin,alphabin),ptbin,ptbin,etabin,etabin);
+	else asDT = (TH1D*)asymmZBs[i]->ProjectionZ(Form("DT_%d%d%d",ptbin,etabin,alphabin),ptbin,ptbin,etabin,etabin);
+
+	TH1D* asMC = (TH1D*)asymmMCs[i]->ProjectionZ(Form("MC_%d%d%d",ptbin,etabin,alphabin),ptbin,ptbin,etabin,etabin);
 	asDT->GetXaxis()->SetRangeUser(0,1.4);
 	asMC->GetXaxis()->SetRangeUser(0,1.4);
 
@@ -65,7 +87,7 @@ void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_j
 	asMC->Scale(1./asMC->Integral(),"");
 	
 	asDT->SetTitle("");
-	asDT->GetXaxis()->SetTitle("A");
+	asDT->GetXaxis()->SetTitle("|A|");
 	cout << "Integrate: " <<  asDT->Integral() << " get entries: " << asDT->GetEntries() << endl;
 	cout << "Scan histrogram" << endl;
 
@@ -94,6 +116,8 @@ void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_j
 	  }
 	}
 	double RMSDT =  GetRootMeanSquare(trunctAsDT);
+	//	sigmasDT->SetBinContent(alphabin,RMSDT);
+	sigmasDTmap[ptbin][etabin]->SetBinContent(alphabin,RMSDT);
 	cout << "RMS in trunct data: " << RMSDT << endl;
 
 	//// MC
@@ -106,20 +130,22 @@ void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_j
 	  float einbinsold = einbins;
 	  einbins += asMC->GetBinContent(j);
 	  // Debug: 
-	   cout << " in bins " << einbins << " binc " << asMC->GetBinContent(j) << " ratio " <<   einbins/all << endl;
+	  //	   cout << " in bins " << einbins << " binc " << asMC->GetBinContent(j) << " ratio " <<   einbins/all << endl;
 
 	  if (einbins/all < cut) trunctAsMC->SetBinContent(j, asMC->GetBinContent(j));
 	  else {
 	    fracmc = (cut*all-einbinsold)/ asMC->GetBinContent(j);
-	    cout << "FRAC is: " << fracmc << " in bin then " << fracmc*asMC->GetBinContent(j) << " " << asMC->GetBinContent(j) << endl; // << " " << cut << " " << all << " " << einbins << endl;
+	    //	    cout << "FRAC is: " << fracmc << " in bin then " << fracmc*asMC->GetBinContent(j) << " " << asMC->GetBinContent(j) << endl; // << " " << cut << " " << all << " " << einbins << endl;
 	    trunctAsMC->SetBinContent(j, fracmc*asMC->GetBinContent(j));
 	    linepointmc = fracmc*asMC->GetBinWidth(j) + asMC->GetBinLowEdge(j);
 	  }
 	}
 	double RMSMC = GetRootMeanSquare(trunctAsMC);
+	//	sigmasMC->SetBinContent(alphabin,RMSMC);
+	sigmasMCmap[ptbin][etabin]->SetBinContent(alphabin,RMSMC);
 	cout << "RMS in trunct MC: " << RMSMC << endl;
 
-	/// TODO: change tline to 
+
 	////////// Draw data
 	auto linedt  = new TLine(linepointdt, 0, linepointdt, 0.3); // TODO: max
 	asDT->SetStats(0);
@@ -151,7 +177,6 @@ void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_j
 	leg2->AddEntry(linemc,Form("%.1f%% mc",cut*100),"l");
 	leg2->Draw();
 
-	//	TF1 *fit = asDT->GetFunction("gaus");
 	auto txt = new TLatex();
 	txt->SetNDC();
 	txt->SetTextSize(0.03);
@@ -159,54 +184,27 @@ void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_j
 	txt->DrawLatex( 0.62, 0.35, Form("%.1f < |#eta| < %.1f, #alpha < %.2f",etabins[etabin-1],etabins[etabin],0.01*alphabins[i]));
 	txt->DrawLatex( 0.62, 0.3, Form("RMS DT: %g",RMSDT));
 	txt->DrawLatex( 0.62, 0.25, Form("RMS MC: %g",RMSMC));
-	//	txt->DrawLatex( 0.2, 0.45, Form("#sigma = %.5f",fit->GetParameter(2)));
        
 	c1->SetLogy();
+	
         c1->Print(Form("jersfhists_L2_rerunall/absasymm_RMS_ptbin_%d_etabin_%d_a%d.png",ptbin,etabin,i));
+
 	//c1->Print(Form("jersfhists_L2_rerunall/asymm_DT_ptbin_%d_etabin_%d_a.pdf",ptbin,etabin));
-      }
-      }
- 
+      } // etabin
 
+        // pt, eta?
+   
+    } // ptbin
 
-    /*  for (int ptbin = 2; ptbin <= asymmDT->GetXaxis()->GetNbins(); ++ptbin) {
-      for (int etabin = 1; etabin <= asymmDT->GetYaxis()->GetNbins(); ++etabin) {
-	//	cout << asymmDT->GetBinContent(ptbin,etabin,20) << " " <<  asymmDT->GetBinError(ptbin,etabin,20) << endl;
-  	TH1D* asMC = (TH1D*)asymmMCs[i]->ProjectionZ("MC",ptbin,ptbin,etabin,etabin);
-	
-	// asMC->Scale(1./asMC->Integral(),"width");
-	// Technically we'd need the lumi normalization?
-	
-	asMC->SetTitle("");
-
-	asMC->GetXaxis()->SetTitle("A");
-
-	//	cout << asymmDT->GetBinContent(ptbin,etabin,20) << " " <<  asymmDT->GetBinError(ptbin,etabin,20) << endl;
-	//      cout << asDT->GetBinContent(20) << " " <<  asDT->GetBinError(20) << endl;
-	asMC->Draw("");
-	//	asMC->Fit("gaus");
-	
-	c1->SetLogy();
-
-	// Put the labels in
-
-	//TF1 *fit = asMC->GetFunction("gaus");
-     	//  cout << fit->GetParameter(1) << endl;    //Mean, sigma is 2
-
-	auto txt = new TLatex();
-	txt->SetNDC();
-	txt->SetTextSize(0.03);
-	txt->DrawLatex( 0.2, 0.35, Form("%.1f < |#eta| < %.1f",etabins[etabin-1],etabins[etabin]));
-	txt->DrawLatex( 0.2, 0.4, Form("%d < p_{T,avg} < %d",pts[ptbin-1],pts[ptbin]));
-	//txt->DrawLatex( 0.2, 0.45, Form("#sigma = %.5f",fit->GetParameter(2)));
-       
-	c1->Print(Form("jersfhists_L2_rerunall/absasymm_MC_ptbin_%d_etabin_%d_a%d.png",ptbin,etabin,i));
-      }
-  } */
   }
-  
-  // SAVE: old: jersfsigmas.root"
-  // We want to save the sigmas as function of alphe for both MC and DT
-  
+
+
+  for (int ptbin = 2; ptbin <= asymmDT->GetXaxis()->GetNbins(); ++ptbin) {
+    for (int etabin = 1; etabin <= asymmDT->GetYaxis()->GetNbins(); ++etabin) {
+      sigmasMCmap[ptbin][etabin]->Write(Form("sigmasMCpt%deta%d",ptbin,etabin));
+      sigmasDTmap[ptbin][etabin]->Write(Form("sigmasDTpt%deta%d",ptbin,etabin));
+    }
+  }
+
 }
 

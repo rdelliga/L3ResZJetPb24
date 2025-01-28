@@ -1,16 +1,23 @@
 #include "histograms.h"
 
-int pts[] = {15, 25, 55, 80, 120, 170, 1000}; // Temporary
+//int pts[] = {15, 25, 55, 80, 120, 170, 1000}; // Temporary
+int pts[] = {15, 25, 80, 120, 1000}; // Temporary
+int nptbins = 4;
+//string ptbins[] = {"25to55", "55to80", "80to120", "120to170", "170to1000"};
+string ptbins[] = {"25to80", "80to120", "120to1000"};
 
-void dofits(float fitmin = 0.15, float fitmax = 0.35, string outfilename = "kfactor_rerunall_allpts.root", bool doabseta = true) {
+
+void dofits(float fitmin = 0.15, float fitmax = 0.35, string outfilename = "kfactor_rerunall_combined_allpts", bool doabseta = true) {
   // input file is from 3D derivation
   gStyle->SetOptStat(0);
 
-  TFile *inFilezb = new TFile("RERUNALL/L2residuals_pbpbreco_rerunall_zerobias_jetid.root", "READ");
-  TFile *inFile = new TFile("RERUNALL/L2residuals_pbpbreco_rerunall_HP_PFTRIG_jetid_a3.root", "READ");
-  //TFile *inFile = new TFile("test.root", "READ");
-  TFile *outfile = new TFile(outfilename.c_str(),"RECREATE");
+  TFile *inFilezb = new TFile("RERUNALL_combinedbins/L2residuals_pbpbreco_rerunall_zerobias_jetid.root", "READ");
+  TFile *inFile = new TFile("RERUNALL_combinedbins/L2residuals_pbpbreco_rerunall_HP_jetid.root", "READ");
 
+  //TFile *inFile = new TFile("test.root", "READ");
+  string outfolder = "fits_combinedbins";
+  TFile *outfile = new TFile(Form("%s/%s.root",outfolder.c_str(),outfilename.c_str()),"RECREATE");
+  
   // ROOT::Fit::DataRange range(0.3,0.4);
   ROOT::Fit::DataOptions opt; 
   ROOT::Fit::DataRange range; 
@@ -19,7 +26,7 @@ void dofits(float fitmin = 0.15, float fitmax = 0.35, string outfilename = "kfac
    //  mg->Add(g2,"L");
  
   // This is for correcton factors - hiso against eta
-  auto factors = (TH1D*)inFile->Get("ratio_pt25to55_alpha0.3"); // There needs to be a switch...
+  auto factors = (TH1D*)inFile->Get("ratio_pt25to80_alpha0.3"); // There needs to be a switch...
   factors->Reset();
 
   // TODO: change this so that histogram contents are copied into TGraphs and the reference alpha is excluded
@@ -43,22 +50,24 @@ void dofits(float fitmin = 0.15, float fitmax = 0.35, string outfilename = "kfac
     
     //int etabin = 18;
     // pick histos for different pT:s
-     for ( int ptbin = 1; ptbin <=3; ++ptbin)  histos[ptbin] = (TH1D*)inFilezb->Get(Form("Respvsa_norm_%d_%d",ptbin,etabin)); // TODO: histo name logic will change
-     for ( int ptbin = 4; ptbin <=6; ++ptbin)  histos[ptbin] = (TH1D*)inFile->Get(Form("Respvsa_norm_%d_%d",ptbin,etabin)); // TODO: histo name logic will change
+     for ( int ptbin = 1; ptbin <=2; ++ptbin)  histos[ptbin] = (TH1D*)inFilezb->Get(Form("Respvsa_norm_%d_%d",ptbin,etabin)); // TODO: histo name logic will change
+     for ( int ptbin = 3; ptbin <=4; ++ptbin)  histos[ptbin] = (TH1D*)inFile->Get(Form("Respvsa_norm_%d_%d",ptbin,etabin)); // TODO: histo name logic will change
 
 
-     for ( int ptbin = 1; ptbin <=3; ++ptbin)  ratios[ptbin] = (TH1D*)inFilezb->Get(Form("Respvsa_%d_%d",ptbin,etabin)); // TODO: histo name logic will change
-     for ( int ptbin = 4; ptbin <=6; ++ptbin)  ratios[ptbin] = (TH1D*)inFile->Get(Form("Respvsa_%d_%d",ptbin,etabin)); // TODO: histo name logic will change
+     for ( int ptbin = 1; ptbin <=2; ++ptbin)  ratios[ptbin] = (TH1D*)inFilezb->Get(Form("Respvsa_%d_%d",ptbin,etabin)); // TODO: histo name logic will change
+     for ( int ptbin = 3; ptbin <=4; ++ptbin)  ratios[ptbin] = (TH1D*)inFile->Get(Form("Respvsa_%d_%d",ptbin,etabin)); // TODO: histo name logic will change
 
      histos[1]->SetMaximum(1.15);
      histos[1]->SetMinimum(0.85);
      histos[1]->Draw("AXIS");
        
-     for (int ptbin = 2; ptbin <= 6; ++ptbin) {
+     for (int ptbin = 2; ptbin <= 4; ++ptbin) {
        //       if (etabin >= 14 and ptbin == 6) break;
        //       if (etabin >= 17 and ptbin == 5) break;
-       if (etabin > 8 and ptbin == 6) break;
-       if (etabin > 11 and ptbin == 5) break;
+       //  if (etabin > 8 and ptbin == 6) break;
+       // if (etabin > 11 and ptbin == 5) break;
+           if (etabin > 11 and ptbin == 4) break;
+	   //  if (etabin > 11 and ptbin == 4) break;
        
     // TODO: Handle Graphs here?   
 
@@ -141,7 +150,7 @@ void dofits(float fitmin = 0.15, float fitmax = 0.35, string outfilename = "kfac
   txt->DrawLatex( 0.2, 0.85, Form("p0 = %.5f #pm %.5f",f1->GetParameter(0), f1->GetParError(0)));
 
   
-  c1->Print(Form("fitsrmptbinstest/fits_eta_%d.png",etabin));
+  c1->Print(Form("%s/fits_eta_%d.png",outfolder.c_str(),etabin));
 
   //    TCanvas *c3 = new TCanvas("c3","c3",800,600);
   //  graphs[3]->Draw("");
@@ -158,30 +167,69 @@ void dofits(float fitmin = 0.15, float fitmax = 0.35, string outfilename = "kfac
   factors->Fit(f2);
  
   if (doabseta)  factors->GetXaxis()->SetTitle(" |#eta| ");
-  else  factors->GetXaxis()->SetTitle(" #eta ");
-  
+  else  factors->GetXaxis()->SetTitle(" #eta "); 
 
   factors->Draw();
-  c2->Print("fitsinptbins/kfactors.png");
+  c2->Print(Form("%s/kfactors.png",outfolder.c_str()));
   
   factors->Write();
 
 
   TCanvas *c3 = new TCanvas("c3","c3",800,600);
+
+  auto leg2 = new TLegend(0.57,0.7,0.85,0.85); //  x, y, x, y
+  leg2->SetTextSize(0.03);
+  leg2->SetBorderSize(0);
+  leg2->SetFillStyle(0);
+
+     
   map<string, TH1D*> histos;
-  string ptbins[] = {"25to55", "55to80", "80to120", "120to170", "170to1000"};
       // for ( int ptbin = 1; ptbin <=3; ++ptbin)  histos[ptbin] = (TH1D*)inFilezb->Get(Form("rm_%d_%d",ptbin,etabin)); // TODO: histo name logic will change
       //  for ( int ptbin = 4; ptbin <=6; ++ptbin)  histos[ptbin] = (TH1D*)inFile->Get(Form("Respvsa_norm_%d_%d",ptbin,etabin)); // TODO: histo name logic will change
 
-  histos["25to55"] = (TH1D*)inFilezb->Get("ratio_pt25to55_alpha0.3"); // TODO: histo name logic will change
-  histos["55to80"] = (TH1D*)inFilezb->Get("ratio_pt55to80_alpha0.3"); // TODO: histo name logic will change
+  // histos["15to25"] = (TH1D*)inFilezb->Get("ratio_pt25to55_alpha0.3"); // TODO: histo name logic will change
+  histos["25to80"] = (TH1D*)inFilezb->Get("ratio_pt25to80_alpha0.3"); // TODO: histo name logic will change
+  // histos["55to80"] = (TH1D*)inFilezb->Get("ratio_pt55to80_alpha0.3"); // TODO: histo name logic will change
   histos["80to120"] = (TH1D*)inFile->Get("ratio_pt80to120_alpha0.3"); // TODO: histo name logic will change
-  histos["120to170"] = (TH1D*)inFile->Get("ratio_pt120to170_alpha0.3"); // TODO: histo name logic will change
-  histos["170to1000"] = (TH1D*)inFile->Get("ratio_pt170to1000_alpha0.3"); // TODO: histo name logic will change
+  histos["120to1000"] = (TH1D*)inFile->Get("ratio_pt120to1000_alpha0.3"); // TODO: histo name logic will change
+  //  histos["170to1000"] = (TH1D*)inFile->Get("ratio_pt170to1000_alpha0.3"); // TODO: histo name logic will change
 
+
+  int col = 0;
   for (auto bin : ptbins) {
-    histos[bin.c_str()]->Multiply(factors);
+  
+
+    for (int hb = 1; hb < histos[bin.c_str()]->GetXaxis()->GetNbins(); ++hb) {
+      //cout << "test" << endl;
+      histos[bin.c_str()]->SetBinError(hb, 0.);
+      if (bin == "120to1000" and hb > 11) histos[bin.c_str()]->SetBinContent(hb, 0.);
+      // TODO: set range of validity, as used in the fits
+    }
+  
+    histos[bin.c_str()]->Multiply(factors);    // Bin errors are actually wrong if done like this -> set to 0?
+    histos[bin.c_str()]->SetLineColor(colours[col]);
+    histos[bin.c_str()]->SetMarkerStyle(kFullCircle);
+    histos[bin.c_str()]->SetMarkerColor(colours[col]);
+    
+     if (doabseta)  histos[bin.c_str()]->GetXaxis()->SetTitle(" |#eta| ");
+     else  histos[bin.c_str()]->GetXaxis()->SetTitle(" #eta ");
+     histos[bin.c_str()]->GetYaxis()->SetTitle(" L2 residual correction ");
+
+
+    histos[bin.c_str()]->SetMaximum(1.3);
+    histos[bin.c_str()]->SetMinimum(0.9);
+
+    
+
     histos[bin.c_str()]->Draw("same");
     histos[bin.c_str()]->Write(Form("corrections_%s",bin.c_str()));
+    leg2->AddEntry(histos[bin.c_str()], Form("%d < p_{T} < %d",pts[col+1],pts[col+2])); // TODO: correct bin edges
+    //leg2->AddEntry(histos[bin.c_str()], Form("%s",bin.c_str())); // TODO: correct bin edges
+    col++;
   }
+  leg2->Draw();
+  
+  c3->Print(Form("%s/corrections.png",outfolder.c_str()));
+  c3->Print(Form("%s/corrections.pdf",outfolder.c_str()));
+  
 }
