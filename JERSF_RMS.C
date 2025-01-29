@@ -38,6 +38,7 @@ void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_j
 
   // Outputs
   map<int, map<int, TH1D*>> sigmasMCmap, sigmasDTmap;
+  map<int, map<int, TGraphErrors*>> sigmasGraphMCmap, sigmasGraphDTmap;
 
   TH1D* sigmasMC = new TH1D("sigmasMC","; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
   TH1D* sigmasDT = new TH1D("sigmasDT","; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
@@ -203,6 +204,28 @@ void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_j
     for (int etabin = 1; etabin <= asymmDT->GetYaxis()->GetNbins(); ++etabin) {
       sigmasMCmap[ptbin][etabin]->Write(Form("sigmasMCpt%deta%d",ptbin,etabin));
       sigmasDTmap[ptbin][etabin]->Write(Form("sigmasDTpt%deta%d",ptbin,etabin));
+
+      Double_t results[histograms::nalphavaluesgraphjer];
+      Double_t errors[histograms::nalphavaluesgraphjer];
+      Double_t errorsx[histograms::nalphavaluesgraphjer];
+
+      Double_t resultsdt[histograms::nalphavaluesgraphjer];
+      Double_t errorsdt[histograms::nalphavaluesgraphjer];
+      
+      for (int abin = 0; abin < histograms::nalphavaluesgraphjer; ++abin) {
+	
+        results[abin] =  sigmasMCmap[ptbin][etabin]->GetBinContent(abin+1);
+	//	errors[abin] =   sigmasMCmap[ptbin][etabin]->GetBinError(abin+1);
+
+	resultsdt[abin] =  sigmasDTmap[ptbin][etabin]->GetBinContent(abin+1);
+	//      errorsdt[abin] =   sigmasDTmap[ptbin][etabin]->GetBinError(abin+1);
+       }
+
+      sigmasGraphMCmap[ptbin][etabin] = new TGraphErrors(histograms::nalphavaluesgraphjer, histograms::alphavaluesgraphjer, results, errorsx, errors); // TODO: do not include reference?
+      sigmasGraphMCmap[ptbin][etabin]->Write(Form("gsigmasMCpt%deta%d",ptbin,etabin));
+
+      sigmasGraphDTmap[ptbin][etabin] = new TGraphErrors(histograms::nalphavaluesgraphjer, histograms::alphavaluesgraphjer, resultsdt, errorsx, errorsdt); // TODO: do not include reference?
+      sigmasGraphDTmap[ptbin][etabin]->Write(Form("gsigmasDTpt%deta%d",ptbin,etabin));
     }
   }
 

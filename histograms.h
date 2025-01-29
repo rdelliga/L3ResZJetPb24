@@ -230,6 +230,10 @@ class histograms {
   //static constexpr double alphavalues[] = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6};
   static constexpr unsigned int nalphavaluesgraph = sizeof(alphavaluesgraph)/sizeof(alphavaluesgraph[0])-1;
 
+  static constexpr double alphavaluesgraphjer[] = {0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45}; 
+  //static constexpr double alphavalues[] = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6};
+  static constexpr unsigned int nalphavaluesgraphjer = sizeof(alphavaluesgraphjer)/sizeof(alphavaluesgraphjer[0])-1;
+
  
   histograms(TDirectory *dir, float ptmin, float ptmax, float hibinmin, float hibinmax, bool ismc);
   //   ~histograms();

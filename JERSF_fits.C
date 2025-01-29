@@ -27,6 +27,7 @@ void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_
 
   // Outputs
   map<int, map<int, TH1D*>> sigmasMCmap, sigmasDTmap;
+  map<int, map<int, TGraphErrors*>> sigmasGraphMCmap, sigmasGraphDTmap;
 
   TH3D* asymmDT = (TH3D*)inFileDT->Get("hibin_-1.0_0.0/eta_-5.2_5.2/asymmdist3D");
   for (int ptbin = 2; ptbin <= asymmDT->GetXaxis()->GetNbins(); ++ptbin) {
@@ -35,7 +36,9 @@ void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_
       sigmasDTmap[ptbin][etabin] = new TH1D(Form("sigmasDTpt%deta%d",ptbin,etabin),"; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
     }
   }
-    
+
+
+  
   int nalphas= 7;
   for (int i = 0; i < nalphas; ++i) {
     int alphabin = i +1;
@@ -71,8 +74,9 @@ void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_
 	TF1 *fit = asDT->GetFunction("gaus");
 
 	double sigmaDT = fit->GetParameter(2);
+	double errorDT = fit->GetParError(2);
 	sigmasDTmap[ptbin][etabin]->SetBinContent(alphabin,sigmaDT);
-
+	sigmasDTmap[ptbin][etabin]->SetBinError(alphabin,errorDT);
 	
 	auto txt = new TLatex();
 	txt->SetNDC();
@@ -115,7 +119,9 @@ void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_
      	//  cout << fit->GetParameter(1) << endl;    //Mean, sigma is 2
 
 	double sigmaMC = fit->GetParameter(2);
+	double errorMC = fit->GetParError(2);
 	sigmasMCmap[ptbin][etabin]->SetBinContent(alphabin,sigmaMC);
+	sigmasMCmap[ptbin][etabin]->SetBinError(alphabin,errorMC);
 
 
 	auto txt = new TLatex();
@@ -134,6 +140,30 @@ void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_
     for (int etabin = 1; etabin <= asymmDT->GetYaxis()->GetNbins(); ++etabin) {
       sigmasMCmap[ptbin][etabin]->Write(Form("sigmasMCpt%deta%d",ptbin,etabin));
       sigmasDTmap[ptbin][etabin]->Write(Form("sigmasDTpt%deta%d",ptbin,etabin));
+
+      
+      Double_t results[histograms::nalphavaluesgraphjer];
+      Double_t errors[histograms::nalphavaluesgraphjer];
+      Double_t errorsx[histograms::nalphavaluesgraphjer];
+
+      Double_t resultsdt[histograms::nalphavaluesgraphjer];
+      Double_t errorsdt[histograms::nalphavaluesgraphjer];
+      
+      for (int abin = 0; abin < histograms::nalphavaluesgraphjer; ++abin) {
+	
+        results[abin] =  sigmasMCmap[ptbin][etabin]->GetBinContent(abin+1);
+	errors[abin] =   sigmasMCmap[ptbin][etabin]->GetBinError(abin+1);
+
+	resultsdt[abin] =  sigmasDTmap[ptbin][etabin]->GetBinContent(abin+1);
+	errorsdt[abin] =   sigmasDTmap[ptbin][etabin]->GetBinError(abin+1);
+   }
+
+      sigmasGraphMCmap[ptbin][etabin] = new TGraphErrors(histograms::nalphavaluesgraphjer, histograms::alphavaluesgraphjer, results, errorsx, errors); // TODO: do not include reference?
+      sigmasGraphMCmap[ptbin][etabin]->Write(Form("gsigmasMCpt%deta%d",ptbin,etabin));
+
+      sigmasGraphDTmap[ptbin][etabin] = new TGraphErrors(histograms::nalphavaluesgraphjer, histograms::alphavaluesgraphjer, resultsdt, errorsx, errorsdt); // TODO: do not include reference?
+      sigmasGraphDTmap[ptbin][etabin]->Write(Form("gsigmasDTpt%deta%d",ptbin,etabin));
+
     }
   }
     
