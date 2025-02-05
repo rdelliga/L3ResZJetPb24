@@ -1,15 +1,20 @@
-void JERSF_fits_vsalpha(string filein = "../JERSF_sigmas_fits_forjer_wideeta.root") {
+void JERSF_fits_vsalpha(string filein = "../JERSF_sigmas_fits_forjer_wideeta.root", string outfilename = "JERSFs_fromfits.root") {
   float fitmin = 0.2, fitmax = 0.4;
   double ptbins[] = {15, 25, 80, 120, 1000};
   int nptbins = 4;
 
   double etas[] = {0.0, 1.3, 2.5, 3.0};
+  int netas = 2;
   
   // inputs are in same file for data and MC
   auto file = new TFile(filein.c_str(),"READ");
 
+  auto outfile = new TFile(outfilename.c_str(),"RECREATE");
+
   auto txt = new TLatex();
   txt->SetNDC();
+
+  auto SFs = new TH1D("SF","JER scale factor",nptbins,&etas[0]);
   
   for (int etabin = 1; etabin < 3; ++etabin) {
     auto hdata = new TH1D(Form("hdata_%d",etabin),Form("hdata_%d",etabin),nptbins,&ptbins[0] );
@@ -34,9 +39,8 @@ void JERSF_fits_vsalpha(string filein = "../JERSF_sigmas_fits_forjer_wideeta.roo
       MC->SetMarkerColor(kRed+1); MC->SetMarkerStyle(kFullCircle);
       DT->Draw("");
       MC->Draw("P same");
-
   
-      TF1 * f1 = new TF1("f1","pol1",fitmin,fitmax); // TODO: check that this range selection works
+      TF1 * f1 = new TF1("f1","pol1",fitmin,fitmax);
       f1->SetParameters(1,0);
       DT->Fit("f1","R");
       f1->Draw("same");
@@ -57,7 +61,7 @@ void JERSF_fits_vsalpha(string filein = "../JERSF_sigmas_fits_forjer_wideeta.roo
       hmc->SetBinContent(ptbin,sigmamc);
       hmc->SetBinError(ptbin,errmc);
 
-  //  save SF vs. abs(eta)
+      //  save SF vs. abs(eta)
 
     }
 
@@ -73,12 +77,25 @@ void JERSF_fits_vsalpha(string filein = "../JERSF_sigmas_fits_forjer_wideeta.roo
     txt->DrawLatex(0.3,0.3, Form("%.1f <|#eta| < %.1f",etas[etabin-1],etas[etabin]));
 
     // fit vs. pT in separate bins of eta? = calculate average? pol fit?
-    TF1 * f2 = new TF1("f2","pol0",25,1000); // TODO: check that this range selection works
+    TF1 * f2 = new TF1("f2","pol0",25,1000);
     //      f2->SetParameters(0,1);
-      hratio->Fit("f2","R");
-      f2->Draw("same");
+    hratio->Fit("f2","R");
+    f2->Draw("same");
+
+    SFs->SetBinContent(etabin,f2->GetParameter(0));
+    SFs->SetBinError(etabin,f2->GetParError(0));
+
+    hdata->Write();
+    hmc->Write();
+    hratio->Write();
     
   }
+
+  auto csf = new TCanvas("sf","sf",600,600);
+  SFs->GetXaxis()->SetRangeUser(0.,2.6);
+  
+  SFs->Draw();
+  SFs->Write();
   
 
 }
