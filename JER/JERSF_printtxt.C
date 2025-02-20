@@ -19,8 +19,8 @@ void JERSF_printtxt(string filein = "JERSFs_fromfits.root")  {
   
   // Neg eta
   for (int i = SFs->GetXaxis()->GetNbins()-1; i > 1 ; i--) {
-    cout << -SFs->GetBinLowEdge(i) << " " <<  (i == 1 ? -SFs->GetBinLowEdge(i-1) : SFs->GetBinLowEdge(i-1))  << " " << minpt << " " << maxpt << " 3 " << SFs->GetBinContent(i-1) << " "  << SFs->GetBinContent(i-1) << " "  << SFs->GetBinContent(i-1) << endl;
-    txtfile << -SFs->GetBinLowEdge(i) << " " <<  (i == 1 ? -SFs->GetBinLowEdge(i-1) : SFs->GetBinLowEdge(i-1))  << " " << minpt << " " << maxpt << " 3 " << SFs->GetBinContent(i-1) << " "  << SFs->GetBinContent(i-1) << " "  << SFs->GetBinContent(i-1) << endl;
+    cout << -SFs->GetBinLowEdge(i) << " " <<  (i != 2 ? -SFs->GetBinLowEdge(i-1) : SFs->GetBinLowEdge(i-1))  << " " << minpt << " " << maxpt << " 3 " << SFs->GetBinContent(i-1) << " "  << SFs->GetBinContent(i-1) << " "  << SFs->GetBinContent(i-1) << endl;
+    txtfile << -SFs->GetBinLowEdge(i) << " " <<  (i != 2 ? -SFs->GetBinLowEdge(i-1) : SFs->GetBinLowEdge(i-1))  << " " << minpt << " " << maxpt << " 3 " << SFs->GetBinContent(i-1) << " "  << SFs->GetBinContent(i-1) << " "  << SFs->GetBinContent(i-1) << endl;
   }
 
    for (int i = 1; i < SFs->GetXaxis()->GetNbins()-1; ++i) {

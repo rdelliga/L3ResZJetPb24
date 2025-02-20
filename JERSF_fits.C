@@ -4,16 +4,20 @@
 // TODO: zero bias for low pT:s
 
 #include "histograms.h"
-string outfilename = "JERSF_sigmas_fits.root";
+string outfilename = "JERSF_sigmas_fits_forjer_wideeta.root";
 
 
 //void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr.root") {
-void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr.root") {
+//void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr.root") {
+//void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_PFTRIG_jetid_l2corr_etaforjerinsamebin.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr_etaforjetinsamebin.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr_etaforjerinsamebin.root") {
+//void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_PFTRIG_jetid_l2corr_forjer.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr_forjer.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr_forjer.root") {
+void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_PFTRIG_jetid_l2corr_forjer_wideeta.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr_forjer_wideeta.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr_forjer_wideeta.root") {
 
   //  int pts[] = {40, 55, 80, 120, 170, 1000}; // Temporary
   int pts[] = {15, 25, 80, 120, 1000}; // Temporary
 
-  float etabins[] = {0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0}; // Temporary
+  //  float etabins[] = {0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0}; // Temporary
+  float etabins[] = {0, 1.3, 2.5, 3.0}; // Temporary
   
   TFile *inFile = new TFile(inFileName.c_str(), "READ");
   TFile *inFileDT = new TFile(inFileNameDT.c_str(), "READ");
@@ -37,8 +41,6 @@ void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_
     }
   }
 
-
-  
   int nalphas= 7;
   for (int i = 0; i < nalphas; ++i) {
     int alphabin = i +1;
@@ -69,12 +71,26 @@ void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_
 	//	cout << asymmDT->GetBinContent(ptbin,etabin,20) << " " <<  asymmDT->GetBinError(ptbin,etabin,20) << endl;
 	//      cout << asDT->GetBinContent(20) << " " <<  asDT->GetBinError(20) << endl;
 	asDT->Draw("E0");
-	asDT->Fit("gaus"); // TODO: fit twice?
+	//asDT->Fit("gaus"); // TODO: fit twice?
+	// Fit twice
+	TF1 *f1 = new TF1("f1", "gaus");
+	f1->SetParameter(0,1.5);
+	asDT->Fit("f1");
 
-	TF1 *fit = asDT->GetFunction("gaus");
+	double c = f1->GetParameter(0);
+	double m = f1->GetParameter(1);
+	double s = f1->GetParameter(2);
 
-	double sigmaDT = fit->GetParameter(2);
-	double errorDT = fit->GetParError(2);
+	TF1 *fit = new TF1("fit", "gaus", m-2*s, m+2*s );
+	fit->SetParameters(c,m,s);
+
+	asDT->Fit("fit","R");
+
+	//	TF1 *fit = asDT->GetFunction("gaus");
+
+	double sigmaDT = 0, errorDT = 0;
+	if (fit) sigmaDT = fit->GetParameter(2);
+	if (fit) errorDT = fit->GetParError(2);
 	sigmasDTmap[ptbin][etabin]->SetBinContent(alphabin,sigmaDT);
 	sigmasDTmap[ptbin][etabin]->SetBinError(alphabin,errorDT);
 	
@@ -86,7 +102,7 @@ void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_
 	txt->DrawLatex( 0.2, 0.45, Form("#sigma = %.5f",sigmaDT));
        
 	c1->SetLogy();
-        c1->Print(Form("jersfhists_L2_rerunall/asymm_DT_ptbin_%d_etabin_%d_a%d.png",ptbin,etabin,i));
+        c1->Print(Form("jersfhists_L2_rerunall_forjer_wideeta/asymm_DT_ptbin_%d_etabin_%d_a%d.png",ptbin,etabin,i));
 	//c1->Print(Form("jersfhists_L2_rerunall/asymm_DT_ptbin_%d_etabin_%d_a.pdf",ptbin,etabin));
       }
       }
@@ -103,23 +119,34 @@ void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_
 	// Technically we'd need the lumi normalization?
 	
 	asMC->SetTitle("");
-
 	asMC->GetXaxis()->SetTitle("A");
 
 	//	cout << asymmDT->GetBinContent(ptbin,etabin,20) << " " <<  asymmDT->GetBinError(ptbin,etabin,20) << endl;
 	//      cout << asDT->GetBinContent(20) << " " <<  asDT->GetBinError(20) << endl;
 	asMC->Draw("");
-	asMC->Fit("gaus");
 	
+	//	asMC->Fit("gaus");	
 	c1->SetLogy();
 
-	// Put the labels in
 
-	TF1 *fit = asMC->GetFunction("gaus");
-     	//  cout << fit->GetParameter(1) << endl;    //Mean, sigma is 2
+		// Fit twice
+	TF1 *f1 = new TF1("f1", "gaus");
+	f1->SetParameter(0,1.5);
+	asMC->Fit("f1");
 
-	double sigmaMC = fit->GetParameter(2);
-	double errorMC = fit->GetParError(2);
+	double c = f1->GetParameter(0);
+	double m = f1->GetParameter(1);
+	double s = f1->GetParameter(2);
+
+	TF1 *fit = new TF1("fit", "gaus", m-2*s, m+2*s );
+	fit->SetParameters(c,m,s);
+
+	asMC->Fit("fit","R");
+       
+
+	double sigmaMC = 0, errorMC = 0;
+	if (fit) sigmaMC = fit->GetParameter(2);
+	if (fit) errorMC = fit->GetParError(2);
 	sigmasMCmap[ptbin][etabin]->SetBinContent(alphabin,sigmaMC);
 	sigmasMCmap[ptbin][etabin]->SetBinError(alphabin,errorMC);
 
@@ -131,7 +158,7 @@ void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_
 	txt->DrawLatex( 0.2, 0.4, Form("%d < p_{T,avg} < %d",pts[ptbin-1],pts[ptbin]));
 	txt->DrawLatex( 0.2, 0.45, Form("#sigma = %.5f",sigmaMC));
        
-	c1->Print(Form("jersfhists_L2_rerunall/asymm_MC_ptbin_%d_etabin_%d_a%d.png",ptbin,etabin,i));
+	c1->Print(Form("jersfhists_L2_rerunall_forjer_wideeta/asymm_MC_ptbin_%d_etabin_%d_a%d.png",ptbin,etabin,i));
       }
   }
   }

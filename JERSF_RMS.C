@@ -11,16 +11,21 @@ double GetRootMeanSquare( const TH1* h1) {
    return (stats[0] > 0) ? std::sqrt(stats[3]/stats[0]) : 0;
 }
 
-string outfilename = "JERSF_sigmas_RMS.root";
+string outfilename = "JERSF_sigmas_RMS_forjer_wideeta.root";
 
-void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr.root") {
+//void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr.root") {
+//  void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_PFTRIG_jetid_l2corr_forjer.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr_forjer.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr_forjer.root") {
+    void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_PFTRIG_jetid_l2corr_forjer_wideeta.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr_forjer_wideeta.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr_forjer_wideeta.root") {
+
+
  
   float cut = 0.985; // cut for trunctuating the |A| histograms
   
   //  int pts[] = {40, 55, 80, 120, 170, 1000}; // Temporary
   int pts[] = {15, 25, 80, 120, 1000}; // Temporary
 
-  float etabins[] = {0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0}; // Temporary
+  // float etabins[] = {0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0}; // Temporary
+   float etabins[] = {0, 1.3, 2.5, 3.0}; // Temporary
   
   TFile *inFile = new TFile(inFileName.c_str(), "READ");
   TFile *inFileDT = new TFile(inFileNameDT.c_str(), "READ");
@@ -188,7 +193,7 @@ void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_j
        
 	c1->SetLogy();
 	
-        c1->Print(Form("jersfhists_L2_rerunall/absasymm_RMS_ptbin_%d_etabin_%d_a%d.png",ptbin,etabin,i));
+        c1->Print(Form("jersfhists_L2_rerunall_forjer_wideeta/absasymm_RMS_ptbin_%d_etabin_%d_a%d.png",ptbin,etabin,i));
 
 	//c1->Print(Form("jersfhists_L2_rerunall/asymm_DT_ptbin_%d_etabin_%d_a.pdf",ptbin,etabin));
       } // etabin
