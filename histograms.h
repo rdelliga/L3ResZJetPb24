@@ -133,6 +133,10 @@ class histograms {
   TH3D* asymmdist3D;
   TH3D* absasymmdist3D;
 
+  // Phi and eta resolution
+  TH3D* phiresponse;
+  TH3D* etaresponse;
+
   // JER needs asymmetries as function of alpha
   TH3D* asymmdist3D_a10;
   TH3D* absasymmdist3D_a10;
@@ -187,7 +191,8 @@ class histograms {
   static constexpr unsigned int ndwabsetas = sizeof(dwabsetarange)/sizeof(dwabsetarange[0])-1;
 
 
-  static constexpr double jeretarange[] = {0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0};
+  //  static constexpr double jeretarange[] = {0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0};
+  static constexpr double jeretarange[] = {0.0, 1.3, 2.5, 3.0};
   static constexpr unsigned int njeretas = sizeof(jeretarange)/sizeof(jeretarange[0])-1;
 
   static constexpr double phirange[] = {    -3.14159265360, -3.0543261909902775, -2.9670597283905553, -2.879793265790833, -2.792526803191111, -2.705260340591389, -2.6179938779916667, -2.5307274153919446, -2.443460952792222, -2.3561944901925, -2.2689280275927777, -2.1816615649930555, -2.0943951023933334, -2.0071286397936112, -1.9198621771938889, -1.8325957145941667, -1.7453292519944443, -1.6580627893947222, -1.570796326795, -1.4835298641952777, -1.3962634015955555, -1.3089969389958334, -1.221730476396111, -1.1344640137963888, -1.0471975511966667, -0.9599310885969444, -0.8726646259972222, -0.7853981633975, -0.6981317007977778, -0.6108652381980555, -0.5235987755983333, -0.4363323129986111, -0.3490658503988889, -0.26179938779916667, -0.17453292519944444, -0.08726646259972222,
@@ -211,7 +216,8 @@ class histograms {
   // Should one try narrower bins first too?
   //   static constexpr double ptforjec[] = {40, 60, 80, 100, 120, 140, 180, 220, 300, 500, 700, 5000};
   //  static constexpr double ptforjec[] = {40, 55, 80, 120, 170, 1000};
-  static constexpr double ptforjec[] = {15 , 25, 55, 80, 120, 170, 1000};   // Low pT as Nick
+  //  static constexpr double ptforjec[] = {15 , 25, 55, 80, 120, 170, 1000};   // Low pT as Nick
+    static constexpr double ptforjec[] = {15, 25, 80, 120, 1000};   // Low pT as Nick
   static constexpr unsigned int nptforjec = sizeof(ptforjec)/sizeof(ptforjec[0])-1;
 
   //  static constexpr double ptforJER[] = {15, 21, 28, 37, 49, 64, 84, 114, 153, 196, 245, 300, 362, 430, 507, 592, 686, 790, 905, 1032, 2238};

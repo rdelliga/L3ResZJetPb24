@@ -25,9 +25,7 @@ using std::endl;
 #include "helpers.h"
 
 // TODO: if local etc
-#if REDOJER == 1
-#include "JetMETCorrections/Modules/interface/JetResolution.h"
-#endif
+// #include "JetMETCorrections/Modules/interface/JetResolution.h"
 
 #if REDOJES == 1
 #include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
@@ -38,27 +36,23 @@ map<string, vector<histograms*> > _histos;
 // For JER
 /* JME::JetResolution *_jer(0);
 JME::JetResolutionScaleFactor *_jer_sf(0); */
-
-bool debug = false;
-//void analyse(string era = "HP", string outputfiletag = "AK4_PFTRIG_jetid_l2corr_etaforjerinsamebin", bool isMC = false, bool checkjetid = true, bool iszb = false, bool dol2res = true, bool dojer = false) {
+// JER version: different tnp
+void analyse_JER(string era = "HP", string outputfiletag = "AK4_PFTRIG_jetid_l2corr_etaforjerinsamebin", bool isMC = false, bool checkjetid = true, bool iszb = false, bool dol2res = true, bool dojer = false) {
 //void analyse(string era = "zb0", string outputfiletag = "AK4_PFTRIG_nojetid", bool isMC = false, bool checkjetid = false, bool iszb = true, bool dol2res = false, bool dojer = false) {
-void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC = true, bool checkjetid = false, bool iszb = false, bool dol2res = false, bool dojer = false) {
+//void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC = true, bool checkjetid = false, bool iszb = false, bool dol2res = false, bool dojer = false) {
 
   bool usecalotrig = false;
-  bool checkvalidjet = false; // this is for checking valid jet range after applying l2. now for tightly limited range.TODO: do something smarter
+  bool checkvalidjet = false; // this is for checking valid jet range after applying l2. now for tightly limited range.TODO: do something smarter  
      
-  string outputfilename = Form("/eos/user/l/lamartik/HIJEC_rereco_results/%s_%s.root",era.c_str(),outputfiletag.c_str());
-  if (debug) outputfilename = "test.root";
+  string outputfilename = Form("/eos/user/l/lamartik/HIJEC_results/rerunall_combinedbins/%s_%s.root",era.c_str(),outputfiletag.c_str());
   
   TRandom3 r;
   // Define and activate branches
   std::string evtPath = "hiEvtAnalyzer/HiTree";
   std::string triggerPath = "hltanalysis/HltTree";
   std::string skimPath = "skimanalysis/HltTree";
-  // TODO: jet type ; rereco has PF and PFCHS jets
   std::string jetPath = "ak4PFJetAnalyzer/t";
-  if (!isMC) jetPath = "ak0PFJetAnalyzer/t";
-  
+
   cout << "Opening input file" << endl;
   //  TFile *inFile = new TFile(inFileName.c_str(), "READ"); // TODO: safety checks about opening file successfully
   TFile *inFile = new TFile(filenames[era.c_str()].c_str(), "READ"); // TODO: safety checks about opening file successfully
@@ -206,13 +200,11 @@ void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC 
   Float_t   jtpt_gen[MAXJETS];
   Float_t   jteta_gen[MAXJETS];
   Float_t   jtphi_gen[MAXJETS];
-  Float_t   refdrjt[MAXJETS];
 
   if (isMC) {
     jetTree->SetBranchAddress("refpt", &jtpt_gen);
     jetTree->SetBranchAddress("refeta", &jteta_gen);
     jetTree->SetBranchAddress("refphi", &jtphi_gen);
-    jetTree->SetBranchAddress("refdrjt", &refdrjt);
   }
 
   TFile *outfile = new TFile(outputfilename.c_str(),"RECREATE");
@@ -249,7 +241,7 @@ void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC 
    
   // JEC stuff
 #if REDOJES == 1
-  cout << "Applying MC JEC" << endl;
+  cout << "Applying JEC" << endl;
   FactorizedJetCorrector* corr;
   vector<JetCorrectorParameters> vpar;
   // This is MCTruth
@@ -260,33 +252,11 @@ void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC 
   corr = new FactorizedJetCorrector(vpar);
 #endif
 
-#if REDOJER == 1
-  cout << "Applying JER SF" << endl;
-
-  JME::JetResolution *_jer(0);
-  JME::JetResolutionScaleFactor *_jer_sf(0);
-
-  string resolutionFile = "jerfiles/jtptres.txt"; // TODO: fix tpatho be taken fro msettings
-  string scaleFactorFile = "jerfiles/JERSF.txt";
-  float rho = 0.;
-  
-  _jer = new JME::JetResolution(resolutionFile);
-  _jer_sf =  new JME::JetResolutionScaleFactor(scaleFactorFile);
-
-  std::mt19937 _mersennetwister;
-  std::uint32_t _seed;
-  _seed = 4;
-
-#endif
-  
  // jetTree->Print();
  // Start event loop to fill histograms:
-
    cout << "Number of entries :" <<  jetTree->GetEntries()  << endl; 
-   int nentries = jetTree->GetEntries();
-   if (debug) nentries = 10;
-   
-   for (int i = 0; i < nentries; ++i) {
+
+   for (int i = 0; i < jetTree->GetEntries(); ++i) {
      //   for (int i = 0; i < 50; ++i) {
      evtTree->GetEntry(i);
      triggerTree->GetEntry(i);
@@ -405,35 +375,6 @@ void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC 
 	 //	 cout << "New jes correction jet pt: " << jtpt[j] << " " << jteta[j] << " "  << jes << endl;
 	 jtpt[j] *= jes;
 #endif
-#if REDOJER == 1
-	 if (isMC) {
-	   double jet_resolution = _jer->getResolution({{JME::Binning::JetPt, jtpt[j]}, {JME::Binning::JetEta, jteta[j]}, {JME::Binning::Rho, rho}});
-	   double jer_sf = _jer_sf->getScaleFactor({{JME::Binning::JetEta, jteta[j]}, {JME::Binning::JetPt, jtpt[j]}}, Variation::NOMINAL);
-	   // TODO: correct with the hybrid method
-
-	   float jersfcorr = 1;
-	   // TODO: not hardcoded radius
-	   // Also check tesolution
-	   if (refdrjt[j] != -999 and refdrjt[j] < 0.2 and abs((jtpt[j]-jtpt_gen[j])) < 3*jet_resolution*jtpt[j] ) {
-	     jersfcorr += (jer_sf-1)*(jtpt[j]-jtpt_gen[j])/jtpt[j];
-	     //	     cout << "We use scaling method " <<  abs((jtpt[j]-jtpt_gen[j])) << endl;
-	   }
-	   else {
-	     //	     cout << "We use stochastic method " <<  abs((jtpt[j]-jtpt_gen[j])) << endl;
-
-	     _mersennetwister = std::mt19937(_seed);
-
-	     //	     double sigma = std::sqrt(std::max(jer_sf*jer_sf - 1,0)); // technically should be max sf*sf-1,0, maybe do if loop
-	     std::normal_distribution<> d(0, jet_resolution);
-	     if (jer_sf*jer_sf > 1) jersfcorr += d(_mersennetwister)*std::sqrt(jer_sf*jer_sf-1);
-	     else jersfcorr += d(_mersennetwister)*std::sqrt(0);
-
-	   }
-	   
-	   //	   cout << jet_resolution << " SF " << jer_sf << " eta: " << jteta[j] << " corr:  " << jersfcorr << " reco: " << jtpt[j] << " gen " << jtpt_gen[j] << " matching " << refdrjt[j] <<  endl;
-	   jtpt[j] *= jersfcorr;
-	 }
-#endif
      }
      
     // Get dijet system (do not impose any cuts here)
@@ -495,20 +436,13 @@ void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC 
 	 if (rand < 0.5) tagind = 1;
 	 else tagind = 0;
        }
-
        if (jtpt[0] < 1 or jtpt[1] < 1) tagind = -1; */
-       int probeind = 0;
+
+       const auto rand = r.Rndm();
+       if (rand < 0.5) tagind = ind[1];
+       else tagind = ind[0];
        
-       if (abs(jteta[ind[0]]) > 1.3 and abs(jteta[ind[1]]) <= 1.3) { tagind = ind[1]; probeind = ind[0]; }
-       else if (abs(jteta[ind[1]]) > 1.3 and abs(jteta[ind[0]]) <= 1.3)  { tagind = ind[0];  probeind = ind[1]; }
-       else if (abs(jteta[ind[0]]) <= 1.3 and abs(jteta[ind[1]]) <= 1.3)  {
-	 const auto rand = r.Rndm();
-	 if (rand < 0.5) { tagind = ind[1]; probeind = ind[0]; }
-	 else  { tagind = ind[0];  probeind = ind[1];}
-       }
-
-       //       int probeind = 1-tagind;
-
+       int probeind = 1-tagind;
        tagpt = jtpt[tagind];
        probept = jtpt[probeind];
 
@@ -616,15 +550,7 @@ void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC 
 		   h->dijetasymmetry3Dnarrow->Fill(ptavgtp, probeeta, 0.3-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabsetanarrow->Fill(ptavgtp, abs(probeeta), 0.3-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabsetawide->Fill(ptavgtp, abs(probeeta), 0.3-0.0001, asymmtp/2./ptavgtp, evtwt);
-
-
-		   h->jet_nef->Fill(probept,jtnef[probeind],evtwt);
-		   h->jet_cef->Fill(probept,jtcef[probeind],evtwt);
-		   h->jet_nhf->Fill(probept,jtnhf[probeind],evtwt);
-		   h->jet_chf->Fill(probept,jtchf[probeind],evtwt);
-		   h->jet_muf->Fill(probept,jtmuf[probeind],evtwt);       
-
-		 }
+}
 		 //else if (alpha < 0.35)   h->dijetasymmetry2D_a035->Fill(ptavgtp, probeeta, asymmtp/2./ptavgtp, evtwt);
 		 if (alpha < 0.35) {
 		   if (tagincorrecteta) h->asymmdist3D_a35->Fill(ptavgtp, abs(probeeta), asymmtp/2./ptavgtp, evtwt);
@@ -731,6 +657,13 @@ void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC 
 	       h->jet_eta->Fill(jteta[j],evtwt);
 	       h->jet_phi->Fill(jtphi[j],evtwt);
 
+	       // Fill without t&p, TODO: add t&p versions
+	       h->jet_nef->Fill(jtpt[j],jtnef[j],evtwt);
+	       h->jet_cef->Fill(jtpt[j],jtcef[j],evtwt);
+	       h->jet_nhf->Fill(jtpt[j],jtnhf[j],evtwt);
+	       h->jet_chf->Fill(jtpt[j],jtchf[j],evtwt);
+	       h->jet_muf->Fill(jtpt[j],jtmuf[j],evtwt);       
+
 	       if (isMC) {
 	     
 		 h->genjet_pt->Fill(jtpt_gen[j],evtwt);
@@ -746,8 +679,6 @@ void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC 
 		 h->ptgenvsweight->Fill(jtpt_gen[j],weight);
 
 		 h->responses3D->Fill(jtpt_gen[j], jteta_gen[j], jtpt[j]/jtpt_gen[j], evtwt);
-		 h->phiresponse->Fill(jtpt_gen[j], jteta_gen[j], jtphi[j]-jtphi_gen[j], evtwt);
-		 h->etaresponse->Fill(jtpt_gen[j], jteta_gen[j], jteta[j]-jteta_gen[j], evtwt);
 		 
 	       }
 	     }
