@@ -1,5 +1,12 @@
 
-void plotresponses(float h1 = -1.0, float h2 = 0.0, float eta1 = -5.2, float eta2 = 5.2) {
+//void plotresponses( string input = "RERUNALL/L2residuals_pbpbreco_rerunall_HP_PFTRIG_nojetid_a3.root", string plottag = "PFTRIG_nojetid") {
+//void plotresponses( string input = "RERUNALL/L2residuals_pbpbreco_rerunall_HP_PFTRIG_jetid_a3.root", string plottag = "PFTRIG_jetid") {
+//void plotresponses( string input = "RERUNALL/L2residuals_pbpbreco_rerunall_HP_CALOTRIG_nojetid_a3.root", string plottag = "CALOTRIG_nojetid") {
+//void plotresponses( string input = "RERUNALL/L2residuals_pbpbreco_rerunall_HP_CALOTRIG_jetid_a3.root", string plottag = "CALOTRIG_jetid") {
+void plotresponses( string input = "RERUNALL/L2residuals_pbpbreco_rerunall_zerobias_nojetid.root", string plottag = "ZB_nojetid") {
+
+  float h1 = -1.0, h2 = 0.0, eta1 = -5.2, eta2 = 5.2;
+  
   float rmax = 1.2, rmin = 0.75; // For initial checks
   // float rmax = 1.07, rmin = 0.93; // For closure to get better zoom
 
@@ -9,19 +16,19 @@ void plotresponses(float h1 = -1.0, float h2 = 0.0, float eta1 = -5.2, float eta
   
   gStyle->SetOptStat(0);
 
-  string input = "L2residuals_pbpbreco_from3Dlxplus_alpha03_debugged.root";   // This contains both data and mc and the ratio -> should one
+ 
   //string input = "L2residuals_pbpbreco_from3Dlxplus_alpha03_closure_ptlims.root ";   // This contains both data and mc and the ratio -> should one
   //string input = "L2residuals_ppreco_from3Dlxplus_alpha02.root";   // This contains both data and mc and the ratio -> should one
  
   TFile *file = new TFile(input.c_str(),"READ");
 
-  float alpha = 0.2;
-  int pts[] = {40, 55, 80, 120, 170, 1000}; // Temporary
+  float alpha = 0.3;
+  int pts[] = {15, 25, 55, 80, 120, 170, 1000}; // Temporary
 
-  for (int i = 0; i < 5; ++i) {
+  for (int i = 0; i < 6; ++i) {
     int pt1 = pts[i];
     int pt2= pts[i+1];
-    string namelabel = Form("pbpb_%dto%dalpha%.1f",pt1,pt2,alpha);
+    string namelabel = Form("pbpb_%dto%dalpha%.1f_%s",pt1,pt2,alpha,plottag.c_str());
 
     auto mc = (TH1D*)file->Get(Form("mc_pt%dto%d_alpha%.1f",pt1,pt2,alpha));
     auto data = (TH1D*)file->Get(Form("dt_pt%dto%d_alpha%.1f",pt1,pt2,alpha));
@@ -38,7 +45,7 @@ void plotresponses(float h1 = -1.0, float h2 = 0.0, float eta1 = -5.2, float eta
 
     TCanvas *c1 = new TCanvas("c1","c1",800,600);
 
-    mc->GetXaxis()->SetTitle("#eta_{probe}");
+    mc->GetXaxis()->SetTitle("|#eta_{probe}|");
     auto rp = new TRatioPlot(mc, data);
     
     rp->GetLowYaxis()->SetNdivisions(505);
@@ -63,7 +70,7 @@ void plotresponses(float h1 = -1.0, float h2 = 0.0, float eta1 = -5.2, float eta
     txt->DrawLatex( 0.2, 0.4, Form("%d < p_{T} < %d",pt1,pt2));
     txt->DrawLatex( 0.2, 0.45, Form("#alpha < %.1f",alpha));
   
-    c1->Print(Form("debugged/response_hbin_%.0f_%.0f_eta_%.1f_%.1f_%s_abs_large.pdf",h1,h2,eta1,eta2,namelabel.c_str()));
+    c1->Print(Form("response_eta_%.1f_%.1f_%s.pdf",eta1,eta2,namelabel.c_str()));
  
   }
 }

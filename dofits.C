@@ -1,38 +1,42 @@
 #include "histograms.h"
-// Should somehow control which binning is picked, flag?
 
- int pts[] = {40, 55, 80, 120, 170, 1000}; // Temporary
+//int pts[] = {15, 25, 55, 80, 120, 170, 1000}; // Temporary
+int pts[] = {15, 25, 80, 120, 1000}; // Temporary
+int nptbins = 4;
+//string ptbins[] = {"25to55", "55to80", "80to120", "120to170", "170to1000"};
+string ptbins[] = {"25to80", "80to120", "120to1000"};
 
-void dofits(float fitmin = 0.1, float fitmax = 0.4, string outfilename = "testfitresults.root", bool doabseta = true) {
+
+void dofits(float fitmin = 0.15, float fitmax = 0.35, string outfilename = "kfactor_rerunall_combined_allpts", bool doabseta = true) {
   // input file is from 3D derivation
   gStyle->SetOptStat(0);
 
-  TFile *inFile = new TFile("L2residuals_pbpbreco_from3Dlxplus_alpha03_rebin_abs.root", "READ");
-  //TFile *inFile = new TFile("test.root", "READ");
-  //   TFile *outfile = new TFile(outfilename.c_str(),"RECREATE");
+  TFile *inFilezb = new TFile("RERUNALL_combinedbins/L2residuals_pbpbreco_rerunall_zerobias_jetid.root", "READ");
+  TFile *inFile = new TFile("RERUNALL_combinedbins/L2residuals_pbpbreco_rerunall_HP_jetid.root", "READ");
 
+  //TFile *inFile = new TFile("test.root", "READ");
+  string outfolder = "fits_combinedbins";
+  TFile *outfile = new TFile(Form("%s/%s.root",outfolder.c_str(),outfilename.c_str()),"RECREATE");
+  
   // ROOT::Fit::DataRange range(0.3,0.4);
   ROOT::Fit::DataOptions opt; 
   ROOT::Fit::DataRange range; 
   range.SetRange(fitmin,fitmax);
 
- 
-
    //  mg->Add(g2,"L");
  
-
   // This is for correcton factors - hiso against eta
-  auto factors = (TH1D*)inFile->Get("ratio_pt40to55_alpha0.2"); // There needs to be a switch...
+  auto factors = (TH1D*)inFile->Get("ratio_pt25to80_alpha0.3"); // There needs to be a switch...
   factors->Reset();
 
   // TODO: change this so that histogram contents are copied into TGraphs and the reference alpha is excluded
   // TODO: remove reference alpha from the fit
-  int colours[] = {209, 226, 213, 51, 206};
-  //  for (int etabin = 1; etabin < 37; ++etabin) { // TODO bins
-  for (int etabin = 1; etabin < 19; ++etabin) { // TODO bins
+  int colours[] = {209, 226, 213, 51, 206, 209};
+  //  for (int etabin = 1; etabin < 37; ++etabin) {
+  for (int etabin = 1; etabin < 15; ++etabin) { 
 
      ROOT::Fit::BinData data(opt,range); 
-     map<int, TH1D*> histos;
+     map<int, TH1D*> histos, ratios;
      map<int, TGraphErrors*> graphs;
      auto multifit = new TMultiGraph();
 
@@ -43,30 +47,41 @@ void dofits(float fitmin = 0.1, float fitmax = 0.4, string outfilename = "testfi
      leg->SetTextSize(0.03);
      leg->SetBorderSize(0);
      leg->SetFillStyle(0);
-
-
-     
+    
     //int etabin = 18;
     // pick histos for different pT:s
-  for (int ptbin = 2; ptbin <= 5; ++ptbin) {
-      if (etabin >= 14 and ptbin == 5) break;
-      if (etabin >= 17 and ptbin == 4) break;
-      histos[ptbin] = (TH1D*)inFile->Get(Form("Respvsa_norm_%d_%d",ptbin,etabin)); // TODO: histo name logic will change
+     for ( int ptbin = 1; ptbin <=2; ++ptbin)  histos[ptbin] = (TH1D*)inFilezb->Get(Form("Respvsa_norm_%d_%d",ptbin,etabin)); // TODO: histo name logic will change
+     for ( int ptbin = 3; ptbin <=4; ++ptbin)  histos[ptbin] = (TH1D*)inFile->Get(Form("Respvsa_norm_%d_%d",ptbin,etabin)); // TODO: histo name logic will change
 
+
+     for ( int ptbin = 1; ptbin <=2; ++ptbin)  ratios[ptbin] = (TH1D*)inFilezb->Get(Form("Respvsa_%d_%d",ptbin,etabin)); // TODO: histo name logic will change
+     for ( int ptbin = 3; ptbin <=4; ++ptbin)  ratios[ptbin] = (TH1D*)inFile->Get(Form("Respvsa_%d_%d",ptbin,etabin)); // TODO: histo name logic will change
+
+     histos[1]->SetMaximum(1.15);
+     histos[1]->SetMinimum(0.85);
+     histos[1]->Draw("AXIS");
+       
+     for (int ptbin = 2; ptbin <= 4; ++ptbin) {
+       //       if (etabin >= 14 and ptbin == 6) break;
+       //       if (etabin >= 17 and ptbin == 5) break;
+       //  if (etabin > 8 and ptbin == 6) break;
+       // if (etabin > 11 and ptbin == 5) break;
+           if (etabin > 11 and ptbin == 4) break;
+	   //  if (etabin > 11 and ptbin == 4) break;
+       
     // TODO: Handle Graphs here?   
 
-      Double_t results[histograms::nalphavalues];
-      Double_t errors[histograms::nalphavalues];
-      Double_t errorsx[histograms::nalphavalues];
+      Double_t results[histograms::nalphavaluesgraph];
+      Double_t errors[histograms::nalphavaluesgraph];
+      Double_t errorsx[histograms::nalphavaluesgraph];
       
-      for (int abin = 0; abin < histograms::nalphavalues; ++abin) {
-	
+      for (int abin = 0; abin < histograms::nalphavaluesgraph; ++abin) {
         results[abin] =  histos[ptbin]->GetBinContent(abin+1);
-	errors[abin] =  histos[ptbin]->GetBinContent(abin+1);
-	errors[abin] = 0; 
+	errors[abin] =  histos[ptbin]->GetBinError(abin+1);
+	errorsx[abin] = 0; 
       }
       
-      graphs[ptbin] = new TGraphErrors(histograms::nalphavalues, histograms::alphavalues, results, errorsx, errors); // TODO: do not include reference?
+      graphs[ptbin] = new TGraphErrors(histograms::nalphavaluesgraph, histograms::alphavaluesgraph, results, errorsx, errors); // TODO: do not include reference?
       //      cout << graphs[ptbin] << endl
 
       // histograms::alphavalues[]
@@ -78,18 +93,24 @@ void dofits(float fitmin = 0.1, float fitmax = 0.4, string outfilename = "testfi
       histos[ptbin]->SetMinimum(0.85);
 
       histos[ptbin]->GetXaxis()->SetTitle("#alpha");
-      histos[ptbin]->GetYaxis()->SetTitle(" < MC / Data > / < MC / Data >_{#alpha < 0.2}");    // TODO: correc reference label
+      histos[ptbin]->GetYaxis()->SetTitle(" < MC / Data > / < MC / Data >_{#alpha < 0.3}");    // TODO: correc reference label
       
       histos[ptbin]->SetLineColor(colours[ptbin-1]);
-      histos[ptbin]->Draw("same E1");
+      // histos[ptbin]->Draw("same E1");
+
+
+      graphs[ptbin]->SetMarkerStyle(kFullCircle);
+      graphs[ptbin]->SetMarkerColor(colours[ptbin-1]);
+      graphs[ptbin]->Draw("sameP");
 
       leg->AddEntry(histos[ptbin], Form("%d < p_{T} < %d",pts[ptbin-1],pts[ptbin])); // TODO: correct bin edges
       // TODO: colours
     } 
-  
+
+ 
   leg->Draw("same");
    
-  TF1 * f1 = new TF1("f1","pol1",fitmin,fitmax);
+  /* TF1 * f1 = new TF1("f1","pol1",fitmin,fitmax);
   f1->SetParameters(1,0);
 
    ROOT::Math::WrappedTF1 wf(*f1);
@@ -101,14 +122,21 @@ void dofits(float fitmin = 0.1, float fitmax = 0.4, string outfilename = "testfi
   ROOT::Fit::FitResult result = fitter.Result();
   result.Print(std::cout);
 
-  cout << result.Chi2() <<  " " << result.Ndf() << " " << result.Parameter(0) << " " << result.ParError(0) << endl;
+  cout << result.Chi2() <<  " " << result.Ndf() << " " << result.Parameter(0) << " " << result.ParError(0) << endl; */
 
+  //f1->Draw("same");
+
+  TF1 * f1 = new TF1("f1","pol1",fitmin,fitmax); // TODO: check that this range selection works
+  f1->SetParameters(1,0);
+  multifit->Fit("f1","R");
   f1->Draw("same");
 
-  // multifit->Fit("pol1");
+  //   multifit->Fit("pol1");
 
-  factors->SetBinContent(etabin, result.Parameter(0));
- factors->SetBinError(etabin, result.ParError(0));
+  // factors->SetBinContent(etabin, result.Parameter(0));
+  // factors->SetBinError(etabin, result.ParError(0));
+  factors->SetBinContent(etabin, f1->GetParameter(0));
+  factors->SetBinError(etabin, f1->GetParError(0));
 
   // TODO: debug this
   TLatex* txt = new TLatex();
@@ -118,10 +146,11 @@ void dofits(float fitmin = 0.1, float fitmax = 0.4, string outfilename = "testfi
   if (!doabseta) txt->DrawLatex( 0.2, 0.8, Form("%.2f < #eta < %.2f",histograms::wetarange[etabin-1], histograms::wetarange[etabin])); // TODO: correct bin
   else txt->DrawLatex( 0.2, 0.8, Form("%.2f < |#eta| < %.2f",histograms::wabsetarange[etabin-1], histograms::wabsetarange[etabin])); // TODO: correct bin
 
-  txt->DrawLatex( 0.2, 0.85, Form("p0 = %.5f #pm %.5f",result.Parameter(0), result.ParError(0)));
+  //txt->DrawLatex( 0.2, 0.85, Form("p0 = %.5f #pm %.5f",result.Parameter(0), result.ParError(0)));
+  txt->DrawLatex( 0.2, 0.85, Form("p0 = %.5f #pm %.5f",f1->GetParameter(0), f1->GetParError(0)));
 
   
-  c1->Print(Form("fitsrmptbins/fits_eta_%d.pdf",etabin));
+  c1->Print(Form("%s/fits_eta_%d.png",outfolder.c_str(),etabin));
 
   //    TCanvas *c3 = new TCanvas("c3","c3",800,600);
   //  graphs[3]->Draw("");
@@ -130,16 +159,77 @@ void dofits(float fitmin = 0.1, float fitmax = 0.4, string outfilename = "testfi
   }
 
   TCanvas *c2 = new TCanvas("c2","c2",800,600);
+  factors->SetMaximum(1.15);
+  factors->SetMinimum(0.95);
+
+  // TF1 * f2 = new TF1("f2","pol1",0.0,3.0);
+  TF1 * f2 = new TF1("f2","[0]+[1]*cosh(x)/(1+[2]*cosh(x))",0.0,3.0);
+  factors->Fit(f2);
  
   if (doabseta)  factors->GetXaxis()->SetTitle(" |#eta| ");
-  else  factors->GetXaxis()->SetTitle(" #eta ");
-  // TODO: save this, save histogram
-  factors->Draw();
-  c2->Print("fitsrmptbins/corrections.pdf");
-  
-  // TODO: save extrapolations = par0 somehow. Those are in bins of eta. So TH1D created using same eta binning as in input, then do fits etc, calculate extrapolation
-  // will need tgraph for doing properly?
-  // then put value in the histogram, plot. how to handle errors? from fit?
+  else  factors->GetXaxis()->SetTitle(" #eta "); 
 
+  factors->Draw();
+  c2->Print(Form("%s/kfactors.png",outfolder.c_str()));
+  
+  factors->Write();
+
+
+  TCanvas *c3 = new TCanvas("c3","c3",800,600);
+
+  auto leg2 = new TLegend(0.57,0.7,0.85,0.85); //  x, y, x, y
+  leg2->SetTextSize(0.03);
+  leg2->SetBorderSize(0);
+  leg2->SetFillStyle(0);
+
+     
+  map<string, TH1D*> histos;
+      // for ( int ptbin = 1; ptbin <=3; ++ptbin)  histos[ptbin] = (TH1D*)inFilezb->Get(Form("rm_%d_%d",ptbin,etabin)); // TODO: histo name logic will change
+      //  for ( int ptbin = 4; ptbin <=6; ++ptbin)  histos[ptbin] = (TH1D*)inFile->Get(Form("Respvsa_norm_%d_%d",ptbin,etabin)); // TODO: histo name logic will change
+
+  // histos["15to25"] = (TH1D*)inFilezb->Get("ratio_pt25to55_alpha0.3"); // TODO: histo name logic will change
+  histos["25to80"] = (TH1D*)inFilezb->Get("ratio_pt25to80_alpha0.3"); // TODO: histo name logic will change
+  // histos["55to80"] = (TH1D*)inFilezb->Get("ratio_pt55to80_alpha0.3"); // TODO: histo name logic will change
+  histos["80to120"] = (TH1D*)inFile->Get("ratio_pt80to120_alpha0.3"); // TODO: histo name logic will change
+  histos["120to1000"] = (TH1D*)inFile->Get("ratio_pt120to1000_alpha0.3"); // TODO: histo name logic will change
+  //  histos["170to1000"] = (TH1D*)inFile->Get("ratio_pt170to1000_alpha0.3"); // TODO: histo name logic will change
+
+
+  int col = 0;
+  for (auto bin : ptbins) {
+  
+
+    for (int hb = 1; hb < histos[bin.c_str()]->GetXaxis()->GetNbins(); ++hb) {
+      //cout << "test" << endl;
+      histos[bin.c_str()]->SetBinError(hb, 0.);
+      if (bin == "120to1000" and hb > 11) histos[bin.c_str()]->SetBinContent(hb, 0.);
+      // TODO: set range of validity, as used in the fits
+    }
+  
+    histos[bin.c_str()]->Multiply(factors);    // Bin errors are actually wrong if done like this -> set to 0?
+    histos[bin.c_str()]->SetLineColor(colours[col]);
+    histos[bin.c_str()]->SetMarkerStyle(kFullCircle);
+    histos[bin.c_str()]->SetMarkerColor(colours[col]);
+    
+     if (doabseta)  histos[bin.c_str()]->GetXaxis()->SetTitle(" |#eta| ");
+     else  histos[bin.c_str()]->GetXaxis()->SetTitle(" #eta ");
+     histos[bin.c_str()]->GetYaxis()->SetTitle(" L2 residual correction ");
+
+
+    histos[bin.c_str()]->SetMaximum(1.3);
+    histos[bin.c_str()]->SetMinimum(0.9);
+
+    
+
+    histos[bin.c_str()]->Draw("same");
+    histos[bin.c_str()]->Write(Form("corrections_%s",bin.c_str()));
+    leg2->AddEntry(histos[bin.c_str()], Form("%d < p_{T} < %d",pts[col+1],pts[col+2])); // TODO: correct bin edges
+    //leg2->AddEntry(histos[bin.c_str()], Form("%s",bin.c_str())); // TODO: correct bin edges
+    col++;
+  }
+  leg2->Draw();
+  
+  c3->Print(Form("%s/corrections.png",outfolder.c_str()));
+  c3->Print(Form("%s/corrections.pdf",outfolder.c_str()));
   
 }
