@@ -1,3 +1,5 @@
+// Fit the sigma ratios vs. alpha
+
 // 20.2.2025
 
 void JERSF_fits_vsalpha(string filein = "JERSF_sigmas_fits_forjer_wideeta.root", string outfilename = "JERSFs_fromfits.root", bool RMS = false) {
@@ -99,8 +101,8 @@ void JERSF_fits_vsalpha(string filein = "JERSF_sigmas_fits_forjer_wideeta.root",
       leg->AddEntry(MC, "MC");
       leg->Draw();
 
-      if (RMS) c->Print(Form("JERSF_RMS_alphafit_ptbin%d_etabin%d.png",ptbin,etabin));
-      else c->Print(Form("JERSF_alphafit_ptbin%d_etabin%d.png",ptbin,etabin));
+      if (RMS) c->Print(Form("JERSF/JERSF_RMS_alphafit_ptbin%d_etabin%d.png",ptbin,etabin));
+      else c->Print(Form("JERSF/JERSF_fits_alphafit_ptbin%d_etabin%d.png",ptbin,etabin));
 
     }
 
@@ -124,14 +126,15 @@ void JERSF_fits_vsalpha(string filein = "JERSF_sigmas_fits_forjer_wideeta.root",
     f2->Draw("same");
 
     SFs->SetBinContent(etabin,f2->GetParameter(0));
-    SFs->SetBinError(etabin,f2->GetParError(0));
+    // SFs->SetBinError(etabin,f2->GetParError(0));
+    SFs->SetBinError(etabin,0);
 
     hdata->Write();
     hmc->Write();
     hratio->Write();
 
-    if (RMS) cr->Print(Form("JERSF_RMS_SFperpT_etabin%d.png",etabin));
-    else cr->Print(Form("JERSF_SFperpT_etabin%d.png",etabin));
+    if (RMS) cr->Print(Form("JERSF/JERSF_RMS_SFperpT_etabin%d.png",etabin));
+    else cr->Print(Form("JERSF/JERSF_fits_SFperpT_etabin%d.png",etabin));
     
   }
 
@@ -142,8 +145,9 @@ void JERSF_fits_vsalpha(string filein = "JERSF_sigmas_fits_forjer_wideeta.root",
   SFs->Draw();
   SFs->Write();
 
-  if (RMS) csf->Print("JER_SFs_RMS.png");
-  else csf->Print("JER_SFs.png");
-  
+  if (RMS) csf->Print("JERSF/JER_SFs_RMS.png");
+  else csf->Print("JERSF/JER_SFs_fits.png");
 
+  outfile->Close();
+  
 }

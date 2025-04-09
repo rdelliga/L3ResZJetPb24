@@ -1,11 +1,12 @@
+// Produce txt files with JER SF
+// TODO: Add uncertainty
 
-
-void JERSF_printtxt(string filein = "JERSFs_fromfits.root")  {
+void JERSF_printtxt(string filein = "JERSFs_fromfits.root",  string filename = "JERSF.txt")  {
 
   auto file = new TFile(filein.c_str(),"READ");
   auto SFs = (TH1D*)file->Get("SF");
   string header = "{ 2 JetEta JetPt 0 None ScaleFactor }";
-  string filename = "JERSF.txt";
+ 
   float minpt = 0, maxpt = 7000;
   
   cout << header.c_str() << endl;
