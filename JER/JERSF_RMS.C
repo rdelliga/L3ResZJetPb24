@@ -1,8 +1,6 @@
 #include "../histograms.h"
 
 // Do the fits as function of alpha
-// TODO: save sigmas as function of alpha for DT and MC
-// TODO: zero bias for low pT:s
 
 // https://root-forum.cern.ch/t/getrms-on-th1d-class/41881
 double GetRootMeanSquare( const TH1* h1) { 
@@ -11,15 +9,13 @@ double GetRootMeanSquare( const TH1* h1) {
    return (stats[0] > 0) ? std::sqrt(stats[3]/stats[0]) : 0;
 }
 
-string outfilename = "JERSF_sigmas_RMS_RERECO.root";
-
 //void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr.root") {
 //  void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_PFTRIG_jetid_l2corr_forjer.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr_forjer.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr_forjer.root") {
 // latest with old reco
 //void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_PFTRIG_jetid_l2corr_forjer_wideeta.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr_forjer_wideeta.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr_forjer_wideeta.root") {
 
 // RERECO
-void JERSF_RMS(string inFileName = "/home/laura/Code/jec/HIJEC_rereco_results/RERECOMC_AK4_PFTRIG_jetid.root", string inFileNameZB = "/home/laura/Code/jec/HIJEC_rereco_results/RERECO_ZB_ALL_PFTRIG_l2closure.root", string inFileNameDT = "/home/laura/Code/jec/HIJEC_rereco_results/RERECOHP_AK4_PFTRIG_jetid_l2jecclosure.root") {
+void JERSF_RMS(TString outFileName = "JERSF_sigmas_RMS.root", string inFileName = "/home/laura/Code/jec/HIJEC_rereco_results/RERECOMC_AK4_PFTRIG_jetid_l2jecclosure_forjer.root", string inFileNameZB = "/home/laura/Code/jec/HIJEC_rereco_results/RERECO_ZB_AK4_PFTRIG_jetid_l2closure_forjer.root", string inFileNameDT = "/home/laura/Code/jec/HIJEC_rereco_results/RERECOHP_AK4_PFTRIG_jetid_l2jecclosure_forjer.root") {
  
   float cut = 0.985; // cut for trunctuating the |A| histograms
   
@@ -41,8 +37,7 @@ void JERSF_RMS(string inFileName = "/home/laura/Code/jec/HIJEC_rereco_results/RE
   map<int, TH3D*> asymmMCs;
   map<int, TH3D*> asymmDTs, asymmZBs; // _a10 to a55?
   int alphabins[] = {10, 15, 20, 25, 30, 35, 40, 45};
-  // Loop over alphas?
-
+ 
   // Outputs
   map<int, map<int, TH1D*>> sigmasMCmap, sigmasDTmap;
   map<int, map<int, TGraphErrors*>> sigmasGraphMCmap, sigmasGraphDTmap;
@@ -57,7 +52,7 @@ void JERSF_RMS(string inFileName = "/home/laura/Code/jec/HIJEC_rereco_results/RE
     }
   }
 
-  TFile *outfile = new TFile(outfilename.c_str(),"RECREATE");
+  TFile *outfile = new TFile(outFileName,"RECREATE");
   TCanvas *c1 = new TCanvas("c1","c1",600,600);
   
   int nalphas= 7;
@@ -71,8 +66,7 @@ void JERSF_RMS(string inFileName = "/home/laura/Code/jec/HIJEC_rereco_results/RE
     
     // if (i != 0) break; // debug
 
-  // Need to fit these histograms and get the width; is it iterative?
-  // trunct. RMS: 98.5% of events in the core
+   // trunct. RMS: 98.5% of events in the core
     int alphabin = i + 1;// binning in array vs. histogram
     for (int ptbin = 2; ptbin <= asymmDTs[i]->GetXaxis()->GetNbins(); ++ptbin) {
       for (int etabin = 1; etabin <= asymmDTs[i]->GetYaxis()->GetNbins(); ++etabin) {
@@ -103,6 +97,8 @@ void JERSF_RMS(string inFileName = "/home/laura/Code/jec/HIJEC_rereco_results/RE
 	//// DATA
 	float einbins = 0, fracdt = 0, fracmc = 0, linepointdt = 0, linepointmc = 0;
 	float all =  asDT->Integral();
+	if (all != all) { cout << "No entries in data, skipping this bin" << endl; continue; }
+	
 	TH1D* trunctAsDT = (TH1D*)asDT->Clone(Form("trunct%d",etabin));
 	trunctAsDT->Reset();
 	//	for (int i = 1; i < asDT->GetXaxis()->GetNbins(); ++i) {
@@ -195,13 +191,10 @@ void JERSF_RMS(string inFileName = "/home/laura/Code/jec/HIJEC_rereco_results/RE
        
 	c1->SetLogy();
 	
-        c1->Print(Form("jersfhists_RERECO/absasymm_RMS_ptbin_%d_etabin_%d_a%d.png",ptbin,etabin,i));
+        c1->Print(Form("jersfhists/absasymm_RMS_ptbin_%d_etabin_%d_a%d.png",ptbin,etabin,i));
 
-	//c1->Print(Form("jersfhists_L2_rerunall/asymm_DT_ptbin_%d_etabin_%d_a.pdf",ptbin,etabin));
       } // etabin
 
-        // pt, eta?
-   
     } // ptbin
 
   }
@@ -236,5 +229,6 @@ void JERSF_RMS(string inFileName = "/home/laura/Code/jec/HIJEC_rereco_results/RE
     }
   }
 
+  outfile->Close();
 }
 

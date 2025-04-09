@@ -2,15 +2,10 @@
 #include "TMath.h"
 #include "plots.h"
 
-//void MCJER(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root") {
-//void MCJER(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root") {
-
-//  void MCJER(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbreco_MC_JERHCALbinningHF.root") {
-void MCJER(string inFileName = "../../results_RERECO/RERECOMC_AK4_PFTRIG_nojetid.root") {
-    
- 
-  int pts[] = {40, 55, 80, 120, 170, 1000}; // Temporary
-  float etabins[] = {0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0}; // Temporary
+void MCJER(string inFileName = "../../../HIJEC_rereco_results/RERECOMC_AK4_PFTRIG_nojetid.root", int minpt = 15, string dirname = "MCJER", TString outFileName = "testingMCjer-rereco.root") {
+     
+  int pts[] = {40, 55, 80, 120, 170, 1000}; // Temporarily here
+  float etabins[] = {0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0}; // Temporarily here
 
   float ptsforwidths[] = {80, 120, 170, 1000}; // Temporary
   TH1D* widths = new TH1D("widths","widths",3,&ptsforwidths[0]); // TODO: for different bins of eta
@@ -18,20 +13,15 @@ void MCJER(string inFileName = "../../results_RERECO/RERECOMC_AK4_PFTRIG_nojetid
   map<int, TH1D*> ws;
 
   for (int ebin = 1; ebin <= histograms::netaforjer; ++ebin) {
-     ws[ebin] =  new TH1D(Form("widths_%d",ebin),"",histograms::nptforJER,&histograms::ptforJER[0]); // TODO: for different bins of eta
+     ws[ebin] =  new TH1D(Form("widths_%d",ebin),"",histograms::nptforJER,&histograms::ptforJER[0]);
     }
 
   TFile *inFile = new TFile(inFileName.c_str(), "READ");
+  TFile *outfile = new TFile(outFileName,"RECREATE");
 
-  // TODO:
-   TFile *outfile = new TFile("testingMCjer-rereco.root","RECREATE");
-
-  // Get 3D monster
   TH3D* responseprofile = (TH3D*)inFile->Get("hibin_-1.0_0.0/eta_-5.2_5.2/responses3D");
 
-  //responseprofile->Draw();
-  //cout << responseprofile->GetXaxis()->GetNbins() << endl;
-  //cout << responseprofile->GetYaxis()->GetNbins() << endl;
+
   TCanvas *c1 = new TCanvas("c1","c1",800,600);
 
   for (int ptbin = 1; ptbin <= responseprofile->GetXaxis()->GetNbins(); ++ptbin) {
@@ -87,11 +77,11 @@ void MCJER(string inFileName = "../../results_RERECO/RERECOMC_AK4_PFTRIG_nojetid
 	txt->DrawLatex( 0.2, 0.4, Form("%g < p_{T,gen} < %g",histograms::ptforJER[ptbin-1],histograms::ptforJER[ptbin]));
 	txt->DrawLatex( 0.2, 0.45, Form("#sigma = %.5f #pm %.5f",f2->GetParameter(2), f2->GetParError(2)));
 
-	ws[etabin]->SetBinContent(ptbin,f2->GetParameter(2)); // Was ptbin-2?
+	ws[etabin]->SetBinContent(ptbin,f2->GetParameter(2));
 	ws[etabin]->SetBinError(ptbin,f2->GetParError(2));
 	//	ws[etabin]->SetMaximum(0.2);       
 
-	c1->Print(Form("mcjerhists_rereco/resp_ptbin_%d_etabin_%d.png",ptbin,etabin));
+	c1->Print(Form("%s/resp_ptbin_%d_etabin_%d.png",dirname.c_str(),ptbin,etabin));
       }
   }
 
@@ -112,6 +102,7 @@ void MCJER(string inFileName = "../../results_RERECO/RERECOMC_AK4_PFTRIG_nojetid
     ws[ebin]->Draw("same");
     leg->AddEntry(ws[ebin],Form("%.3f < |#eta| < %.3f",histograms::etaforjer[ebin-1],histograms::etaforjer[ebin]));
 
+    ws[ebin]->GetXaxis()->SetRangeUser(minpt,1000);
     ws[ebin]->Write();
 
     // Fit NSC: sqrt([0]*abs([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])
@@ -126,6 +117,7 @@ void MCJER(string inFileName = "../../results_RERECO/RERECOMC_AK4_PFTRIG_nojetid
   }
   leg->Draw();
 
-  c2->Print("mcjerhists_rereco/allmcjers.png");
-
+  c2->Print(Form("%s/allmcjers.png",dirname.c_str()));
+  
+  outfile->Close();
 }
