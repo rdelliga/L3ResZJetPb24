@@ -1,6 +1,7 @@
 // 20.2.2025
 
-void JERSF_fits_vsalpha(string filein = "../JERSF_sigmas_fits_forjer_wideeta.root", string outfilename = "JERSFs_fromfits.root") {
+void JERSF_fits_vsalpha(string filein = "JERSF_sigmas_fits_forjer_wideeta.root", string outfilename = "JERSFs_fromfits.root", bool RMS = false) {
+  //void JERSF_fits_vsalpha(string filein = "JERSF_sigmas_RMS_forjer_wideeta.root", string outfilename = "JERSFs_fromRMS.root", bool RMS = true) {
   gStyle->SetOptStat(0);
   
   float fitmin = 0.2, fitmax = 0.4;
@@ -31,14 +32,16 @@ void JERSF_fits_vsalpha(string filein = "../JERSF_sigmas_fits_forjer_wideeta.roo
     for (int ptbin = 2; ptbin <= 4; ++ptbin) {
   
       auto DT = (TGraphErrors*)file->Get(Form("gsigmasDTpt%deta%d",ptbin,etabin));  // pt 2-4 eta 1-3
-      DTs[ptbin] = (TGraph*)file->Get(Form("gsigmasDTpt%deta%d",ptbin,etabin));  // pt 2-4 eta 1-3
+      //   DTs[ptbin] = (TGraph*)file->Get(Form("gsigmasDTpt%deta%d",ptbin,etabin));  // pt 2-4 eta 1-3
       auto MC = (TGraphErrors*)file->Get(Form("gsigmasMCpt%deta%d",ptbin,etabin));  // pt 2-4 eta 1-3
 
-      DTs[ptbin]->SetTitle("");      MC->SetTitle("");
-      DTs[ptbin]->GetXaxis()->SetTitle("#alpha");
+      //  DTs[ptbin]->SetTitle("");      MC->SetTitle("");
+      //DTs[ptbin]->GetXaxis()->SetTitle("#alpha");
 
       DT->SetTitle("");      MC->SetTitle("");
       DT->GetXaxis()->SetTitle("#alpha");
+      DT->GetYaxis()->SetTitle("#sigma");
+      DT->GetYaxis()->SetTitleOffset(1.2);
 
       // Remove points where alpha < 0.2
       DT->RemovePoint(1); MC->RemovePoint(1);
@@ -54,14 +57,21 @@ void JERSF_fits_vsalpha(string filein = "../JERSF_sigmas_fits_forjer_wideeta.roo
       MC->Draw("p");
   
       TF1 * f1 = new TF1("f1","pol1",fitmin,fitmax);
-      f1->SetParameters(1,0);
-      DT->Fit("f1","R");
+      if (RMS) f1->SetParameters(0.1,0.1);
+      else f1->SetParameters(1,0);
+      
+      DT->Fit("f1","WQR");  // Initially: use only R
+      DT->Fit("f1","QR");
+      
       f1->Draw("same");
       float ydt = f1->Eval(0.5);
       double sigmadt = f1->GetParameter(0);
       double errdt = f1->GetParError(0);
     
-      MC->Fit("f1","R");
+      // MC->Fit("f1","R");
+      MC->Fit("f1","WQR");
+      MC->Fit("f1","QR");
+      
       double sigmamc = f1->GetParameter(0);
       double errmc = f1->GetParError(0);
       float ymc = f1->Eval(0.5);
@@ -78,10 +88,10 @@ void JERSF_fits_vsalpha(string filein = "../JERSF_sigmas_fits_forjer_wideeta.roo
       txt->DrawLatex(0.15,0.8, Form("%.1f <|#eta| < %.1f, %.0f < p_{T,avg} < %.0f",etas[etabin-1],etas[etabin],ptbins[ptbin-1],ptbins[ptbin]));
 
       hdata->SetBinContent(ptbin,sigmadt);
-      hdata->SetBinError(ptbin,errdt);
+      if (!RMS) hdata->SetBinError(ptbin,errdt);
     
       hmc->SetBinContent(ptbin,sigmamc);
-      hmc->SetBinError(ptbin,errmc);
+      if (!RMS) hmc->SetBinError(ptbin,errmc);
 
       //  save SF vs. abs(eta)
       auto leg = new TLegend(0.8,0.1,0.9,0.3);
@@ -89,7 +99,8 @@ void JERSF_fits_vsalpha(string filein = "../JERSF_sigmas_fits_forjer_wideeta.roo
       leg->AddEntry(MC, "MC");
       leg->Draw();
 
-      c->Print(Form("JERSF_alphafit_ptbin%d_etabin%d.png",ptbin,etabin));
+      if (RMS) c->Print(Form("JERSF_RMS_alphafit_ptbin%d_etabin%d.png",ptbin,etabin));
+      else c->Print(Form("JERSF_alphafit_ptbin%d_etabin%d.png",ptbin,etabin));
 
     }
 
@@ -100,6 +111,7 @@ void JERSF_fits_vsalpha(string filein = "../JERSF_sigmas_fits_forjer_wideeta.roo
     cr->SetLogx();
     hratio->SetTitle("");
     hratio->GetXaxis()->SetTitle("p_{T}^{avg}");
+    hratio->GetYaxis()->SetTitle("(Data/MC)_{#alpha #rightarrow 0}");
     hratio->SetStats(0);
     hratio->SetMarkerStyle(kFullCircle);
     hratio->Draw();
@@ -118,7 +130,8 @@ void JERSF_fits_vsalpha(string filein = "../JERSF_sigmas_fits_forjer_wideeta.roo
     hmc->Write();
     hratio->Write();
 
-    cr->Print(Form("JERSF_SFperpT_etabin%d.png",etabin));
+    if (RMS) cr->Print(Form("JERSF_RMS_SFperpT_etabin%d.png",etabin));
+    else cr->Print(Form("JERSF_SFperpT_etabin%d.png",etabin));
     
   }
 
@@ -129,7 +142,8 @@ void JERSF_fits_vsalpha(string filein = "../JERSF_sigmas_fits_forjer_wideeta.roo
   SFs->Draw();
   SFs->Write();
 
-  csf->Print("JER_SFs.png");
+  if (RMS) csf->Print("JER_SFs_RMS.png");
+  else csf->Print("JER_SFs.png");
   
 
 }
