@@ -1,8 +1,6 @@
 #include "histograms.h"
-
 histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinmin, float hibinmax, bool ismc) {
-  //histograms::histograms(float ptmin, float ptmax, bool ismc) {
-
+ //histograms::histograms(float ptmin, float ptmax, bool ismc) {
   TDirectory *curdir = gDirectory;
   bool enter = dir->cd();
   assert(enter);
@@ -11,12 +9,10 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   this->etamin = etamin;
   this->etamax = etamax;
   this->isMC = ismc;
-
   this->hibinmin = hibinmin;
   this->hibinmax = hibinmax;
-
+  
 // Jet histograms
-
   jet_pt = new TH1D("reco jet pT", "reco jet p_{T}; reco jet p_{T};", 100, 15, 1000);
   jet_pt_now = new TH1D("reco jet pT, no evt w", "reco jet p_{T}; reco jet p_{T};", 100, 15, 1000);
   jet_uncorr_pt = new TH1D("reco jet pT uncorr", "reco jet p_{T}; reco jet p_{T};", 100, 15, 1000);
@@ -24,8 +20,7 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   jet_eta = new TH1D("reco jet eta"," reco jet #eta; reco jet #eta;", 40, -5.2, 5.2);
   jet_phi = new TH1D("reco jet phi"," reco jet #phi; reco jet #phi;", 25, -3.1415926535, 3.1415926535);
 
-
-  // Trigger checks: TODO: pT bins
+  // Trigger checks
   HLTZB = new TH1D("HLTZB", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
   HLT40 = new TH1D("HLT40", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
   HLT60 = new TH1D("HLT60", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
@@ -33,7 +28,6 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   HLT80 = new TH1D("HLT80", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
   HLT100 = new TH1D("HLT100", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
   HLT120 = new TH1D("HLT120", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
-
   HLTZB_ptav = new TH1D("HLTZB_ptav", "p_{T,avg}; p_{T,avg};", 100, 0, 1000);
   HLT40_ptav = new TH1D("HLT40_ptav", "p_{T,avg}; p_{T,avg};", 100, 0, 1000);
   HLT60_ptav = new TH1D("HLT60_ptav", "p_{T,avg}; p_{T,avg};", 100, 0, 1000);
@@ -45,24 +39,21 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   HLT60vs80 = new TH1D("HLT60vs80", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
   HLT60vs100 = new TH1D("HLT60vs100", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000); */
   
-  // PF composition
+  // PF energy fraction composition
   jet_nhf = new TProfile("reco jet nhf", "reco jet nhf; reco jet p_{T};", 100, 15, 1000);
   jet_chf = new TProfile("reco jet chf", "reco jet chf; reco jet p_{T};", 100, 15, 1000);
   jet_nef = new TProfile("reco jet nef", "reco jet nef; reco jet p_{T};", 100, 15, 1000); 
   jet_cef = new TProfile("reco jet cef", "reco jet cef; reco jet p_{T};", 100, 15, 1000);
   jet_muf = new TProfile("reco jet muf", "reco jet muf; reco jet p_{T};", 100, 15, 1000);
-
   jetetaphi = new TH2D("eta-phi distribution",";#eta; #phi",netas,etarange,nphis,phirange);
   
   if (ismc) {
-
     genjet_pt = new TH1D("gen jet pT", "gen jet p_{T}; gen jet p_{T};", 100, 100, 1000);
     genjet_eta = new TH1D("gen jet eta"," gen jet #eta; gen jet #eta;", 20, -2.5, 2.5);
     genjet_phi = new TH1D("gen jet phi"," gen jet #phi; gen jet #phi;", 20, -2.5, 2.5);
-
     jetresponse = new TProfile("response","",100,100,1000);
 
-// Residuals
+// "Residuals"
 // Definition: (reco-true)/true
     ptres = new TH1D("pT res"," pT ; (pT_reco-pT_gen)/pT_gen;", 40, -2, 2);
  
@@ -73,40 +64,32 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   dijetasymmetry_now = new TH1D("dijetasymmetry_now","  ; asymmetry;", 40, 0, 1);
   dijetdeltaphi  = new TH1D("dijetdeltaphi"," ; delta phi;", 40, 0, 3.1415926535);
   dijetdeltaeta  = new TH1D("dijetdeltaeta"," ; delta eta;", 40, 0, 5.2);
-
   //  dijetbalance_a01 = new TH1D("dijetbalance_a01","  ; ;", 20, -2, 2);
   dijetasymmetry_a01 = new TProfile("dijetasymmetry_a01","  ; ;",  nptforjec, &ptforjec[0]);
-
   // dijetbalance_a02 = new TH1D("dijetbalance_a02","  ; ;", 20, -2, 2);
   dijetasymmetry_a02 = new TProfile("dijetasymmetry_a02","  ; ;",  nptforjec, &ptforjec[0]);
-
   dijetbalance_a03 = new TH1D("dijetbalance_a03","  ; ;", 20, -2, 2);
   dijetasymmetry_a03 = new TProfile("dijetasymmetry_a03","  ; ;",  nptforjec, &ptforjec[0]);
-
   //  dijetbalance_a035 = new TH1D("dijetbalance_a035","  ; ;", 20, -2, 2);
   dijetasymmetry_a035 = new TProfile("dijetasymmetry_a035","  ; ;",  nptforjec, &ptforjec[0]);
   
   //  dijetbalance_a04 = new TH1D("dijetbalance_a04","  ; ;", 20, -2, 2);
   dijetasymmetry_a04 = new TProfile("dijetasymmetry_a04","  ; ;",  nptforjec, &ptforjec[0]);
-
   //  dijetbalance_a05 = new TH1D("dijetbalance_a05","  ; ;", 20, -2, 2);
   dijetasymmetry_a05 = new TProfile("dijetasymmetry_a05","  ; ;",  nptforjec, &ptforjec[0]);
-
   //  dijetbalance_a06 = new TH1D("dijetbalance_a06","  ; ;", 20, -2, 2);
   dijetasymmetry_a06 = new TProfile("dijetasymmetry_a06","  ; ;",  nptforjec, &ptforjec[0]);
   
   dijetbalance_a1= new TH1D("dijetbalance_a1","  ; ;", 20, -2, 2);
   dijetasymmetry_a1 = new TProfile("dijetasymmetry_a1","  ; ;",  nptforjec, &ptforjec[0]);
 
-
   if ((this->etamin - this->etamax) < -10) {
+
     dijetasymmetry3D = new TProfile3D("dijetasymmetry3D", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0], nalphavalues, &alphavalues[0]); 
     dijetasymmetry3Dabseta = new TProfile3D("dijetasymmetry3Dabseta", ";;", nptforjec, &ptforjec[0], nwabsetas, &wabsetarange[0], nalphavalues, &alphavalues[0]);
     dijetasymmetry3Dabsetawide = new TProfile3D("dijetasymmetry3Dabsetawide", ";;", nptforjec, &ptforjec[0], ndwabsetas, &dwabsetarange[0], nalphavalues, &alphavalues[0]); 
-
     dijetasymmetry3Dnarrow = new TProfile3D("dijetasymmetry3Dnarrow", ";;", nptforjec, &ptforjec[0], netas, &etarange[0], nalphavalues, &alphavalues[0]); 
     dijetasymmetry3Dabsetanarrow = new TProfile3D("dijetasymmetry3Dabsetanarrow", ";;", nptforjec, &ptforjec[0], nabsetas, &absetarange[0], nalphavalues, &alphavalues[0]); 
-
     dijetasymmetry2D_a01 = new TProfile2D("dijetasymmetry2D_a01", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
     dijetasymmetry2D_a02 = new TProfile2D("dijetasymmetry2D_a02", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
     dijetasymmetry2D_a03 = new TProfile2D("dijetasymmetry2D_a03", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
@@ -114,26 +97,21 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
     dijetasymmetry2D_a05 = new TProfile2D("dijetasymmetry2D_a05", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
     dijetasymmetry2D_a06 = new TProfile2D("dijetasymmetry2D_a06", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
   }
-
   ptgenvsptreco = new TH2D("ptgenvsptreco","",200,0,1500,200,0,1500);
   ptrecovsweight = new TH2D("ptrecovsweight","",200,0,1500,200,0,0.1);
   ptgenvsweight = new TH2D("ptgenvsweight","",200,0,1500,200,0,0.1);
 
-  // JER STUFF: TODO: bins
-
+  // JER STUFF:
   vector<double> x(61);
   for (unsigned int i = 0; i != x.size(); ++i) x[i] = 0.05*i;
   const int nx = x.size()-1;
-
   vector<double> y(41);
   for (unsigned int i = 0; i != y.size(); ++i) y[i] = -1 + 0.05*i;
   const int ny = y.size()-1;
-
   if (ismc) {
     responses3D = new TH3D("responses3D",";;", nptforJER, &ptforJER[0], netaforjer, &etaforjer[0], nx, &x[0]);
     phiresponse = new TH3D("phiresponses3D",";;", nptforJER, &ptforJER[0], netaforjer, &etaforjer[0], nx, &x[0]);
     etaresponse = new TH3D("etaresponses3D",";;", nptforJER, &ptforJER[0], netaforjer, &etaforjer[0], nx, &x[0]);
-
   }
   absasymmdist3D = new TH3D("absasymmdist3D",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
   asymmdist3D = new TH3D("asymmdist3D",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
@@ -157,13 +135,10 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   absasymmdist3D_a45 = new TH3D("absasymmdist3D_a45",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
    
 }
-
-
 void histograms::Write() {
   dir->cd();
   dir->Write();
   }
-
 // HistosBasic::~HistosBasic() {
 //  Write();/
 // };
