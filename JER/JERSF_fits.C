@@ -1,17 +1,9 @@
 // Do the fits as function of alpha
-// TODO: version with trunct. RMS?
-// TODO: save sigmas as function of alpha for DT and MC
-// TODO: zero bias for low pT:s
 
-#include "histograms.h"
-string outfilename = "JERSF_sigmas_fits_forjer_wideeta.root";
+#include "../histograms.h"
 
 
-//void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr.root") {
-//void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr.root") {
-//void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_PFTRIG_jetid_l2corr_etaforjerinsamebin.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr_etaforjetinsamebin.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr_etaforjerinsamebin.root") {
-//void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_PFTRIG_jetid_l2corr_forjer.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr_forjer.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr_forjer.root") {
-void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_PFTRIG_jetid_l2corr_forjer_wideeta.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr_forjer_wideeta.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr_forjer_wideeta.root") {
+void JERSF_fits(string outfilename = "JERSF_sigmas_fits_forjer_wideeta.root", string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_PFTRIG_jetid_l2corr_forjer_wideeta.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr_forjer_wideeta.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr_forjer_wideeta.root") {
 
   //  int pts[] = {40, 55, 80, 120, 170, 1000}; // Temporary
   int pts[] = {15, 25, 80, 120, 1000}; // Temporary
@@ -56,7 +48,6 @@ void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_
   
 	// 	TH1D* asMC = (TH1D*)asymmMC->ProjectionZ("MC",ptbin,ptbin,etabin,etabin);
 	//TH1D* asDT = (TH1D*)asymmDT->ProjectionZ("DT",ptbin,ptbin,etabin,etabin);
-	TH1D* asMC = (TH1D*)asymmMCs[i]->ProjectionZ("MC",ptbin,ptbin,etabin,etabin);
 	TH1D* asDT(0);
 
 	// Take HP instead of ZB; TODO: be more flexible for 2024
@@ -66,7 +57,8 @@ void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_
 	//	asDT->Scale(1./asDT->Integral(),"width"); // For some reason using "scale" leads to histograms not plotted with error bars after the first iteration
 	asDT->SetTitle("");
 	asDT->GetXaxis()->SetTitle("A");
-	
+
+	if (asDT->Integral() < 100) continue;
 
 	//	cout << asymmDT->GetBinContent(ptbin,etabin,20) << " " <<  asymmDT->GetBinError(ptbin,etabin,20) << endl;
 	//      cout << asDT->GetBinContent(20) << " " <<  asDT->GetBinError(20) << endl;
@@ -102,8 +94,7 @@ void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_
 	txt->DrawLatex( 0.2, 0.45, Form("#sigma = %.5f",sigmaDT));
        
 	c1->SetLogy();
-        c1->Print(Form("jersfhists_L2_rerunall_forjer_wideeta/asymm_DT_ptbin_%d_etabin_%d_a%d.png",ptbin,etabin,i));
-	//c1->Print(Form("jersfhists_L2_rerunall/asymm_DT_ptbin_%d_etabin_%d_a.pdf",ptbin,etabin));
+        c1->Print(Form("jersfhists/asymm_DT_ptbin_%d_etabin_%d_a%d.png",ptbin,etabin,i));
       }
       }
  
@@ -116,10 +107,10 @@ void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_
 	//	TH1D* asMC = (TH1D*)asymmMC->ProjectionZ("MC",ptbin,ptbin,etabin,etabin);
 	
 	// asMC->Scale(1./asMC->Integral(),"width");
-	// Technically we'd need the lumi normalization?
-	
+	//if (asMC->Integral() < 10) continue;
 	asMC->SetTitle("");
 	asMC->GetXaxis()->SetTitle("A");
+	
 
 	//	cout << asymmDT->GetBinContent(ptbin,etabin,20) << " " <<  asymmDT->GetBinError(ptbin,etabin,20) << endl;
 	//      cout << asDT->GetBinContent(20) << " " <<  asDT->GetBinError(20) << endl;
@@ -158,7 +149,7 @@ void JERSF_fits(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_
 	txt->DrawLatex( 0.2, 0.4, Form("%d < p_{T,avg} < %d",pts[ptbin-1],pts[ptbin]));
 	txt->DrawLatex( 0.2, 0.45, Form("#sigma = %.5f",sigmaMC));
        
-	c1->Print(Form("jersfhists_L2_rerunall_forjer_wideeta/asymm_MC_ptbin_%d_etabin_%d_a%d.png",ptbin,etabin,i));
+	c1->Print(Form("jersfhists/asymm_MC_ptbin_%d_etabin_%d_a%d.png",ptbin,etabin,i));
       }
   }
   }

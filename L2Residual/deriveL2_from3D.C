@@ -1,7 +1,7 @@
 // Derive responses from dijet asymmetries using the 3D profile
 
 //#include settings.h
-#include "histograms.h"
+#include "../histograms.h"
 
  
 //void deriveL2_from3D(string inFileName = "HIJEC_results/rebin/pbpbreco_MC_wideeta_lxplus.root",string inFileNameDT = "HIJEC_results/rebin/pbpbreco_DATA_wideeta_lxplus.root", string outfilename = "L2residuals_pbpbreco_from3Dlxplus_alpha03_rebin_abs_wideeta.root", bool dodt = true,   int alphabin = 3, bool useabs = false, bool usewideabs = true) {
@@ -13,12 +13,12 @@
 // void deriveL2_from3D(string inFileName = "HIJEC_results/rerunall/MC_AK4_nojetid.root",string inFileNameDT = "HIJEC_results/rerunall/HP_AK4_PFTRIG_nojetid.root", string outfilename = "RERUNALL/L2residuals_pbpbreco_rerunall_HP_PFTRIG_nojetid_a3.root", bool dodt = true,   int alphabin = 5, bool useabs = true, bool usewideabs = false) {
 
    
-void deriveL2_from3D(string inFileName = "HIJEC_results/rerunall/MC_AK4_jetid.root",string inFileNameDT = "HIJEC_results/rerunall/zerobiasall_jetid.root", string outfilename = "RERUNALL/L2residuals_pbpbreco_rerunall_zerobias_jetid.root", bool dodt = true,   int alphabin = 5, bool useabs = true, bool usewideabs = false) {
+void deriveL2_from3D(TString inFileName = "HIJEC_results/rerunall/MC_AK4_jetid.root",TString inFileNameDT = "HIJEC_results/rerunall/zerobiasall_jetid.root", TString outfilename = "RERUNALL/L2residuals_pbpbreco_rerunall_zerobias_jetid.root", bool dodt = true,   int alphabin = 5, bool useabs = true, bool usewideabs = false) {
 
 
   // Open file
-  TFile *inFile = new TFile(inFileName.c_str(), "READ"); // TODO: safety checks about opening file successfully
-  TFile *inFileDT = new TFile(inFileNameDT.c_str(), "READ"); // TODO: safety checks about opening file successfully
+  TFile *inFile = new TFile(inFileName, "READ"); // TODO: safety checks about opening file successfully
+  TFile *inFileDT = new TFile(inFileNameDT, "READ"); // TODO: safety checks about opening file successfully
 
   //// These are bins to be processed
   vector<string> etabins = {"eta_-5.2_5.2"};
@@ -30,7 +30,7 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/rerunall/MC_AK4_jetid.ro
   // TODO: should one save responses is like 3d thing? means: how to save responses from the different alphas, actually.
 
   
-  TFile *outfile = new TFile(outfilename.c_str(),"RECREATE");
+  TFile *outfile = new TFile(outfilename,"RECREATE");
   
   TH1D* vsalpha = new TH1D("testvsalpha","  ; ;",  histograms::nalphavalues, &histograms::alphavalues[0]);
 
@@ -198,14 +198,14 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/rerunall/MC_AK4_jetid.ro
 
    
   // loop over bin in pt
-  for (int ptbin = 1; ptbin <= asymm3d[etabins[i].c_str()]->GetXaxis()->GetNbins(); ++ptbin) {  // TODO: LIMIT
+  for (int ptbin = 1; ptbin <= asymm3d[etabins[i].c_str()]->GetXaxis()->GetNbins(); ++ptbin) {
   // loop over bin in eta
      cout << "NEW PT BIN " << ptbin << endl;
      for (int etabin = 1; etabin <= data3d[etabins[i].c_str()]->GetYaxis()->GetNbins(); ++etabin) {
        cout << "NEW ETA BIN " << data3d[etabins[i].c_str()]->GetYaxis()->GetBinLowEdge(etabin) << " " << data3d[etabins[i].c_str()]->GetYaxis()->GetBinLowEdge(etabin+1) <<  endl;
   
        
-       for (int alphabin = 1; alphabin <= asymm3d[etabins[i].c_str()]->GetZaxis()->GetNbins(); ++alphabin) { // TODO: check bins
+       for (int alphabin = 1; alphabin <= asymm3d[etabins[i].c_str()]->GetZaxis()->GetNbins(); ++alphabin) {
 	 double val = asymm3d[etabins[i].c_str()]->GetBinContent(ptbin,etabin,alphabin);
 	 double err = asymm3d[etabins[i].c_str()]->GetBinError(ptbin,etabin,alphabin);
 	 
@@ -230,7 +230,7 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/rerunall/MC_AK4_jetid.ro
 	 //cout <<  alphabin << " " << val << endl;
 
       }
-     // TODO: check correct error for responses
+ 
      vsalpha_nom->Divide(vsalpha_denom);
      for (int bin = 1; bin < vsalpha_nom->GetXaxis()->GetNbins(); ++bin) {
       float error = aerrormc->GetBinContent(bin);
@@ -270,6 +270,6 @@ void deriveL2_from3D(string inFileName = "HIJEC_results/rerunall/MC_AK4_jetid.ro
      }
 
    }
-
+  outfile->Close();
    
 }

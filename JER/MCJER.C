@@ -21,7 +21,6 @@ void MCJER(string inFileName = "../../../HIJEC_rereco_results/RERECOMC_AK4_PFTRI
 
   TH3D* responseprofile = (TH3D*)inFile->Get("hibin_-1.0_0.0/eta_-5.2_5.2/responses3D");
 
-
   TCanvas *c1 = new TCanvas("c1","c1",800,600);
 
   for (int ptbin = 1; ptbin <= responseprofile->GetXaxis()->GetNbins(); ++ptbin) {

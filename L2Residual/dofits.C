@@ -1,4 +1,4 @@
-#include "histograms.h"
+#include "../histograms.h"
 
 //int pts[] = {15, 25, 55, 80, 120, 170, 1000}; // Temporary
 int pts[] = {15, 25, 80, 120, 1000}; // Temporary
@@ -7,15 +7,15 @@ int nptbins = 4;
 string ptbins[] = {"25to80", "80to120", "120to1000"};
 
 
-void dofits(float fitmin = 0.15, float fitmax = 0.35, string outfilename = "kfactor_rerunall_combined_allpts", bool doabseta = true) {
+void dofits(TString inzb, TString inHP, float fitmin = 0.15, float fitmax = 0.35, string outfilename = "kfactor_rerunall_combined_allpts", bool doabseta = true) {
   // input file is from 3D derivation
   gStyle->SetOptStat(0);
 
-  TFile *inFilezb = new TFile("RERUNALL_combinedbins/L2residuals_pbpbreco_rerunall_zerobias_jetid.root", "READ");
-  TFile *inFile = new TFile("RERUNALL_combinedbins/L2residuals_pbpbreco_rerunall_HP_jetid.root", "READ");
+  TFile *inFilezb = new TFile(inzb, "READ");
+  TFile *inFile = new TFile(inHP, "READ");
 
   //TFile *inFile = new TFile("test.root", "READ");
-  string outfolder = "fits_combinedbins";
+  string outfolder = "L2fits";
   TFile *outfile = new TFile(Form("%s/%s.root",outfolder.c_str(),outfilename.c_str()),"RECREATE");
   
   // ROOT::Fit::DataRange range(0.3,0.4);
@@ -231,5 +231,7 @@ void dofits(float fitmin = 0.15, float fitmax = 0.35, string outfilename = "kfac
   
   c3->Print(Form("%s/corrections.png",outfolder.c_str()));
   c3->Print(Form("%s/corrections.pdf",outfolder.c_str()));
+
+  outfile->Close();
   
 }

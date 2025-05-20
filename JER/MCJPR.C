@@ -1,31 +1,27 @@
-// MC JET PHI RESOLUTION
+// MC JET PHI/ETA RESOLUTION
 
-#include "../histograms.h"
+#include "../fillhistograms/histograms.h"
 #include "TMath.h"
 #include "plots.h"
 
-//void MCJER(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root") {
-//void MCJER(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_jetid.root") {
-//void MCJER(string inFileName = "HIJEC_results/debugged_plus_JER/pbpbreco_MC_JERHCALbinningHF.root") {
-void MCJPR(string inFileName = "../../results_RERECO/RERECOMC_AK4_PFTRIG_nojetid.root", bool doeta = 0) {
+void MCJPR(string inFileName = "../../../results_RERECO/RERECOMC_AK4_PFTRIG_nojetid.root", bool doeta = 0) {
 
   string varlabel = (doeta ? "eta" : "phi");
 
-  int pts[] = {40, 55, 80, 120, 170, 1000}; // Temporary
-  float etabins[] = {0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0}; // Temporary
+  int pts[] = {40, 55, 80, 120, 170, 1000};
+  float etabins[] = {0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0};
 
-  float ptsforwidths[] = {80, 120, 170, 1000}; // Temporary
-  TH1D* widths = new TH1D("widths","widths",3,&ptsforwidths[0]); // TODO: for different bins of eta
+  float ptsforwidths[] = {80, 120, 170, 1000};
+  TH1D* widths = new TH1D("widths","widths",3,&ptsforwidths[0]); 
 
   map<int, TH1D*> ws;
 
   for (int ebin = 1; ebin <= histograms::netaforjer; ++ebin) {
-     ws[ebin] =  new TH1D(Form("widths_%d",ebin),"",histograms::nptforJER,&histograms::ptforJER[0]); // TODO: for different bins of eta
+     ws[ebin] =  new TH1D(Form("widths_%d",ebin),"",histograms::nptforJER,&histograms::ptforJER[0]); 
     }
 
   TFile *inFile = new TFile(inFileName.c_str(), "READ");
 
-  // TODO:
   TFile *outfile = new TFile("testingMCphiresolution.root","RECREATE");
 
   TH3D* responseprofile = (TH3D*)inFile->Get((doeta ? "hibin_-1.0_0.0/eta_-5.2_5.2/etaresponses3D" : "hibin_-1.0_0.0/eta_-5.2_5.2/phiresponses3D"));

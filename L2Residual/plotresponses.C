@@ -1,9 +1,5 @@
 
-//void plotresponses( string input = "RERUNALL/L2residuals_pbpbreco_rerunall_HP_PFTRIG_nojetid_a3.root", string plottag = "PFTRIG_nojetid") {
-void plotresponses( string input = "RERUNALL_combinedbins/L2residuals_pbpbreco_rerunall_HP_jetid.root", string plottag = "PFTRIG_jetid") {
-//void plotresponses( string input = "RERUNALL/L2residuals_pbpbreco_rerunall_HP_CALOTRIG_nojetid_a3.root", string plottag = "CALOTRIG_nojetid") {
-//void plotresponses( string input = "RERUNALL/L2residuals_pbpbreco_rerunall_HP_CALOTRIG_jetid_a3.root", string plottag = "CALOTRIG_jetid") {
-//void plotresponses( string input = "RERUNALL_combinedbins/L2residuals_pbpbreco_rerunall_zerobias_jetid.root", string plottag = "ZB_jetid") {
+void plotresponses( string input = "L2residuals_pbpbreco_rereco_zb_jetid.root", string plottag = "ZB") {
 
   float h1 = -1.0, h2 = 0.0, eta1 = -5.2, eta2 = 5.2;
   
@@ -18,21 +14,18 @@ void plotresponses( string input = "RERUNALL_combinedbins/L2residuals_pbpbreco_r
   gStyle->SetOptStat(0);
 
  
-  //string input = "L2residuals_pbpbreco_from3Dlxplus_alpha03_closure_ptlims.root ";   // This contains both data and mc and the ratio -> should one
-  //string input = "L2residuals_ppreco_from3Dlxplus_alpha02.root";   // This contains both data and mc and the ratio -> should one
- 
   TFile *file = new TFile(input.c_str(),"READ");
 
   float alpha = 0.3;
-// int pts[] = {15, 25, 55, 80, 120, 170, 1000}; // Temporary
-int pts[] = {15, 25, 80, 120, 1000}; // Temporary
+  // int pts[] = {15, 25, 55, 80, 120, 170, 1000}; // Temporary
+  int pts[] = {15, 25, 80, 120, 1000}; // Temporary
 
-// for (int i = 0; i < 6; ++i) {
-for (int i = 0; i < 4; ++i) {
+  // for (int i = 0; i < 6; ++i) {
+  for (int i = 0; i < 4; ++i) {
     int pt1 = pts[i];
     int pt2= pts[i+1];
     string namelabel = Form("pbpb_%dto%dalpha%.1f_%s",pt1,pt2,alpha,plottag.c_str());
-
+    
     auto mc = (TH1D*)file->Get(Form("mc_pt%dto%d_alpha%.1f",pt1,pt2,alpha));
     auto data = (TH1D*)file->Get(Form("dt_pt%dto%d_alpha%.1f",pt1,pt2,alpha));
 
@@ -60,6 +53,8 @@ for (int i = 0; i < 4; ++i) {
     
     rp->GetLowerRefGraph()->SetMaximum(rmax);
     rp->GetLowerRefGraph()->SetMinimum(rmin);
+
+    rp->GetUpperRefYaxis()->SetRangeUser(0.89, 1.59);
   
     leg->Draw("same");
 
@@ -71,10 +66,10 @@ for (int i = 0; i < 4; ++i) {
 
     auto txt = new TLatex();
     txt->SetTextSize(0.03);
-    txt->DrawLatex( 0.2, 0.4, Form("%d < p_{T,avg} < %d",pt1,pt2));
-    txt->DrawLatex( 0.2, 0.45, Form("#alpha < %.1f",alpha));
+    txt->DrawLatex( 0.2, 0.8, Form("%d < p_{T,avg} < %d",pt1,pt2));
+    txt->DrawLatex( 0.2, 0.85, Form("#alpha < %.1f",alpha));
   
-    c1->Print(Form("RERUNALL_combinedbins/response_eta_%.1f_%.1f_%s.pdf",eta1,eta2,namelabel.c_str()));
+    c1->Print(Form("response_eta_%.1f_%.1f_%s.pdf",eta1,eta2,namelabel.c_str()));
  
   }
 }
