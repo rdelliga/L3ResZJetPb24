@@ -24,10 +24,10 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   HLTZB = new TH1D("HLTZB", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
   HLT40 = new TH1D("HLT40", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
   HLT60 = new TH1D("HLT60", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
-  HLT60a = new TH1D("HLT60a", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
   HLT80 = new TH1D("HLT80", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
   HLT100 = new TH1D("HLT100", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
   HLT120 = new TH1D("HLT120", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
+
   HLTZB_ptav = new TH1D("HLTZB_ptav", "p_{T,avg}; p_{T,avg};", 100, 0, 1000);
   HLT40_ptav = new TH1D("HLT40_ptav", "p_{T,avg}; p_{T,avg};", 100, 0, 1000);
   HLT60_ptav = new TH1D("HLT60_ptav", "p_{T,avg}; p_{T,avg};", 100, 0, 1000);
@@ -35,10 +35,6 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   HLT100_ptav = new TH1D("HLT100_ptav", "p_{T,avg}; p_{T,avg};", 100, 0, 1000);
   HLT120_ptav = new TH1D("HLT120_ptav", "p_{T,avg}; p_{T,avg};", 100, 0, 1000);
 
-  /*  HLT60vs120 = new TH1D("HLT60vs120", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
-  HLT60vs80 = new TH1D("HLT60vs80", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000);
-  HLT60vs100 = new TH1D("HLT60vs100", "leading jet p_{T}; leading jet p_{T};", 100, 15, 1000); */
-  
   // PF energy fraction composition
   jet_nhf = new TProfile("reco jet nhf", "reco jet nhf; reco jet p_{T};", 100, 15, 1000);
   jet_chf = new TProfile("reco jet chf", "reco jet chf; reco jet p_{T};", 100, 15, 1000);
@@ -105,13 +101,14 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   vector<double> x(61);
   for (unsigned int i = 0; i != x.size(); ++i) x[i] = 0.05*i;
   const int nx = x.size()-1;
-  vector<double> y(41);
+
+    vector<double> y(41);
   for (unsigned int i = 0; i != y.size(); ++i) y[i] = -1 + 0.05*i;
   const int ny = y.size()-1;
   if (ismc) {
     responses3D = new TH3D("responses3D",";;", nptforJER, &ptforJER[0], netaforjer, &etaforjer[0], nx, &x[0]);
-    phiresponse = new TH3D("phiresponses3D",";;", nptforJER, &ptforJER[0], netaforjer, &etaforjer[0], nx, &x[0]);
-    etaresponse = new TH3D("etaresponses3D",";;", nptforJER, &ptforJER[0], netaforjer, &etaforjer[0], nx, &x[0]);
+    phiresponse = new TH3D("phiresponses3D",";;", nptforJER, &ptforJER[0], netaforjer, &etaforjer[0], ny, &y[0]);
+    etaresponse = new TH3D("etaresponses3D",";;", nptforJER, &ptforJER[0], netaforjer, &etaforjer[0], ny, &y[0]);
   }
   absasymmdist3D = new TH3D("absasymmdist3D",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
   asymmdist3D = new TH3D("asymmdist3D",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
