@@ -1,6 +1,6 @@
 // Do the fits as function of alpha
 
-#include "../histograms.h"
+#include "../fillhistograms/histograms.h"
 
 
 void JERSF_fits(string outfilename = "JERSF_sigmas_fits_forjer_wideeta.root", string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_PFTRIG_jetid_l2corr_forjer_wideeta.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr_forjer_wideeta.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr_forjer_wideeta.root") {
@@ -184,5 +184,7 @@ void JERSF_fits(string outfilename = "JERSF_sigmas_fits_forjer_wideeta.root", st
 
     }
   }
+
+  outfile->Close();
     
 }
