@@ -1,15 +1,9 @@
 #include "../fillhistograms/histograms.h"
 #include "TMath.h"
-#include "plots.h"
+//#include "plots.h"
 
-void MCJER(string inFileName = "../../../HIJEC_rereco_results/RERECOMC_AK4_PFTRIG_nojetid.root", int minpt = 15, string dirname = "MCJER", TString outFileName = "testingMCjer-rereco.root") {
+void MCJER(string inFileName = "../../../HIJEC_rereco_results/RERECOMC_AK4_PFTRIG_nojetid.root", int minpt = 28, string dirname = "MCJER", TString outFileName = "testingMCjer-rereco.root") {
      
-  int pts[] = {40, 55, 80, 120, 170, 1000}; // Temporarily here
-  float etabins[] = {0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0}; // Temporarily here
-
-  float ptsforwidths[] = {80, 120, 170, 1000}; // Temporary
-  TH1D* widths = new TH1D("widths","widths",3,&ptsforwidths[0]); // TODO: for different bins of eta
-
   map<int, TH1D*> ws;
 
   for (int ebin = 1; ebin <= histograms::netaforjer; ++ebin) {
@@ -87,36 +81,77 @@ void MCJER(string inFileName = "../../../HIJEC_rereco_results/RERECOMC_AK4_PFTRI
   //  
 
   auto leg = new TLegend(0.57,0.6,0.85,0.9);
+  auto legb = new TLegend(0.57,0.6,0.85,0.9); //barrel(ish) bins
+  auto legf = new TLegend(0.57,0.6,0.85,0.9); //forward(ish) bins
+
   TCanvas *c2 = new TCanvas("c2","c2",800,600);
   c2->SetLogx();
+  gStyle->SetOptStat(0);
+
+  TCanvas *c2b = new TCanvas("c2b","c2b",800,600);
+  c2b->SetLogx();
+  gStyle->SetOptStat(0);
+
+  TCanvas *c2f = new TCanvas("c2f","c2f",800,600);
+  c2f->SetLogx();
   gStyle->SetOptStat(0);
   
   for (int ebin = 1; ebin <= histograms::netaforjer; ++ebin) {
     //for (int ebin = 1; ebin <= 5; ++ebin) {
+
+    c2->cd();
+    
     ws[ebin]->SetLineColor(cols[ebin-1]);
     ws[ebin]->GetXaxis()->SetRangeUser(15,1500);
     ws[ebin]->SetMaximum(0.5);
     ws[ebin]->GetXaxis()->SetTitle("p_{T,ptcl}");
     ws[ebin]->GetYaxis()->SetTitle("#sigma");
+    
     ws[ebin]->Draw("same");
+
     leg->AddEntry(ws[ebin],Form("%.3f < |#eta| < %.3f",histograms::etaforjer[ebin-1],histograms::etaforjer[ebin]));
 
     ws[ebin]->GetXaxis()->SetRangeUser(minpt,1000);
     ws[ebin]->Write();
 
     // Fit NSC: sqrt([0]*abs([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])
-    TF1 *nsc = new TF1("nsc", "sqrt([0]*abs([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])");
+    // TF1 *nsc = new TF1("nsc", "sqrt([0]*abs([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])");
+
+    TF1 *nsc = new TF1("nsc", "sqrt([0]*([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])");
     nsc->SetLineColor(cols[ebin-1]);
+    if (ebin ==  histograms::netaforjer) ws[ebin]->GetXaxis()->SetRangeUser(minpt,100);
     // nsc->SetLineColor(kBlue-8+ebin);
     ws[ebin]->Fit("nsc");
 
-    nsc->Draw("same");
     nsc->Write(Form("fit_eta_%.3fto%.3f",histograms::etaforjer[ebin-1],histograms::etaforjer[ebin]));
     
-  }
+    nsc->Draw("same");
+    if (ebin <= 8) {
+      c2b->cd();
+      ws[ebin]->Draw("same");
+      nsc->Draw("same");
+      legb->AddEntry(ws[ebin],Form("%.3f < |#eta| < %.3f",histograms::etaforjer[ebin-1],histograms::etaforjer[ebin]));
+    }
+
+    else {
+      c2f->cd();
+       ws[ebin]->Draw("same");
+       nsc->Draw("same");
+       legf->AddEntry(ws[ebin],Form("%.3f < |#eta| < %.3f",histograms::etaforjer[ebin-1],histograms::etaforjer[ebin]));
+    }
+    
+    
+  } 
   leg->Draw();
+  c2b->cd();
+  legb->Draw();
+  
+  c2f->cd();
+  legf->Draw();
 
   c2->Print(Form("%s/allmcjers.png",dirname.c_str()));
+  c2b->Print(Form("%s/allmcjers_barrel.png",dirname.c_str()));
+  c2f->Print(Form("%s/allmcjers_fwd.png",dirname.c_str()));
   
   outfile->Close();
 }

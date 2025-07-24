@@ -2,7 +2,7 @@
 
 int nparams = 6;
   
-void doTxtMCJER(TString inFileName = "nscfits.root", TString filename = "jtptres.txt" ) { // fit params plus pt range
+void doTxtMCJER(TString inFileName = "nscfits.root", TString filename = "jtptres.txt", bool phieta = false) { // fit params plus pt range
   static constexpr double etabins[] = {0.0, 0.522, 0.783, 1.044, 1.305, 1.566, 2.043, 2.322, 2.65, 2.853, 3.139, 3.485, 5.191};
   static constexpr unsigned int netabins = sizeof(etabins)/sizeof(etabins[0])-1;
  
@@ -10,8 +10,12 @@ void doTxtMCJER(TString inFileName = "nscfits.root", TString filename = "jtptres
  
   TFile *inFile = new TFile(inFileName, "READ");
   // TFile *inFile2 = new TFile("", "READ");
-  
-  TString header = "{1 JetEta 1 JetPt (sqrt([0]*abs([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])) Resolution}";
+
+  // Remember to use the header from the MCJER script
+  TString header = "{1 JetEta 1 JetPt (sqrt([0]*[0]/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])) Resolution}";
+
+  // phi or eta res:
+  if (phieta) header = "{1 JetEta 1 JetPt (sqrt([0]*[0]/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])) Resolution}";
   
   ofstream txtfile;
   txtfile.open(filename);

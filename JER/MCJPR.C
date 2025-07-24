@@ -1,10 +1,10 @@
 // MC JET PHI/ETA RESOLUTION
 
-#include "../fillhistograms/histograms.h"
+//#include "../fillhistograms/histograms.h"
 #include "TMath.h"
-#include "plots.h"
 
-void MCJPR(string inFileName = "../../../results_RERECO/RERECOMC_AK4_PFTRIG_nojetid.root", bool doeta = 0) {
+
+void MCJPR(string inFileName = "../../../results_RERECO/RERECOMC_AK4_PFTRIG_nojetid.root", bool doeta = 0,  string dirname = "MCJPR", TString outFileName = "testingMCpfires-rereco.root") {
 
   string varlabel = (doeta ? "eta" : "phi");
 
@@ -22,7 +22,7 @@ void MCJPR(string inFileName = "../../../results_RERECO/RERECOMC_AK4_PFTRIG_noje
 
   TFile *inFile = new TFile(inFileName.c_str(), "READ");
 
-  TFile *outfile = new TFile("testingMCphiresolution.root","RECREATE");
+  TFile *outfile = new TFile(outFileName,"RECREATE");
 
   TH3D* responseprofile = (TH3D*)inFile->Get((doeta ? "hibin_-1.0_0.0/eta_-5.2_5.2/etaresponses3D" : "hibin_-1.0_0.0/eta_-5.2_5.2/phiresponses3D"));
 
@@ -80,7 +80,6 @@ void MCJPR(string inFileName = "../../../results_RERECO/RERECOMC_AK4_PFTRIG_noje
 	//	resp->Fit("f2","R");
 	resp->Fit("f2");
 
-	
 	c1->SetLogy();
 	auto txt = new TLatex();
 	txt->SetNDC();
@@ -93,7 +92,7 @@ void MCJPR(string inFileName = "../../../results_RERECO/RERECOMC_AK4_PFTRIG_noje
 	ws[etabin]->SetBinError(ptbin,f2->GetParError(2));
 	//	ws[etabin]->SetMaximum(0.2);       
 
-	c1->Print(Form("mcphires_hists/%sresp_ptbin_%d_etabin_%d.png",varlabel.c_str(),ptbin,etabin));
+	c1->Print(Form("%s/%sresp_ptbin_%d_etabin_%d.png",dirname.c_str(),varlabel.c_str(),ptbin,etabin));
       }
   }
 
@@ -110,7 +109,7 @@ void MCJPR(string inFileName = "../../../results_RERECO/RERECOMC_AK4_PFTRIG_noje
     ws[ebin]->GetXaxis()->SetRangeUser(15,1500);
     ws[ebin]->SetMaximum(0.25);
 
-   ws[ebin]->GetXaxis()->SetTitle("#p_{T,gen}");
+    ws[ebin]->GetXaxis()->SetTitle("#p_{T,gen}");
 
     ws[ebin]->GetYaxis()->SetTitle("#sigma");
     ws[ebin]->Draw("same");
@@ -122,7 +121,10 @@ void MCJPR(string inFileName = "../../../results_RERECO/RERECOMC_AK4_PFTRIG_noje
     
     
     // Fit NSC: sqrt([0]*abs([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])
-     TF1 *nsc = new TF1("nsc", "sqrt([0]*abs([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])"); // JER
+    //     TF1 *nsc = new TF1("nsc", "[0]+[1]*exp(-x/[2])+[3]*exp(-x/[4])"); // JERC files UL18
+     TF1 *nsc = new TF1("nsc", "sqrt([0]*([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])"); // JER
+
+     
     //TF1 *nsc = new TF1("nsc", "sqrt(pow([0],2) + pow([1],2)/x + pow([2]/x,2) + pow([3]/x,3))");
     nsc->SetLineColor(cols[ebin-1]);
     ws[ebin]->Fit("nsc");
@@ -133,6 +135,8 @@ void MCJPR(string inFileName = "../../../results_RERECO/RERECOMC_AK4_PFTRIG_noje
   }
   leg->Draw();
 
-  c2->Print(Form("mcphires_hists/allmc%sres.png",varlabel.c_str()));
+  c2->Print(Form("%s/allmc%sres.png",dirname.c_str(),varlabel.c_str()));
+
+  outfile->Close();
 
 }
