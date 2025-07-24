@@ -30,17 +30,14 @@ using std::endl;
 
 map<string, vector<histograms*> > _histos;
 
-bool debug = true;
-bool fillforJER = false;
+bool debug = false;
 
-//void analyse(string era = "HP", string outputfiletag = "AK4_PFTRIG_jetid_l2corr_etaforjerinsamebin", bool isMC = false, bool checkjetid = true, bool iszb = false, bool dol2res = true, bool dojer = false) {
-//void analyse(string era = "zb0", string outputfiletag = "AK4_PFTRIG_nojetid", bool isMC = false, bool checkjetid = false, bool iszb = true, bool dol2res = false, bool dojer = false) {
-void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC = true, bool checkjetid = false, bool iszb = false, bool dol2res = false, bool dojer = false) {
+void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC = true, bool checkjetid = false, bool iszb = false, bool dol2res = false, bool dojer = false, bool fillforJER = false) {
 
   bool usecalotrig = false;
   bool checkvalidjet = false; // this is for checking valid jet range after applying l2. now for tightly limited range. TODO: do something smarter
      
-  string outputfilename = Form("/eos/user/l/lamartik/HIJEC_rereco_results/%s_%s.root",era.c_str(),outputfiletag.c_str());
+  string outputfilename = Form("/eos/user/l/lamartik/HIJEC_rereco_results_redoMCtruth/%s_%s.root",era.c_str(),outputfiletag.c_str());
   if (debug) outputfilename = "test.root";
   
   TRandom3 r;
@@ -238,8 +235,8 @@ void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC 
   JME::JetResolution *_jer(0);
   JME::JetResolutionScaleFactor *_jer_sf(0);
 
-  string resolutionFile = "jerfiles/jtptres.txt"; // TODO: fix tpatho be taken fro msettings
-  string scaleFactorFile = "jerfiles/JERSF.txt";
+  string resolutionFile = "jecfiles/MCptres.txt"; // TODO: fix tpatho be taken fro msettings
+  string scaleFactorFile = "jecfiles/JERSF.txt";
   float rho = 0.;
   
   _jer = new JME::JetResolution(resolutionFile);
@@ -297,7 +294,7 @@ void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC 
      double asymmtp;
      double djrespasymm; 
 
-     if (checkvalidjet) {   // This is based on validity of JEC.
+     if (checkvalidjet) {   // This is based on validity of JEC. - obsolete?
        for (int j = 0; j < nref; ++j ) {
 	 if (abs(jteta[j]) > 2.964) jtpt[j] = 0;   // Always invalid jets
 	 
@@ -391,19 +388,6 @@ void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC 
 	 }
 #endif
      }
-     
-    // Get dijet system (do not impose any cuts here)
-     if (nref > 1) {
-       dphi = DPhi(jtphi[0],jtphi[1]);
-       leadpt = jtpt[0];
-       subleadpt = jtpt[1];
-       leadeta = jteta[0];
-       subleadeta = jteta[1];
-       ddeta = abs(jteta[0]-jteta[1]);
-       avgpt = 0.5*(leadpt+subleadpt);
-       djetasymm = (leadpt-subleadpt)/(leadpt+subleadpt);
-     }     
-
      int ind1 = -1, ind2 = -1, ind3 = -1;
      int ind[3] = {0, 1, -1};
      
@@ -441,8 +425,18 @@ void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC 
 	 }
 
        if (jtpt_uncorr[ind[0]] < jtptmin or jtpt_uncorr[ind[1]] < jtptmin) continue; // Didn't with dijets with good pt
+
+  
+       // Get dijet system (do not impose any cuts here)
+       dphi = DPhi(jtphi[0],jtphi[1]);
+       leadpt = jtpt[0];
+       subleadpt = jtpt[1];
+       leadeta = jteta[0];
+       subleadeta = jteta[1];
+       ddeta = abs(jteta[0]-jteta[1]);
+       avgpt = 0.5*(leadpt+subleadpt);
+       djetasymm = (leadpt-subleadpt)/(leadpt+subleadpt);
        
-       // Define tag and probe - TODO: change to above defined indices
        /*    if (abs(jteta[0]) > 1.3 and abs(jteta[1]) <= 1.3)  tagind = 1;
        else if (abs(jteta[1]) > 1.3 and abs(jteta[0]) <= 1.3)  tagind = 0;
        else if (abs(jteta[0]) <= 1.3 and abs(jteta[1]) <= 1.3)  {
@@ -470,15 +464,6 @@ void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC 
           else  { tagind = ind[0];  probeind = ind[1];}
         }
        }
-
-       
-       /*       if (abs(jteta[ind[0]]) > 1.3 and abs(jteta[ind[1]]) <= 1.3) { tagind = ind[1]; probeind = ind[0]; }
-       else if (abs(jteta[ind[1]]) > 1.3 and abs(jteta[ind[0]]) <= 1.3)  { tagind = ind[0];  probeind = ind[1]; }
-       else if (abs(jteta[ind[0]]) <= 1.3 and abs(jteta[ind[1]]) <= 1.3)  {
-	 const auto rand = r.Rndm();
-	 if (rand < 0.5) { tagind = ind[1]; probeind = ind[0]; }
-	 else  { tagind = ind[0];  probeind = ind[1];}
-	 }*/
 
        tagpt = jtpt[tagind];
        probept = jtpt[probeind];
@@ -520,7 +505,7 @@ void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC 
 		 int tagbin = h->asymmdist3D_a10->FindBin(ptavgtp, abs(tageta), asymmtp/2./ptavgtp);
 		 //		 cout << " probebin " << probebin << " tagbin " << tagbin << " " << (probebin==tagbin) << endl;
 		 //              cout << abs(probeeta) << " " << abs(tageta) << endl;
-		 bool tagincorrecteta = (probebin == tagbin);
+		 bool tagincorrecteta = (probebin == tagbin);    // For JER we want tag and probe in the same eta bin
 		 
 		 if (alpha < 0.1)   {
 		   if (tagincorrecteta) h->asymmdist3D_a10->Fill(ptavgtp, abs(probeeta), asymmtp/2./ptavgtp, evtwt);
@@ -675,25 +660,22 @@ void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC 
 		 //		 cout << "PS: " << J40psnum << " " << J40psdenom << endl;
 		 // Trigger checks; leading jet pt
 		 if (HLT_ZB) h->HLTZB->Fill(jtpt[ind[0]],evtwt);
-		 //	 if (HLT_40) h->HLT40->Fill(jtpt[0],evtwt*J40psnum/J40psdenom);
+
 		 if (HLT_40) h->HLT40->Fill(jtpt[ind[0]],evtwt);
 		 if (HLT_60) h->HLT60->Fill(jtpt[ind[0]],evtwt); //  if (jtpt[0] > 100.) cout << jtpt[0] << "  " << HLT_100 << endl; }
-		 if (HLT_60) h->HLT60a->Fill(jtpt[ind[0]],evtwt); //  if (jtpt[0] > 100.) cout << jtpt[0] << "  " << HLT_100 << endl; }
 		 if (HLT_80) h->HLT80->Fill(jtpt[ind[0]],evtwt);
 		 if (HLT_100) h->HLT100->Fill(jtpt[ind[0]],evtwt);
 		 if (HLT_120) { h->HLT120->Fill(jtpt[ind[0]],evtwt);}
-		 //if (!HLT_AK4CaloJet60_v1 and !HLT_AK4CaloJet80_v1 and !HLT_AK4CaloJet100_v1 and HLT_AK4CaloJet120_v1) h->HLT60vs120->Fill(jtpt[0],evtwt);
-		 // if (!HLT_AK4CaloJet60_v1 and !HLT_AK4CaloJet80_v1 and HLT_AK4CaloJet100_v1 and !HLT_AK4CaloJet120_v1) h->HLT60vs100->Fill(jtpt[0],evtwt);
-		 //if (!HLT_AK4CaloJet60_v1 and HLT_AK4CaloJet80_v1 and !HLT_AK4CaloJet100_v1 and !HLT_AK4CaloJet120_v1) h->HLT60vs80->Fill(jtpt[0],evtwt);
+
 	       }
-	   
-	       if (j == 0 and nref > 1 and dphi > 2.7) { // Fill dijet system based on leading jet pT
+
+	       // These are actually obsolete after all the selections
+	       /*	       if (j == 0 and nref > 1 and dphitp > 2.7) { // Fill dijet system based on leading jet pT
 		 h->dijetasymmetry->Fill(abs(djetasymm),evtwt);
 		 h->dijetasymmetry_now->Fill(abs(djetasymm));
 		 h->dijetdeltaphi->Fill(dphi,evtwt);
 		 h->dijetdeltaeta->Fill(ddeta,evtwt);
-
-	       }
+		 } */
 
 	       h->jet_pt->Fill(jtpt[j],evtwt);
 	       h->jet_pt_now->Fill(jtpt[j],1);

@@ -2,8 +2,12 @@ Repository to run analysis for producind L2 residual jet energy corrections and 
 At the moment direct balance method with tag-and-probing a dijet system is used.
 
 
-To fill histograms for L2residuals.
+1. To fill histograms for L2residuals:
+
+- Code is in difectory L2Residual.
+
 -> call this code separarely for different datasets. you need cmsenv to be able to call functions to apply jec (and jer sf). shouldn't really matter which cmssw you use.
+-> in settings.h you can manually set which JEC files to use. The JEC (and JER SF) files are always read from the path set up in here.
 
 -> First: root -l compile.C 
 -> 

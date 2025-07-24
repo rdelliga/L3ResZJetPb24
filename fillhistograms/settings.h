@@ -1,14 +1,15 @@
 // Some general parameters
 
-#define REDOJES 0
-
+#define REDOJES 1
 
 
 // JEC FILES
 // 2023ppwithpbpb_MC_L2Relative_AK4PF.txt  2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt  2023ppwithpp_MC_L2Relative_AK4PF.txt  2023ppwithpp_old_MC_L2Relative_AK4PF.txt
-string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt";
+
+//string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt";
+string jecfile = "jecfiles/2023ReReco_L2Relative_AK4PF.txt";
 string MCjecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt";
-string l2file = "jecfiles/L2residual_2023PbPb.txt";
+string l2file = "jecfiles/L2residual_corrections.txt";
 
 
 // JER

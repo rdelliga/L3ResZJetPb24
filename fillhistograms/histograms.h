@@ -33,7 +33,6 @@ class histograms {
   TH1D* HLTZB;
   TH1D* HLT40;
   TH1D* HLT60;
-  TH1D* HLT60a;
   TH1D* HLT80;
   TH1D* HLT100;
   TH1D* HLT120;
@@ -44,11 +43,6 @@ class histograms {
   TH1D* HLT80_ptav;
   TH1D* HLT100_ptav;
   TH1D* HLT120_ptav;
-
-  TH1D* HLT60vs120;
-  TH1D* HLT60vs80;
-  TH1D* HLT60vs100;
-  
 
 // PF composition
   TProfile* jet_nhf;
