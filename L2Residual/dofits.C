@@ -1,4 +1,4 @@
-#include "../histograms.h"
+#include "../fillhistograms/histograms.h"
 
 //int pts[] = {15, 25, 55, 80, 120, 170, 1000}; // Temporary
 int pts[] = {15, 25, 80, 120, 1000}; // Temporary

@@ -108,10 +108,9 @@ void MCJPR(string inFileName = "../../../results_RERECO/RERECOMC_AK4_PFTRIG_noje
     //for (int ebin = 1; ebin <= 5; ++ebin) {
     ws[ebin]->SetLineColor(cols[ebin-1]);
     ws[ebin]->GetXaxis()->SetRangeUser(15,1500);
-    ws[ebin]->SetMaximum(0.5);
+    ws[ebin]->SetMaximum(0.25);
 
-    if (doeta) ws[ebin]->GetXaxis()->SetTitle("#eta_{T,gen}");
-    else  ws[ebin]->GetXaxis()->SetTitle("#phi_{T,gen}");
+   ws[ebin]->GetXaxis()->SetTitle("#p_{T,gen}");
 
     ws[ebin]->GetYaxis()->SetTitle("#sigma");
     ws[ebin]->Draw("same");
