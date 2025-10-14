@@ -4,7 +4,7 @@
 #include "TMath.h"
 
 
-void MCJPR(string inFileName = "../../../results_RERECO/RERECOMC_AK4_PFTRIG_nojetid.root", bool doeta = 0,  string dirname = "MCJPR", TString outFileName = "testingMCpfires-rereco.root") {
+void MCJPR(TString inFileName = "../../../results_RERECO/RERECOMC_AK4_PFTRIG_nojetid.root", bool doeta = 0,  string dirname = "MCJPR", TString outFileName = "testingMCpfires-rereco.root") {
 
   string varlabel = (doeta ? "eta" : "phi");
 
@@ -20,7 +20,7 @@ void MCJPR(string inFileName = "../../../results_RERECO/RERECOMC_AK4_PFTRIG_noje
      ws[ebin] =  new TH1D(Form("widths_%d",ebin),"",histograms::nptforJER,&histograms::ptforJER[0]); 
     }
 
-  TFile *inFile = new TFile(inFileName.c_str(), "READ");
+  TFile *inFile = new TFile(inFileName, "READ");
 
   TFile *outfile = new TFile(outFileName,"RECREATE");
 

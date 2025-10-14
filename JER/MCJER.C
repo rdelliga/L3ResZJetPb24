@@ -2,7 +2,7 @@
 #include "TMath.h"
 //#include "plots.h"
 
-void MCJER(string inFileName = "../../../HIJEC_rereco_results/RERECOMC_AK4_PFTRIG_nojetid.root", int minpt = 28, string dirname = "MCJER", TString outFileName = "testingMCjer-rereco.root") {
+void MCJER(TString inFileName = "../../../HIJEC_rereco_results/RERECOMC_AK4_PFTRIG_nojetid.root", int minpt = 28, string dirname = "MCJER", TString outFileName = "testingMCjer-rereco.root") {
      
   map<int, TH1D*> ws;
 
@@ -10,7 +10,7 @@ void MCJER(string inFileName = "../../../HIJEC_rereco_results/RERECOMC_AK4_PFTRI
      ws[ebin] =  new TH1D(Form("widths_%d",ebin),"",histograms::nptforJER,&histograms::ptforJER[0]);
     }
 
-  TFile *inFile = new TFile(inFileName.c_str(), "READ");
+  TFile *inFile = new TFile(inFileName, "READ");
   TFile *outfile = new TFile(outFileName,"RECREATE");
 
   TH3D* responseprofile = (TH3D*)inFile->Get("hibin_-1.0_0.0/eta_-5.2_5.2/responses3D");
@@ -115,9 +115,9 @@ void MCJER(string inFileName = "../../../HIJEC_rereco_results/RERECOMC_AK4_PFTRI
     ws[ebin]->Write();
 
     // Fit NSC: sqrt([0]*abs([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])
-    // TF1 *nsc = new TF1("nsc", "sqrt([0]*abs([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])");
+    //TF1 *nsc = new TF1("nsc", "sqrt([0]*abs([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])");
 
-    TF1 *nsc = new TF1("nsc", "sqrt([0]*([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])");
+   TF1 *nsc = new TF1("nsc", "sqrt([0]*([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])");
     nsc->SetLineColor(cols[ebin-1]);
     if (ebin ==  histograms::netaforjer) ws[ebin]->GetXaxis()->SetRangeUser(minpt,100);
     // nsc->SetLineColor(kBlue-8+ebin);
