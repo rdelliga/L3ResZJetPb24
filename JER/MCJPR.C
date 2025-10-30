@@ -1,4 +1,5 @@
 // MC JET PHI/ETA RESOLUTION
+// ADJUST ETA, PHI BINS?
 
 //#include "../fillhistograms/histograms.h"
 #include "TMath.h"
@@ -35,7 +36,7 @@ void MCJPR(TString inFileName = "../../../results_RERECO/RERECOMC_AK4_PFTRIG_noj
       for (int etabin = 1; etabin <= responseprofile->GetYaxis()->GetNbins(); ++etabin) {
        
 	// Manually limit bins for 2023
-	/*	if (ptbin == 8 and etabin > 11) continue;
+	if (ptbin == 8 and etabin > 11) continue;
 	if (ptbin == 9 and etabin > 10) continue;
 	if (ptbin == 10 and etabin > 9) continue;
 	if (ptbin == 11 and etabin > 8) continue;
@@ -44,7 +45,7 @@ void MCJPR(TString inFileName = "../../../results_RERECO/RERECOMC_AK4_PFTRIG_noj
 	if (ptbin == 14 and etabin > 7) continue;
 	if (ptbin == 15 and etabin > 6) continue;
 	if (ptbin == 16 and etabin > 5) continue;
-	if (ptbin == 17 and etabin > 4) continue; */
+	if (ptbin == 17 and etabin > 4) continue;
 
 	
 	cout << "etabin " << etabin << endl;
@@ -102,11 +103,13 @@ void MCJPR(TString inFileName = "../../../results_RERECO/RERECOMC_AK4_PFTRIG_noj
   TCanvas *c2 = new TCanvas("c2","c2",800,600);
   c2->SetLogx();
   gStyle->SetOptStat(0);
-  
+
+  cout << "Fitting curve" << endl;
   for (int ebin = 1; ebin <= histograms::netaforjer; ++ebin) {
     //for (int ebin = 1; ebin <= 5; ++ebin) {
     ws[ebin]->SetLineColor(cols[ebin-1]);
-    ws[ebin]->GetXaxis()->SetRangeUser(15,1500);
+    //    ws[ebin]->GetXaxis()->SetRangeUser(15,1500);
+    ws[ebin]->GetXaxis()->SetRangeUser(28,1500);
     ws[ebin]->SetMaximum(0.25);
 
     ws[ebin]->GetXaxis()->SetTitle("#p_{T,gen}");
@@ -121,11 +124,25 @@ void MCJPR(TString inFileName = "../../../results_RERECO/RERECOMC_AK4_PFTRIG_noj
     
     
     // Fit NSC: sqrt([0]*abs([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])
-    //     TF1 *nsc = new TF1("nsc", "[0]+[1]*exp(-x/[2])+[3]*exp(-x/[4])"); // JERC files UL18
-     TF1 *nsc = new TF1("nsc", "sqrt([0]*([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])"); // JER
+    /*TF1 *nsc = new TF1("nsc", "[0]+[1]*exp(-x/[2])+[3]*exp(-x/[4])"); // JERC files UL18
+    nsc->SetParameter(0,0.025);
+    nsc->SetParameter(1,0.02);
+    nsc->SetParameter(2,30);
+    nsc->SetParameter(3,0.02);
+    nsc->SetParameter(4,10); */
+   
+    // TF1 *nsc = new TF1("nsc", "sqrt([0]*([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])"); // JER
+    /*  nsc->SetParameter(0,0.5);
+    nsc->SetParameter(1,-0.2);
+    */   
 
      
-    //TF1 *nsc = new TF1("nsc", "sqrt(pow([0],2) + pow([1],2)/x + pow([2]/x,2) + pow([3]/x,3))");
+    TF1 *nsc = new TF1("nsc", "sqrt(pow([0],2) + pow([1],2)/x + pow([2]/x,2) + pow([3]/x,3))");
+    nsc->SetParameter(0,0.02);
+    nsc->SetParameter(1,-0.1);
+    nsc->SetParameter(2,-1);
+    nsc->SetParameter(3,0.02);
+
     nsc->SetLineColor(cols[ebin-1]);
     ws[ebin]->Fit("nsc");
 
