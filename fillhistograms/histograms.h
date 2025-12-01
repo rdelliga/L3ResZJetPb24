@@ -29,6 +29,15 @@ class histograms {
   TH1D* jet_eta;
   TH1D* jet_phi;
 
+
+  TH1D* tag_pt;
+  TH1D* tag_eta;
+  TH1D* tag_phi;
+
+  TH1D* probe_pt;
+  TH1D* probe_eta;
+  TH1D* probe_phi;
+
   // Trigger
   TH1D* HLTZB;
   TH1D* HLT40;
@@ -50,12 +59,6 @@ class histograms {
   TProfile* jet_nef; 
   TProfile* jet_cef;
   TProfile* jet_muf;
-
-// Substructure
-  TH1D* jetdyn_kt;
-  TH1D* jetdyn_deltaR;
-  TH1D* jetdyn_z;
-  TH1D* jetdyn_z_cutdeltaR;
 
   TH2D* jetetaphi;
 

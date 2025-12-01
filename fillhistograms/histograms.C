@@ -20,6 +20,14 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   jet_eta = new TH1D("reco jet eta"," reco jet #eta; reco jet #eta;", 40, -5.2, 5.2);
   jet_phi = new TH1D("reco jet phi"," reco jet #phi; reco jet #phi;", 25, -3.1415926535, 3.1415926535);
 
+  tag_pt = new TH1D("tag jet pT", "tag jet p_{T}; tag jet p_{T};", 100, 15, 1000);
+  tag_eta = new TH1D("tag jet eta","tag jet #eta; tag jet #eta;", 40, -5.2, 5.2);
+  tag_phi = new TH1D("tag jet phi","tag jet #phi; tag jet #phi;", 25, -3.1415926535, 3.1415926535);
+
+  probe_pt = new TH1D("probe jet pT", "probe jet p_{T}; probe jet p_{T};", 100, 15, 1000);
+  probe_eta = new TH1D("probe jet eta"," probe jet #eta; probe jet #eta;", 40, -5.2, 5.2);
+  probe_phi = new TH1D("probe jet phi"," probe jet #phi; probe jet #phi;", 25, -3.1415926535, 3.1415926535);
+
   // Trigger checks
   HLTZB = new TH1D("HLTZB", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
   HLT40 = new TH1D("HLT40", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
@@ -102,8 +110,8 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   for (unsigned int i = 0; i != x.size(); ++i) x[i] = 0.05*i;
   const int nx = x.size()-1;
 
-    vector<double> y(41);
-  for (unsigned int i = 0; i != y.size(); ++i) y[i] = -1 + 0.05*i;
+    vector<double> y(161);
+  for (unsigned int i = 0; i != y.size(); ++i) y[i] = -1 + 0.0125*i;
   const int ny = y.size()-1;
   if (ismc) {
     responses3D = new TH3D("responses3D",";;", nptforJER, &ptforJER[0], netaforjer, &etaforjer[0], nx, &x[0]);
