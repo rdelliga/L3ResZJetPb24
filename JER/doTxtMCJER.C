@@ -14,8 +14,8 @@ void doTxtMCJER(TString inFileName = "nscfits.root", TString filename = "jtptres
   // Remember to use the header from the MCJER script
   TString header = "{1 JetEta 1 JetPt (sqrt([0]*[0]/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])) Resolution}";
 
-  // phi or eta res:
-  if (phieta) header = "{1 JetEta 1 JetPt (sqrt([0]*[0]/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])) Resolution}";
+  // phi or eta res 2023:
+  if (phieta) header = "{1 JetEta 1 JetPt (sqrt(pow([0],2)+pow([1],2)/x+pow([2]/x,2)+pow([3]/x,3))) Resolution}";
   
   ofstream txtfile;
   txtfile.open(filename);

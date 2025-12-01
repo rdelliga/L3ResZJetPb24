@@ -14,9 +14,10 @@ double GetRootMeanSquare( const TH1* h1) {
 // latest with old reco
 //void JERSF_RMS(string inFileName = "HIJEC_results/rerunall_combinedbins/MC_AK4_PFTRIG_jetid_l2corr_forjer_wideeta.root", string inFileNameZB = "HIJEC_results/rerunall_combinedbins/zerobiasall_jetid_l2corr_forjer_wideeta.root", string inFileNameDT = "HIJEC_results/rerunall_combinedbins/HP_AK4_PFTRIG_jetid_l2corr_forjer_wideeta.root") {
 
-// RERECO
+// RERECO with old corrections
 void JERSF_RMS(TString outFileName = "JERSF_sigmas_RMS.root", string inFileName = "/home/laura/Code/jec/HIJEC_rereco_results/RERECOMC_AK4_PFTRIG_jetid_l2jecclosure_forjer.root", string inFileNameZB = "/home/laura/Code/jec/HIJEC_rereco_results/RERECO_ZB_AK4_PFTRIG_jetid_l2closure_forjer.root", string inFileNameDT = "/home/laura/Code/jec/HIJEC_rereco_results/RERECOHP_AK4_PFTRIG_jetid_l2jecclosure_forjer.root") {
- 
+
+
   float cut = 0.985; // cut for trunctuating the |A| histograms
   
   //  int pts[] = {40, 55, 80, 120, 170, 1000}; // Temporary
@@ -215,10 +216,10 @@ void JERSF_RMS(TString outFileName = "JERSF_sigmas_RMS.root", string inFileName 
       for (int abin = 0; abin < histograms::nalphavaluesgraphjer; ++abin) {
 	
         results[abin] =  sigmasMCmap[ptbin][etabin]->GetBinContent(abin+1);
-	//	errors[abin] =   sigmasMCmap[ptbin][etabin]->GetBinError(abin+1);
+	errors[abin] =   0; //sigmasMCmap[ptbin][etabin]->GetBinError(abin+1);
 
 	resultsdt[abin] =  sigmasDTmap[ptbin][etabin]->GetBinContent(abin+1);
-	//      errorsdt[abin] =   sigmasDTmap[ptbin][etabin]->GetBinError(abin+1);
+	errorsdt[abin] =   0;//  sigmasDTmap[ptbin][etabin]->GetBinError(abin+1);
        }
 
       sigmasGraphMCmap[ptbin][etabin] = new TGraphErrors(histograms::nalphavaluesgraphjer, histograms::alphavaluesgraphjer, results, errorsx, errors); // TODO: do not include reference?

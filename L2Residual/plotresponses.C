@@ -1,10 +1,10 @@
 
-void plotresponses( string input = "L2residuals_pbpbreco_rereco_zb_jetid.root", string plottag = "ZB") {
+void plotresponses( string input = "L2residuals_pbpbreco_rereco_zb_jetid.root", string plottag = "ZB", bool closure = false) {
 
   float h1 = -1.0, h2 = 0.0, eta1 = -5.2, eta2 = 5.2;
   
-  //float rmax = 1.1, rmin = 0.85; // For initial checks
-  float rmax = 1.3, rmin = 0.85; // For initial checks
+  float rmax = 1.12, rmin = 0.87; // For initial checks
+  //float rmax = 1.3, rmin = 0.85; // For initial checks
   // float rmax = 1.07, rmin = 0.93; // For closure to get better zoom
 
   float etalimit[] = {3.0, 3.0, 2.964-0.08, 2.5, 1.93+0.12};// for shady box, do manually before figuring out something smart
@@ -29,8 +29,10 @@ void plotresponses( string input = "L2residuals_pbpbreco_rereco_zb_jetid.root", 
     auto mc = (TH1D*)file->Get(Form("mc_pt%dto%d_alpha%.1f",pt1,pt2,alpha));
     auto data = (TH1D*)file->Get(Form("dt_pt%dto%d_alpha%.1f",pt1,pt2,alpha));
 
-    //  mc->GetXaxis()->SetRangeUser(0,2.5);
-    //  data->GetXaxis()->SetRangeUser(0,2.5);
+    if (closure) {
+     mc->GetXaxis()->SetRangeUser(0,2.5);
+     data->GetXaxis()->SetRangeUser(0,2.5);
+    }
     
     auto leg = new TLegend(0.67,0.7,0.85,0.8); //  x, y, x, y
     leg->SetTextSize(0.03);
