@@ -38,16 +38,16 @@ std::uint32_t _seed = 4;
 map<string, vector<histograms*> > _histos;
 
 bool debug = false;
-bool applyjetvetomap = true;
+bool applyjetvetomap = false;
 
 //void analyse(string era = "RERECOMC", string outputfiletag = "AK4_nojetid", bool isMC = true, bool checkjetid = false, bool iszb = false, bool dol2res = false, bool dojer = false, bool fillforJER = false) {
-void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool isMC = false, bool checkjetid = false, bool iszb = false, bool dol2res = true, bool dojer = false, bool fillforJER = false) {
+void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool isMC = false, bool checkjetid = false, bool iszb = false, bool dol2res = false, bool dojer = false, bool fillforJER = false) {
 
   bool usecalotrig = false;
   bool checkvalidjet = false; // this is for checking valid jet range after applying l2. now for tightly limited range. TODO: do something smarter
      
   //  string outputfilename = Form("/eos/user/l/lamartik/HIJEC_rereco_results_HI2023MCTruth/%s_%s.root",era.c_str(),outputfiletag.c_str());
-  string outputfilename = Form("/eos/user/l/lamartik/HIJEC_rereco_results_HI2023MCTruth_chs_vetomap_all/%s_%s.root",era.c_str(),outputfiletag.c_str());
+  string outputfilename = Form("/eos/cms/store/group/phys_heavyions/bharikri/JetMinPOG/L3ResPhotonJet/%s_%s.root",era.c_str(),outputfiletag.c_str());
   //string outputfilename = Form("/eos/user/l/lamartik/HIJEC_rereco_results_HI2023MCTruth_chs/%s_%s.root",era.c_str(),outputfiletag.c_str());
   if (debug) outputfilename = "test.root";
   
@@ -56,6 +56,7 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
   std::string evtPath = "hiEvtAnalyzer/HiTree";
   std::string triggerPath = "hltanalysis/HltTree";
   std::string skimPath = "skimanalysis/HltTree";
+//   std::string egmPath = "ggHiNtuplizer/EventTree"; 
   
   // TODO: jet type ; rereco has PF and PFCHS jets
   std::string jetPath = "ak4PFCHSJetAnalyzer/t";
@@ -241,8 +242,8 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
   }
 
   // Jet veto map
-  auto mapfile = new TFile("jecfiles/Summer23BPixPrompt23_RunD_v1.root","READ");
-  auto vetomap = (TH2D*)mapfile->Get("jetvetomap_all");
+//   auto mapfile = new TFile("jecfiles/Summer23BPixPrompt23_RunD_v1.root","READ");
+//   auto vetomap = (TH2D*)mapfile->Get("jetvetomap_all");
 
   
    cout << "Number of entries :" <<  jetTree->GetEntries()  << endl; 
@@ -449,7 +450,7 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
        int tagind = -1;
 
        if (applyjetvetomap) {
-	 if (vetomap->GetBinContent(vetomap->FindBin(jteta[0],jtphi[0])) > 0 or vetomap->GetBinContent(vetomap->FindBin(jteta[1],jtphi[1])) > 0) continue;
+	//  if (vetomap->GetBinContent(vetomap->FindBin(jteta[0],jtphi[0])) > 0 or vetomap->GetBinContent(vetomap->FindBin(jteta[1],jtphi[1])) > 0) continue;
        }
 
        

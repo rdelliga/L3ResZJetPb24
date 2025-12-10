@@ -1,13 +1,14 @@
 Repository to run analysis for producind L2 residual jet energy corrections and jet energy resolution scale factor. The inputs for these macros are HiForest ntuples (at the moment for 2023 ppref).
 At the moment direct balance method with tag-and-probing a dijet system is used.
 
+## Required steps:
+```
+cd fillhistograms/jecfiles/
+wget https://github.com/cms-jet/JECDatabase/blob/master/jet_veto_maps/Summer23BPixPrompt23/Summer23BPixPrompt23_RunD_v1.root
+wget https://indico.cern.ch/event/1592138/contributions/6711482/attachments/3141457/5575822/Spring23_HI_V1_MC_L2Relative_AK4PF.txt
+```
 
-1. To fill histograms for L2residuals:
-
-- Code is in difectory L2Residual.
-
--> call this code separarely for different datasets. you need cmsenv to be able to call functions to apply jec (and jer sf). shouldn't really matter which cmssw you use.
--> in settings.h you can manually set which JEC files to use. The JEC (and JER SF) files are always read from the path set up in here.
+## Quick start
 
 -> First: root -l compile.C 
 -> 
@@ -22,6 +23,13 @@ At the moment this is run with hadded ntuples per dat set (MC, HP0, HP1, HP2, ZB
 You can do a test run with simply root -l analyse.cc
 
 -> to run locally: run.sh
+
+1. To fill histograms for L2residuals:
+
+- Code is in directory L2Residual.
+
+-> call this code separarely for different datasets. you need cmsenv to be able to call functions to apply jec (and jer sf). shouldn't really matter which cmssw you use.
+-> in settings.h you can manually set which JEC files to use. The JEC (and JER SF) files are always read from the path set up in here.
 
 
 When you have the output from the former

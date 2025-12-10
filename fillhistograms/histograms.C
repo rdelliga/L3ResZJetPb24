@@ -87,19 +87,66 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   dijetbalance_a1= new TH1D("dijetbalance_a1","  ; ;", 20, -2, 2);
   dijetasymmetry_a1 = new TProfile("dijetasymmetry_a1","  ; ;",  nptforjec, &ptforjec[0]);
 
+  // Photon+Jet histograms (L3 residual) - create for ALL eta bins
+  photon_pt = new TH1D("photon_pt", "Photon p_{T}", 100, 0, 500);
+  photon_eta = new TH1D("photon_eta", "Photon #eta", 50, -2.5, 2.5);
+  photon_phi = new TH1D("photon_phi", "Photon #phi", nphis, phirange);
+  photon_HoverE = new TH1D("photon_HoverE", "Photon H/E", 50, 0, 0.5);
+  photon_sigmaIetaIeta = new TH1D("photon_sigmaIetaIeta", "Photon #sigma_{i#etai#eta}", 50, 0, 0.05);
+  photon_SwissCrx = new TH1D("photon_SwissCrx", "Photon Swiss Cross", 50, 0.8, 1.0);
+  photon_SeedTime = new TH1D("photon_SeedTime", "Photon Seed Time", 50, -10, 10);
+
+  awayside_jet_pt = new TH1D("awayside_jet_pt", "Away-side Jet p_{T}", 100, 0, 500);
+  awayside_jet_eta = new TH1D("awayside_jet_eta", "Away-side Jet #eta", netas, etarange);
+  awayside_jet_phi = new TH1D("awayside_jet_phi", "Away-side Jet #phi", nphis, phirange);
+  awayside_jet_uncorr_pt = new TH1D("awayside_jet_uncorr_pt", "Away-side Jet p_{T} (uncorr)", 100, 0, 500);
+
+  photonjet_dphi = new TH1D("photonjet_dphi", "#Delta#phi(#gamma,jet)", 50, 0, 3.14159);
+  photonjet_balance = new TH1D("photonjet_balance", "p_{T}^{jet}/p_{T}^{#gamma}", 50, 0, 2);
+  photonjet_ptavg = new TH1D("photonjet_ptavg", "p_{T,avg}", 100, 0, 500);
+  photonjet_alpha = new TH1D("photonjet_alpha", "#alpha (3rd jet fraction)", 50, 0, 1);
+
+  // 1D profiles - create for all eta bins
+  photonjet_balance_a01 = new TProfile("photonjet_balance_a01", "Balance (#alpha<0.1)", nptforjec, &ptforjec[0]);
+  photonjet_balance_a02 = new TProfile("photonjet_balance_a02", "Balance (#alpha<0.2)", nptforjec, &ptforjec[0]);
+  photonjet_balance_a03 = new TProfile("photonjet_balance_a03", "Balance (#alpha<0.3)", nptforjec, &ptforjec[0]);
+  photonjet_balance_a04 = new TProfile("photonjet_balance_a04", "Balance (#alpha<0.4)", nptforjec, &ptforjec[0]);
+  photonjet_balance_a05 = new TProfile("photonjet_balance_a05", "Balance (#alpha<0.5)", nptforjec, &ptforjec[0]);
+  photonjet_balance_a06 = new TProfile("photonjet_balance_a06", "Balance (#alpha<0.6)", nptforjec, &ptforjec[0]);
+
+  // 2D profiles (ptavg vs jet eta) - create for all eta bins
+  photonjet_balance2D_a01 = new TProfile2D("photonjet_balance2D_a01", "Balance (#alpha<0.1)", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
+  photonjet_balance2D_a02 = new TProfile2D("photonjet_balance2D_a02", "Balance (#alpha<0.2)", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
+  photonjet_balance2D_a03 = new TProfile2D("photonjet_balance2D_a03", "Balance (#alpha<0.3)", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
+  photonjet_balance2D_a04 = new TProfile2D("photonjet_balance2D_a04", "Balance (#alpha<0.4)", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
+  photonjet_balance2D_a05 = new TProfile2D("photonjet_balance2D_a05", "Balance (#alpha<0.5)", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
+  photonjet_balance2D_a06 = new TProfile2D("photonjet_balance2D_a06", "Balance (#alpha<0.6)", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
+
+  // Photon trigger - create for all eta bins
+  HLTPhoton30 = new TH1D("HLTPhoton30", "HLT Photon30 events", 2, 0, 2);
+  HLTPhoton30_ptav = new TH1D("HLTPhoton30_ptav", "p_{T,avg} (HLT Photon30)", 100, 0, 500);
+
   if ((this->etamin - this->etamax) < -10) {
 
-    dijetasymmetry3D = new TProfile3D("dijetasymmetry3D", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0], nalphavalues, &alphavalues[0]); 
+    dijetasymmetry3D = new TProfile3D("dijetasymmetry3D", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0], nalphavalues, &alphavalues[0]);
     dijetasymmetry3Dabseta = new TProfile3D("dijetasymmetry3Dabseta", ";;", nptforjec, &ptforjec[0], nwabsetas, &wabsetarange[0], nalphavalues, &alphavalues[0]);
-    dijetasymmetry3Dabsetawide = new TProfile3D("dijetasymmetry3Dabsetawide", ";;", nptforjec, &ptforjec[0], ndwabsetas, &dwabsetarange[0], nalphavalues, &alphavalues[0]); 
-    dijetasymmetry3Dnarrow = new TProfile3D("dijetasymmetry3Dnarrow", ";;", nptforjec, &ptforjec[0], netas, &etarange[0], nalphavalues, &alphavalues[0]); 
-    dijetasymmetry3Dabsetanarrow = new TProfile3D("dijetasymmetry3Dabsetanarrow", ";;", nptforjec, &ptforjec[0], nabsetas, &absetarange[0], nalphavalues, &alphavalues[0]); 
+    dijetasymmetry3Dabsetawide = new TProfile3D("dijetasymmetry3Dabsetawide", ";;", nptforjec, &ptforjec[0], ndwabsetas, &dwabsetarange[0], nalphavalues, &alphavalues[0]);
+    dijetasymmetry3Dnarrow = new TProfile3D("dijetasymmetry3Dnarrow", ";;", nptforjec, &ptforjec[0], netas, &etarange[0], nalphavalues, &alphavalues[0]);
+    dijetasymmetry3Dabsetanarrow = new TProfile3D("dijetasymmetry3Dabsetanarrow", ";;", nptforjec, &ptforjec[0], nabsetas, &absetarange[0], nalphavalues, &alphavalues[0]);
     dijetasymmetry2D_a01 = new TProfile2D("dijetasymmetry2D_a01", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
     dijetasymmetry2D_a02 = new TProfile2D("dijetasymmetry2D_a02", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
     dijetasymmetry2D_a03 = new TProfile2D("dijetasymmetry2D_a03", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
     dijetasymmetry2D_a04 = new TProfile2D("dijetasymmetry2D_a04", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
     dijetasymmetry2D_a05 = new TProfile2D("dijetasymmetry2D_a05", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
     dijetasymmetry2D_a06 = new TProfile2D("dijetasymmetry2D_a06", ";;", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
+
+    // 3D profiles (KEY HISTOGRAMS - only for wide eta bin since they have internal eta binning)
+    photonjet_balance3D = new TProfile3D("photonjet_balance3D", "Balance vs p_{T,avg}, #eta_{jet}, #alpha", nptforjec, &ptforjec[0], nwetas, &wetarange[0], nalphavalues, &alphavalues[0]);
+    photonjet_balance3Dwide = new TProfile3D("photonjet_balance3Dwide", "Balance (wide #eta bins)", nptforjec, &ptforjec[0], nwetas, &wetarange[0], nalphavalues, &alphavalues[0]);
+    photonjet_balance3Dnarrow = new TProfile3D("photonjet_balance3Dnarrow", "Balance (narrow #eta bins)", nptforjec, &ptforjec[0], netas, &etarange[0], nalphavalues, &alphavalues[0]);
+    photonjet_balance3Dabseta = new TProfile3D("photonjet_balance3Dabseta", "Balance vs p_{T,avg}, |#eta_{jet}|, #alpha", nptforjec, &ptforjec[0], nwabsetas, &wabsetarange[0], nalphavalues, &alphavalues[0]);
+    photonjet_balance3Dabsetawide = new TProfile3D("photonjet_balance3Dabsetawide", "Balance (wide |#eta| bins)", nptforjec, &ptforjec[0], nwabsetas, &wabsetarange[0], nalphavalues, &alphavalues[0]);
+    photonjet_balance3Dabsetanarrow = new TProfile3D("photonjet_balance3Dabsetanarrow", "Balance (narrow |#eta| bins)", nptforjec, &ptforjec[0], nabsetas, &absetarange[0], nalphavalues, &alphavalues[0]);
   }
   ptgenvsptreco = new TH2D("ptgenvsptreco","",200,0,1500,200,0,1500);
   ptrecovsweight = new TH2D("ptrecovsweight","",200,0,1500,200,0,0.1);

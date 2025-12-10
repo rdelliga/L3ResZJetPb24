@@ -1,6 +1,6 @@
 // Some general parameters
 
-#define REDOJES 1
+#define REDOJES 0
 
 
 //string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt";

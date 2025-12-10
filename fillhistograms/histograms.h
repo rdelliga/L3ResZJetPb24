@@ -93,6 +93,53 @@ class histograms {
   TH1D* dijetdeltaphi;
   TH1D* dijetdeltaeta;
 
+// Photon+Jet histograms (L3 residual)
+  TH1D* photon_pt;
+  TH1D* photon_eta;
+  TH1D* photon_phi;
+  TH1D* photon_HoverE;
+  TH1D* photon_sigmaIetaIeta;
+  TH1D* photon_SwissCrx;
+  TH1D* photon_SeedTime;
+
+  TH1D* awayside_jet_pt;
+  TH1D* awayside_jet_eta;
+  TH1D* awayside_jet_phi;
+  TH1D* awayside_jet_uncorr_pt;
+
+  TH1D* photonjet_dphi;
+  TH1D* photonjet_balance;
+  TH1D* photonjet_ptavg;
+  TH1D* photonjet_alpha;
+
+  // Photon+Jet balance profiles (analogous to dijet asymmetry)
+  TProfile* photonjet_balance_a01;
+  TProfile* photonjet_balance_a02;
+  TProfile* photonjet_balance_a03;
+  TProfile* photonjet_balance_a04;
+  TProfile* photonjet_balance_a05;
+  TProfile* photonjet_balance_a06;
+
+  // 2D profiles for L3 residual derivation
+  TProfile2D* photonjet_balance2D_a01;
+  TProfile2D* photonjet_balance2D_a02;
+  TProfile2D* photonjet_balance2D_a03;
+  TProfile2D* photonjet_balance2D_a04;
+  TProfile2D* photonjet_balance2D_a05;
+  TProfile2D* photonjet_balance2D_a06;
+
+  // 3D profiles (reuse dijet binning: ptavg, jet eta, alpha)
+  TProfile3D* photonjet_balance3D;
+  TProfile3D* photonjet_balance3Dwide;
+  TProfile3D* photonjet_balance3Dnarrow;
+  TProfile3D* photonjet_balance3Dabseta;
+  TProfile3D* photonjet_balance3Dabsetawide;
+  TProfile3D* photonjet_balance3Dabsetanarrow;
+
+  // Photon trigger histograms
+  TH1D* HLTPhoton30;
+  TH1D* HLTPhoton30_ptav;
+
 
 // JERC dijets
   TProfile* dijetasymmetry_a01;
