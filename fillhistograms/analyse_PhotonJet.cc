@@ -56,7 +56,6 @@ void analyse_PhotonJet(string era = "PHOTONHP",
   if (debug)
     outputfilename = "test.root";
 
-  TRandom3 r;
   // Define and activate branches
   std::string evtPath = "hiEvtAnalyzer/HiTree";
   std::string triggerPath = "hltanalysis/HltTree";
@@ -135,7 +134,8 @@ void analyse_PhotonJet(string era = "PHOTONHP",
 
   // JETS
   auto jetTree = (TTree *)inFile->Get(jetPath.c_str());
-  jetTree->SetBranchStatus("*", 1);
+  // Disable all branches first, then enable only what we need
+  jetTree->SetBranchStatus("*", 0);
 
   Int_t evt;
 
@@ -161,6 +161,12 @@ void analyse_PhotonJet(string era = "PHOTONHP",
   jetTree->SetBranchAddress("jtpt", &jtpt);
   jetTree->SetBranchAddress("jteta", &jteta);
   jetTree->SetBranchAddress("jtphi", &jtphi);
+  
+  jetTree->SetBranchStatus("evt", 1);
+  jetTree->SetBranchStatus("nref", 1);
+  jetTree->SetBranchStatus("jtpt", 1);
+  jetTree->SetBranchStatus("jteta", 1);
+  jetTree->SetBranchStatus("jtphi", 1);
 
   // jetTree->SetBranchAddress("jtPfNHF", &jtnhf);
   // jetTree->SetBranchAddress("jtPfCHF", &jtchf);
@@ -180,9 +186,27 @@ void analyse_PhotonJet(string era = "PHOTONHP",
     jetTree->SetBranchAddress("refeta", &jteta_gen);
     jetTree->SetBranchAddress("refphi", &jtphi_gen);
     jetTree->SetBranchAddress("refdrjt", &refdrjt);
+    jetTree->SetBranchStatus("refpt", 1);
+    jetTree->SetBranchStatus("refeta", 1);
+    jetTree->SetBranchStatus("refphi", 1);
+    jetTree->SetBranchStatus("refdrjt", 1);
   }
 
   // Set photon branch addresses (vectors)
+  photonTree->SetBranchStatus("*", 0);
+  photonTree->SetBranchStatus("nPho", 1);
+  photonTree->SetBranchStatus("phoEt", 1);
+  photonTree->SetBranchStatus("phoEta", 1);
+  photonTree->SetBranchStatus("phoPhi", 1);
+  photonTree->SetBranchStatus("phoE", 1);
+  photonTree->SetBranchStatus("phoSCEta", 1);
+  photonTree->SetBranchStatus("phoSCPhi", 1);
+  photonTree->SetBranchStatus("phoHoverE", 1);
+  photonTree->SetBranchStatus("phoSigmaIEtaIEta_2012", 1);
+  photonTree->SetBranchStatus("phoR9_2012", 1);
+  photonTree->SetBranchStatus("pfcIso3subUEec", 1);
+  photonTree->SetBranchStatus("pfnIso3subUEec", 1);
+  photonTree->SetBranchStatus("pfpIso3subUEec", 1);
   photonTree->SetBranchAddress("nPho", &nPho);
   photonTree->SetBranchAddress("phoEt", &phoEt);
   photonTree->SetBranchAddress("phoEta", &phoEta);
@@ -668,11 +692,14 @@ void analyse_PhotonJet(string era = "PHOTONHP",
   }
   eh->Write();
 
-  // Close output file - this writes and ROOT takes ownership of histograms
-  outfile->Close();
-
-  // Close input file
-  inFile->Close();
+  // Write and close output file - delete TFile to properly clean up ROOT objects
+  outfile->Write();
 
   cout << "Wrote " << outputfilename.c_str() << endl;
+  
+  // Properly clean up ROOT objects to avoid segfault
+  outfile->Close();
+  delete outfile;
+  inFile->Close();
+  delete inFile;
 }
