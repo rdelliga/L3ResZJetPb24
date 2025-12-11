@@ -19,7 +19,8 @@ using std::endl;
 
 #include "eventhistograms.h"
 #include "helpers.h"
-
+#include "input_config.h"
+#include "chain_builder.h"
 
 #include "JetMETCorrections/Modules/interface/JetResolution.h"
 JME::JetResolution *_jer(0);
@@ -41,13 +42,68 @@ bool debug = false;
 bool applyjetvetomap = false;
 
 //void analyse(string era = "RERECOMC", string outputfiletag = "AK4_nojetid", bool isMC = true, bool checkjetid = false, bool iszb = false, bool dol2res = false, bool dojer = false, bool fillforJER = false) {
-void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool isMC = false, bool checkjetid = false, bool iszb = false, bool dol2res = false, bool dojer = false, bool fillforJER = false) {
+void analyse(string input = "RERECOHP", string outputfiletag = "AK4_nojetid", bool isMC = false, bool checkjetid = false, bool iszb = false, bool dol2res = false, bool dojer = false, bool fillforJER = false, string inputType = "era", int maxFiles = -1, int maxEvents = -1, string outputDir = "", int batchIndex = -1, int totalBatches = 1) {
 
   bool usecalotrig = false;
   bool checkvalidjet = false; // this is for checking valid jet range after applying l2. now for tightly limited range. TODO: do something smarter
-     
-  //  string outputfilename = Form("/eos/user/l/lamartik/HIJEC_rereco_results_HI2023MCTruth/%s_%s.root",era.c_str(),outputfiletag.c_str());
-  string outputfilename = Form("/eos/cms/store/group/phys_heavyions/bharikri/JetMinPOG/L3ResPhotonJet/%s_%s.root",era.c_str(),outputfiletag.c_str());
+
+  // Build input configuration
+  InputConfig config;
+  config.maxFiles = maxFiles;
+  config.maxEvents = maxEvents;
+  config.outputTag = outputfiletag;
+  config.batchIndex = batchIndex;
+  config.totalBatches = totalBatches;
+  config.skipFiles = 0;
+
+  // Set default output directory
+  if (outputDir.empty()) {
+    config.outputDir = "/eos/cms/store/group/phys_heavyions/bharikri/JetMinPOG/L3ResPhotonJet";
+  } else {
+    config.outputDir = outputDir;
+  }
+
+  // Determine input type and path
+  if (inputType == "era") {
+    auto it = filenames.find(input);
+    if (it != filenames.end()) {
+      config.type = InputType::FILE;
+      config.path = it->second;
+    } else {
+      cerr << "ERROR: Unknown era: " << input << endl;
+      return;
+    }
+  } else if (inputType == "directory") {
+    config.type = InputType::DIRECTORY;
+    config.path = input;
+  } else if (inputType == "filelist") {
+    config.type = InputType::FILELIST;
+    config.path = input;
+  } else {
+    config.type = InputType::FILE;
+    config.path = input;
+  }
+
+  // Calculate skip for batch mode
+  if (batchIndex >= 0 && totalBatches > 0 && maxFiles > 0) {
+    config.skipFiles = batchIndex * maxFiles;
+  }
+
+  // Generate output filename
+  string outputfilename;
+  string inputName = input;
+  if (inputType != "era") {
+    size_t lastSlash = input.find_last_of("/");
+    if (lastSlash != string::npos && lastSlash < input.size() - 1) {
+      inputName = input.substr(lastSlash + 1);
+    }
+  }
+
+  if (batchIndex >= 0) {
+    outputfilename = Form("%s/%s_%s_batch%d_of_%d.root", config.outputDir.c_str(), inputName.c_str(), outputfiletag.c_str(), batchIndex, totalBatches);
+  } else {
+    outputfilename = Form("%s/%s_%s.root", config.outputDir.c_str(), inputName.c_str(), outputfiletag.c_str());
+  }
   //string outputfilename = Form("/eos/user/l/lamartik/HIJEC_rereco_results_HI2023MCTruth_chs/%s_%s.root",era.c_str(),outputfiletag.c_str());
   if (debug) outputfilename = "test.root";
   
@@ -61,12 +117,18 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
   // TODO: jet type ; rereco has PF and PFCHS jets
   std::string jetPath = "ak4PFCHSJetAnalyzer/t";
   if (!isMC) jetPath = "ak0PFJetAnalyzer/t";
-  
-  cout << "Opening input file" << endl;
-  //  TFile *inFile = new TFile(inFileName.c_str(), "READ"); // TODO: safety checks about opening file successfully
-  TFile *inFile = new TFile(filenames[era.c_str()].c_str(), "READ"); // TODO: safety checks about opening file successfully
 
-  auto evtTree = (TTree*)inFile->Get(evtPath.c_str());
+  cout << "Building input chains..." << endl;
+  TreeChains *chains = BuildChainsFromConfig(config, jetPath, false);
+  if (!chains || chains->nEntries == 0) {
+    cerr << "ERROR: No entries found in input!" << endl;
+    return;
+  }
+
+  auto evtTree = chains->evtChain;
+  auto triggerTree = chains->triggerChain;
+  auto skimTree = chains->skimChain;
+  auto jetTree = chains->jetChain;
   
   // Cuts and weights from event tree
   Int_t       hiBin = -1;
@@ -84,8 +146,7 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
   if (isMC) evtTree->SetBranchStatus("pthat",1);
 
   //// EVENT FILTERS
-  auto skimTree = (TTree*)inFile->Get(skimPath.c_str());
-  if (!isMC) skimTree->SetBranchStatus("*",1); 
+  if (!isMC) skimTree->SetBranchStatus("*",1);
 
   Int_t pprimaryVertexFilter = 1;
   if (!isMC) skimTree->SetBranchAddress("pprimaryVertexFilter", &pprimaryVertexFilter);
@@ -94,8 +155,6 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
 
   // Triggger paths in the files
   Int_t HLT_ZB, HLT_40, HLT_60, HLT_80, HLT_100, HLT_120;
-
-  auto triggerTree = (TTree*)inFile->Get(triggerPath.c_str());
  
   //  if (isMC) triggerTree->SetBranchAddress("HLT_PPRefZeroBias_v1",&HLT_ZB);
   
@@ -137,7 +196,6 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
   }
 
   // JETS 
-  auto jetTree = (TTree*)inFile->Get(jetPath.c_str());
   jetTree->SetBranchStatus("*",1);    
 
   Int_t     evt;
@@ -246,12 +304,15 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
 //   auto vetomap = (TH2D*)mapfile->Get("jetvetomap_all");
 
   
-   cout << "Number of entries :" <<  jetTree->GetEntries()  << endl; 
-   int nentries = jetTree->GetEntries();
-   if (debug) nentries = 1000;
+   cout << "Number of entries :" <<  chains->nEntries  << endl; 
+   Long64_t nentries = chains->nEntries;
+   if (config.maxEvents > 0 && config.maxEvents < nentries) {
+     nentries = config.maxEvents;
+   }
+   if (debug && nentries > 1000) nentries = 1000;
 
-   cout << "Processing " << nentries << endl;
-   for (int i = 0; i < nentries; ++i) {
+   cout << "Processing " << nentries << " events" << endl;
+   for (Long64_t i = 0; i < nentries; ++i) {
      evtTree->GetEntry(i);
      triggerTree->GetEntry(i);
 

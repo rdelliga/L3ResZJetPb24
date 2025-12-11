@@ -19,6 +19,11 @@ using std::endl;
 
 #include "eventhistograms.h"
 #include "helpers.h"
+#include "input_config.h"
+#include "chain_builder.h"
+
+R__LOAD_LIBRARY(histograms_C.so)
+R__LOAD_LIBRARY(eventhistograms_C.so)
 
 #include "JetMETCorrections/Modules/interface/JetResolution.h"
 JME::JetResolution *_jer(0);
@@ -37,24 +42,84 @@ bool debug = false;
 bool applyjetvetomap = false;
 
 // Photon+Jet analysis for L3 residual corrections
-void analyse_PhotonJet(string era = "PHOTONHP",
+void analyse_PhotonJet(string input = "PHOTONHP",
                        string outputfiletag = "AK4_photonjet",
-                       bool isMC = false, bool checkjetid = false) {
+                       bool isMC = false, bool checkjetid = false,
+                       string inputType = "era", int maxFiles = -1,
+                       int maxEvents = -1, string outputDir = "",
+                       int batchIndex = -1, int totalBatches = 1) {
 
   bool usecalotrig = false;
   bool checkvalidjet =
       false; // this is for checking valid jet range after applying l2. now for
              // tightly limited range. TODO: do something smarter
 
-  //  string outputfilename =
-  //  Form("/eos/user/l/lamartik/HIJEC_rereco_results_HI2023MCTruth/%s_%s.root",era.c_str(),outputfiletag.c_str());
-  string outputfilename = Form("/eos/cms/store/group/phys_heavyions/bharikri/"
-                               "JetMinPOG/L3ResPhotonJet/%s_%s.root",
-                               era.c_str(), outputfiletag.c_str());
-  // string outputfilename =
-  // Form("/eos/user/l/lamartik/HIJEC_rereco_results_HI2023MCTruth_chs/%s_%s.root",era.c_str(),outputfiletag.c_str());
+  // Build input configuration
+  InputConfig config;
+  config.maxFiles = maxFiles;
+  config.maxEvents = maxEvents;
+  config.outputTag = outputfiletag;
+  config.batchIndex = batchIndex;
+  config.totalBatches = totalBatches;
+  config.skipFiles = 0;
+
+  // Set default output directory
+  if (outputDir.empty()) {
+    config.outputDir =
+        "/eos/cms/store/group/phys_heavyions/bharikri/JetMinPOG/L3ResPhotonJet";
+  } else {
+    config.outputDir = outputDir;
+  }
+
+  // Determine input type and path
+  if (inputType == "era") {
+    auto it = filenames.find(input);
+    if (it != filenames.end()) {
+      config.type = InputType::FILE;
+      config.path = it->second;
+    } else {
+      cerr << "ERROR: Unknown era: " << input << endl;
+      return;
+    }
+  } else if (inputType == "directory") {
+    config.type = InputType::DIRECTORY;
+    config.path = input;
+  } else if (inputType == "filelist") {
+    config.type = InputType::FILELIST;
+    config.path = input;
+  } else {
+    config.type = InputType::FILE;
+    config.path = input;
+  }
+
+  // Calculate skip for batch mode
+  if (batchIndex >= 0 && totalBatches > 0 && maxFiles > 0) {
+    config.skipFiles = batchIndex * maxFiles;
+  }
+
+  // Generate output filename
+  string outputfilename;
+  string inputName = input;
+  // For directory/filelist, use last component of path as name
+  if (inputType != "era") {
+    size_t lastSlash = input.find_last_of("/");
+    if (lastSlash != string::npos && lastSlash < input.size() - 1) {
+      inputName = input.substr(lastSlash + 1);
+    }
+  }
+
+  if (batchIndex >= 0) {
+    outputfilename = Form("%s/%s_%s_batch%d_of_%d.root",
+                         config.outputDir.c_str(), inputName.c_str(),
+                         outputfiletag.c_str(), batchIndex, totalBatches);
+  } else {
+    outputfilename = Form("%s/%s_%s.root", config.outputDir.c_str(),
+                         inputName.c_str(), outputfiletag.c_str());
+  }
   if (debug)
     outputfilename = "test.root";
+
+  cout << "Output file: " << outputfilename << endl;
 
   // Define and activate branches
   std::string evtPath = "hiEvtAnalyzer/HiTree";
@@ -67,21 +132,16 @@ void analyse_PhotonJet(string era = "PHOTONHP",
   std::string jetPath = "ak4PFJetAnalyzer/t";
   // if (!isMC) jetPath = "ak0PFJetAnalyzer/t";
 
-  cout << "Opening input file" << endl;
-  //  TFile *inFile = new TFile(inFileName.c_str(), "READ"); // TODO: safety
-  //  checks about opening file successfully
-  TFile *inFile =
-      new TFile(filenames[era.c_str()].c_str(),
-                "READ"); // TODO: safety checks about opening file successfully
-
-  auto evtTree = (TTree *)inFile->Get(evtPath.c_str());
-
-  // Get photon tree
-  auto photonTree = (TTree *)inFile->Get(photonPath.c_str());
-  if (!photonTree) {
-    cout << "ERROR: Cannot find photon tree: " << photonPath << endl;
+  cout << "Building input chains..." << endl;
+  TreeChains *chains = BuildChainsFromConfig(config, jetPath, true);
+  if (!chains || chains->nEntries == 0) {
+    cerr << "ERROR: No entries found in input!" << endl;
     return;
   }
+
+  auto evtTree = chains->evtChain;
+  auto photonTree = chains->photonChain;
+  auto jetTree = chains->jetChain;
 
   // Cuts and weights from event tree
   Int_t hiBin = -1;
@@ -133,7 +193,6 @@ void analyse_PhotonJet(string era = "PHOTONHP",
   // }
 
   // JETS
-  auto jetTree = (TTree *)inFile->Get(jetPath.c_str());
   // Disable all branches first, then enable only what we need
   jetTree->SetBranchStatus("*", 0);
 
@@ -279,13 +338,16 @@ void analyse_PhotonJet(string era = "PHOTONHP",
   //   TFile("jecfiles/Summer23BPixPrompt23_RunD_v1.root","READ"); auto vetomap
   //   = (TH2D*)mapfile->Get("jetvetomap_all");
 
-  cout << "Number of entries :" << jetTree->GetEntries() << endl;
-  int nentries = jetTree->GetEntries();
-  if (debug)
+  cout << "Number of entries :" << chains->nEntries << endl;
+  Long64_t nentries = chains->nEntries;
+  if (config.maxEvents > 0 && config.maxEvents < nentries) {
+    nentries = config.maxEvents;
+  }
+  if (debug && nentries > 1000)
     nentries = 1000;
 
-  cout << "Processing " << nentries << endl;
-  for (int i = 0; i < nentries; ++i) {
+  cout << "Processing " << nentries << " events" << endl;
+  for (Long64_t i = 0; i < nentries; ++i) {
     evtTree->GetEntry(i);
     //  triggerTree->GetEntry(i);
     photonTree->GetEntry(i);
@@ -700,6 +762,6 @@ void analyse_PhotonJet(string era = "PHOTONHP",
   // Properly clean up ROOT objects to avoid segfault
   outfile->Close();
   delete outfile;
-  inFile->Close();
-  delete inFile;
+  // TChains are managed by ROOT, delete wrapper to release pointers
+  delete chains;
 }
