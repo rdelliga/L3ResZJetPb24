@@ -1,4 +1,103 @@
-Repository to run analysis for producind L2 residual jet energy corrections and jet energy resolution scale factor. The inputs for these macros are HiForest ntuples (at the moment for 2023 ppref).
+# Residual Analysis Framework
+
+Framework for JEC residual corrections (L2, L3) and JER scale factors for CMS Heavy Ion physics.
+
+## Prerequisites
+
+- CMSSW environment (tested with CMSSW_15_1_0_patch3)
+- ROOT (provided by CMSSW)
+- HTCondor (for batch processing)
+
+## Quick Start
+
+### Setup Environment
+```bash
+cd /eos/home-b/bharikri/lxplus_private/EGamma/CMSSW_15_1_0_patch3/src
+cmsenv
+cd /eos/home-b/bharikri/lxplus_private/EGamma/residualanalysis/fillhistograms
+```
+
+### Compile Support Classes
+```bash
+root -l -b -q compile.C
+```
+
+### Run Analysis
+
+#### Single File (Legacy Era Mode)
+```bash
+root -l -b -q 'analyse_PhotonJet.cc("PHOTONHP", "output_tag", false, false)'
+```
+
+#### Directory Mode (Multiple Files)
+```bash
+root -l -b -q 'analyse_PhotonJet.cc("/path/to/directory", "output_tag", false, false, "directory", 100, 10000, "/output/dir")'
+```
+
+#### Filelist Mode
+```bash
+root -l -b -q 'analyse_PhotonJet.cc("/path/to/filelist.txt", "output_tag", false, false, "filelist", -1, -1, "/output/dir")'
+```
+
+### Batch Processing
+
+See batch/README.md for HTCondor batch submission.
+
+```bash
+python3 batch/submit_condor.py \
+    --era PHOTONHP_FULL \
+    --input /path/to/input/directory \
+    --output-dir /path/to/output \
+    --files-per-job 50 \
+    --analysis PhotonJet
+```
+
+## Analysis Scripts
+
+| Script | Purpose | Output |
+|--------|---------|--------|
+| analyse.cc | Dijet analysis | L2 residual histograms |
+| analyse_PhotonJet.cc | Photon+Jet analysis | L3 residual histograms |
+| analyse_JER.cc | JER scale factor | JER SF histograms |
+
+## Function Parameters
+
+```cpp
+void analyse_PhotonJet(
+    string input,           // Era name, file path, directory, or filelist
+    string outputfiletag,   // Tag for output filename
+    bool isMC,              // Is Monte Carlo
+    bool checkjetid,        // Apply jet ID cuts
+    string inputType,       // "era", "file", "directory", "filelist"
+    int maxFiles,           // Max files to process (-1 = all)
+    int maxEvents,          // Max events to process (-1 = all)
+    string outputDir,       // Output directory
+    int batchIndex,         // Batch job index (-1 = non-batch)
+    int totalBatches        // Total number of batches
+)
+```
+
+## Directory Structure
+
+```
+residualanalysis/
+├── fillhistograms/     # Main analysis code
+│   ├── analyse*.cc     # Analysis scripts
+│   ├── histograms.h/C  # Histogram definitions
+│   ├── input_config.h  # Multi-file input utilities
+│   ├── chain_builder.h # TChain construction
+│   └── jecfiles/       # JEC correction files
+├── batch/              # Batch submission
+├── L2Residual/         # L2 derivation
+├── L3Residual/         # L3 derivation
+└── JER/                # JER analysis
+```
+
+## Configuration
+
+- configurations.h - Era-to-file mapping (legacy, still supported)
+- settings.h - Global settings (JEC files, binning, cuts)
+
 At the moment direct balance method with tag-and-probing a dijet system is used.
 
 ## Required steps:
@@ -67,6 +166,3 @@ To look at trigger turn-ons:
 (this is has been used to merge results from different datasets/triggers, for 2023 it has been zero bias and hard probes datasets)
 
 Plot things:
-
-
-

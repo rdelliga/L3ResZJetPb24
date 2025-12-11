@@ -1,18 +1,29 @@
-*#
-*_C.d
-*.so
-*_C_ACLiC_dict.cxx
-*_C_ACLiC_dict.o
+# Build artifacts
+fillhistograms/build/
+fillhistograms/*_C.so
+fillhistograms/*_C.d
+fillhistograms/*_rdict.pcm
 *.pcm
-*_C_ACLiC_linkdef.h
-*_C_ACLiC_mainC
-*_C_ACLiC_map.in
-*_C_ACLiC_map.out
+*.d
+*.so
+
+# Output files
+*.root
+!fillhistograms/jecfiles/*.root
+
+# Batch directories (timestamped)
+batch/*/logs/
+batch/*_2*/
+
+# Test output
+fillhistograms/test_output/
+test_output/
+
+# Editor files
 *~
+.*.swp
+.DS_Store
 
-*pdf
-*png
-
-.*
-
-*root
+# Python
+__pycache__/
+*.pyc
