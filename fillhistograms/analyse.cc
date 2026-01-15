@@ -58,7 +58,7 @@ void analyse(string input = "RERECOHP", string outputfiletag = "AK4_nojetid", bo
 
   // Set default output directory
   if (outputDir.empty()) {
-    config.outputDir = "/eos/cms/store/group/phys_heavyions/bharikri/JetMinPOG/L3ResPhotonJet";
+    config.outputDir = "/eos/cms/store/group/phys_heavyions/bharikri/JetMinPOG/L2ResDiJet";
   } else {
     config.outputDir = outputDir;
   }

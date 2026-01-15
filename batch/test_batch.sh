@@ -4,7 +4,7 @@
 set -e
 
 BASE_DIR="/eos/home-b/bharikri/lxplus_private/EGamma/residualanalysis"
-TEST_OUTPUT="/eos/cms/store/group/phys_heavyions/bharikri/JetMinPOG/L3ResPhotonJet/batch_test"
+TEST_OUTPUT="/eos/cms/store/group/phys_heavyions/bharikri/JetMinPOG/L3ResPhotonJet/batch/"
 
 echo "Creating test output directory..."
 mkdir -p $TEST_OUTPUT

@@ -39,7 +39,7 @@ std::uint32_t _seed = 4;
 #endif
 
 bool debug = false;
-bool applyjetvetomap = false;
+bool applyjetvetomap = true;
 
 // Photon+Jet analysis for L3 residual corrections
 void analyse_PhotonJet(string input = "PHOTONHP",
@@ -101,10 +101,12 @@ void analyse_PhotonJet(string input = "PHOTONHP",
   string outputfilename;
   string inputName = input;
   // For directory/filelist, use last component of path as name
+  // First trim any trailing '/' characters to avoid embedding the full path
+  while (!inputName.empty() && inputName.back() == '/') inputName.pop_back();
   if (inputType != "era") {
-    size_t lastSlash = input.find_last_of("/");
-    if (lastSlash != string::npos && lastSlash < input.size() - 1) {
-      inputName = input.substr(lastSlash + 1);
+    size_t lastSlash = inputName.find_last_of("/");
+    if (lastSlash != string::npos && lastSlash < inputName.size() - 1) {
+      inputName = inputName.substr(lastSlash + 1);
     }
   }
 
@@ -162,13 +164,23 @@ void analyse_PhotonJet(string input = "PHOTONHP",
   std::vector<float> *pfnIso3subUEec = 0;  // PF neutral hadron isolation
   std::vector<float> *pfpIso3subUEec = 0;  // PF photon isolation
 
+  
+
+  // Now enable only the branches we need
   evtTree->SetBranchStatus("*", 0);
   evtTree->SetBranchStatus("hiBin", 1);
   evtTree->SetBranchStatus("vz", 1);
-  if (isMC)
+  if (isMC) {
     evtTree->SetBranchStatus("weight", 1);
-  if (isMC)
     evtTree->SetBranchStatus("pthat", 1);
+  }
+  // Set branch addresses BEFORE SetBranchStatus (like analyse.cc does)
+  evtTree->SetBranchAddress("hiBin", &hiBin);
+  evtTree->SetBranchAddress("vz", &vz);
+  if (isMC) {
+    evtTree->SetBranchAddress("weight", &weight);
+    evtTree->SetBranchAddress("pthat", &pthat);
+  }
 
   //// EVENT FILTERS
   // auto skimTree = (TTree*)inFile->Get(skimPath.c_str());
@@ -217,7 +229,7 @@ void analyse_PhotonJet(string input = "PHOTONHP",
 
   jetTree->SetBranchAddress("evt", &evt);
   jetTree->SetBranchAddress("nref", &nref);
-  jetTree->SetBranchAddress("jtpt", &jtpt);
+  jetTree->SetBranchAddress("rawpt", &jtpt); // we want uncorrected rawpt, jtpt might have some JEC already applied
   jetTree->SetBranchAddress("jteta", &jteta);
   jetTree->SetBranchAddress("jtphi", &jtphi);
   
@@ -334,9 +346,8 @@ void analyse_PhotonJet(string input = "PHOTONHP",
   // JER not needed for photon+jet L3 residual analysis
 
   // Jet veto map
-  //   auto mapfile = new
-  //   TFile("jecfiles/Summer23BPixPrompt23_RunD_v1.root","READ"); auto vetomap
-  //   = (TH2D*)mapfile->Get("jetvetomap_all");
+    auto mapfile = new TFile("jecfiles/Summer24Prompt24_RunBCDEFGHI.root","READ"); 
+    auto vetomap = (TH2D*)mapfile->Get("jetvetomap_all");
 
   cout << "Number of entries :" << chains->nEntries << endl;
   Long64_t nentries = chains->nEntries;
@@ -373,6 +384,10 @@ void analyse_PhotonJet(string input = "PHOTONHP",
     //    if (pprimaryVertexFilter != 1) continue;
     //  }
     jetTree->GetEntry(i);
+
+    if (debug) {
+      cout << "Processing event " << i << ", evt number: " << evt << endl;
+    }
 
     // Photon+jet: need at least 1 photon and 1 jet
     if (nPho < 1)
@@ -568,7 +583,7 @@ void analyse_PhotonJet(string input = "PHOTONHP",
     alpha = 0;
     if (nAwayJets >= 2) {
       int secondAwayJetIdx = awayJetIndices[1];
-      float ptavg_temp = 0.5 * ((*phoEt)[leadPhotonIdx] + jtpt[awayJetIdx]);
+      float ptavg_temp =(*phoEt)[leadPhotonIdx];
       alpha = jtpt[secondAwayJetIdx] / ptavg_temp;
     } else {
       alpha = 0; // Only one away-side jet
@@ -587,7 +602,7 @@ void analyse_PhotonJet(string input = "PHOTONHP",
     if (dphi_photonjet > TMath::Pi())
       dphi_photonjet = 2 * TMath::Pi() - dphi_photonjet;
 
-    ptavgtp = 0.5 * (photon_pt + jet_pt);
+    ptavgtp = photon_pt;
     balance = jet_pt / photon_pt; // Response
     asymmtp = balance;            // For compatibility with histogram filling
 
@@ -754,14 +769,11 @@ void analyse_PhotonJet(string input = "PHOTONHP",
   }
   eh->Write();
 
-  // Write and close output file - delete TFile to properly clean up ROOT objects
+  // Write and close output file
   outfile->Write();
-
   cout << "Wrote " << outputfilename.c_str() << endl;
   
-  // Properly clean up ROOT objects to avoid segfault
+  // Close file properly - TFile destructor handles all owned histogram cleanup
   outfile->Close();
   delete outfile;
-  // TChains are managed by ROOT, delete wrapper to release pointers
-  delete chains;
 }

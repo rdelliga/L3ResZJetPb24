@@ -4,9 +4,9 @@
 
 
 //string jecfile = "jecfiles/2023ppwithpbpb_old_MC_L2Relative_AK4PF.txt";
-string jecfile = "jecfiles/Spring23_HI_V1_MC_L2Relative_AK4PF.txt";
-string MCjecfile = "jecfiles/Spring23_HI_V1_MC_L2Relative_AK4PF.txt";
-string l2file = "jecfiles/Spring23_HI_V1_DATA_L2Residual_AK4PFCHS_vetomap_all.txt";
+string jecfile = "jecfiles/2024ppRef_withPU_L2Relative_AK4PF.txt.txt";
+string MCjecfile = "jecfiles/2024ppRef_withPU_L2Relative_AK4PF.txt.txt";
+string l2file = "jecfiles/L2Residuals_2024ppRef.txt.txt";
 //string l2file = "jecfiles/Spring23_HI_V1_DATA_L2Residual_AK4PFCHS.txt";
 
 // JER
