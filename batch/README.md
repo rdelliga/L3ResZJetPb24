@@ -36,9 +36,19 @@ condor_q
 | `--files-per-job` | Files processed per job | 50 |
 | `--events-per-job` | Max events per job (-1=all) | -1 |
 | `--mc` | Process as MC | False |
+| `--jet-tree` | Jet tree path (e.g. `ak4PFJetAnalyzer/t`, `ak4PFJetAnalyzerSDZcut1/t`) | `ak4PFJetAnalyzer/t` |
 | `--analysis` | `PhotonJet`, `Dijet`, or `JER` | `PhotonJet` |
 | `--flavour` | HTCondor job duration | `workday` |
 | `--dry-run` | Create files without submitting | False |
+
+## Available Jet Trees
+
+**Data (2024 ppRef):** `ak4PFJetAnalyzer/t`
+
+**MC (QCD-Photon):** Multiple radii available:
+- `ak2PFJetAnalyzer/t`, `ak2PFJetAnalyzerSDZcut1/t`, etc.
+- `ak4PFJetAnalyzerSDZcut1/t`, `ak4PFJetAnalyzerSDZcut2/t`, etc.
+- `ak6PFJetAnalyzerSDZcut1/t`, `ak8PFJetAnalyzerSDZcut1/t`, etc.
 
 ## Output Files
 

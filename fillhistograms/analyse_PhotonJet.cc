@@ -42,12 +42,14 @@ bool debug = false;
 bool applyjetvetomap = true;
 
 // Photon+Jet analysis for L3 residual corrections
+// jetTree: jet tree path, e.g. "ak4PFJetAnalyzer/t" or "ak4PFJetAnalyzerSDZcut1/t"
 void analyse_PhotonJet(string input = "PHOTONHP",
                        string outputfiletag = "AK4_photonjet",
                        bool isMC = false, bool checkjetid = false,
                        string inputType = "era", int maxFiles = -1,
                        int maxEvents = -1, string outputDir = "",
-                       int batchIndex = -1, int totalBatches = 1) {
+                       int batchIndex = -1, int totalBatches = 1,
+                       string jetPath = "ak4PFJetAnalyzer/t") {
 
   bool usecalotrig = false;
   bool checkvalidjet =
@@ -131,18 +133,13 @@ void analyse_PhotonJet(string input = "PHOTONHP",
 
   cout << "Output file: " << outputfilename << endl;
 
-  // Define and activate branches
+  // Define tree paths
   std::string evtPath = "hiEvtAnalyzer/HiTree";
   std::string triggerPath = "hltanalysis/HltTree";
   std::string skimPath = "skimanalysis/HltTree";
   std::string photonPath = "ggHiNtuplizer/EventTree";
 
-  // TODO: jet type ; rereco has PF and PFCHS jets
-  // std::string jetPath = "ak4PFCHSJetAnalyzer/t";
-  // std::string jetPath = "ak4PFJetAnalyzer/t";
-  std::string jetPath = "ak4PFJetAnalyzerSDZcut1/t";
-  // if (!isMC) jetPath = "ak0PFJetAnalyzer/t";
-
+  cout << "Using jet tree: " << jetPath << endl;
   cout << "Building input chains..." << endl;
   TreeChains *chains = BuildChainsFromConfig(config, jetPath, true);
   if (!chains || chains->nEntries == 0) {

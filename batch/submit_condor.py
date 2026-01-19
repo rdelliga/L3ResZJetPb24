@@ -56,6 +56,8 @@ def main():
     parser.add_argument('--flavour', default='workday',
                         choices=['espresso', 'microcentury', 'longlunch', 'workday', 'tomorrow'],
                         help='HTCondor job flavour')
+    parser.add_argument('--jet-tree', default='ak4PFJetAnalyzer/t',
+                        help='Jet tree path (e.g. ak4PFJetAnalyzer/t, ak4PFJetAnalyzerSDZcut1/t)')
     parser.add_argument('--dry-run', action='store_true', help='Create files but do not submit')
 
     args = parser.parse_args()
@@ -113,11 +115,13 @@ MAX_EVENTS=$8
 OUTPUT_DIR=$9
 BATCH_INDEX=${{10}}
 TOTAL_BATCHES=${{11}}
+JET_TREE=${{12}}
 
 echo "Starting job at $(date)"
 echo "Analysis: $ANALYSIS"
 echo "Input: $INPUT_PATH"
 echo "Jet ID: $JET_ID"
+echo "Jet tree: $JET_TREE"
 echo "Batch: $BATCH_INDEX of $TOTAL_BATCHES"
 
 # Setup CMSSW
@@ -129,7 +133,7 @@ eval `scramv1 runtime -sh`
 cd {analysis_dir}
 
 # Run analysis
-root -l -b -q "analyse_${{ANALYSIS}}.cc(\\"$INPUT_PATH\\", \\"$OUTPUT_TAG\\", $IS_MC, $JET_ID, \\"$INPUT_TYPE\\", $MAX_FILES, $MAX_EVENTS, \\"$OUTPUT_DIR\\", $BATCH_INDEX, $TOTAL_BATCHES)"
+root -l -b -q "analyse_${{ANALYSIS}}.cc(\\"$INPUT_PATH\\", \\"$OUTPUT_TAG\\", $IS_MC, $JET_ID, \\"$INPUT_TYPE\\", $MAX_FILES, $MAX_EVENTS, \\"$OUTPUT_DIR\\", $BATCH_INDEX, $TOTAL_BATCHES, \\"$JET_TREE\\")"
 
 echo "Job completed at $(date)"
 '''
@@ -145,7 +149,7 @@ echo "Job completed at $(date)"
 
     with open(args_file, 'w') as f:
         for i in range(total_jobs):
-            line = f"{args.analysis} {args.input} {args.output_tag} {is_mc} {jet_id} {args.input_type} {args.files_per_job} {args.events_per_job} {args.output_dir} {i} {total_jobs}\n"
+            line = f"{args.analysis} {args.input} {args.output_tag} {is_mc} {jet_id} {args.input_type} {args.files_per_job} {args.events_per_job} {args.output_dir} {i} {total_jobs} {args.jet_tree}\n"
             f.write(line)
 
     # Create condor submit file

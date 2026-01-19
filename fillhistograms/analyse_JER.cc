@@ -37,7 +37,7 @@ map<string, vector<histograms*> > _histos;
 /* JME::JetResolution *_jer(0);
 JME::JetResolutionScaleFactor *_jer_sf(0); */
 // JER version: different tnp
-void analyse_JER(string era = "HP", string outputfiletag = "AK4_PFTRIG_jetid_l2corr_etaforjerinsamebin", bool isMC = false, bool checkjetid = true, bool iszb = false, bool dol2res = true, bool dojer = false) {
+void analyse_JER(string era = "HP", string outputfiletag = "AK4_PFTRIG_jetid_l2corr_etaforjerinsamebin", bool isMC = false, bool checkjetid = true, bool iszb = false, bool dol2res = true, bool dojer = false, string jetPath = "ak4PFJetAnalyzer/t") {
 //void analyse(string era = "zb0", string outputfiletag = "AK4_PFTRIG_nojetid", bool isMC = false, bool checkjetid = false, bool iszb = true, bool dol2res = false, bool dojer = false) {
 //void analyse(string era = "MC", string outputfiletag = "AK4_nojetid", bool isMC = true, bool checkjetid = false, bool iszb = false, bool dol2res = false, bool dojer = false) {
 
@@ -51,7 +51,8 @@ void analyse_JER(string era = "HP", string outputfiletag = "AK4_PFTRIG_jetid_l2c
   std::string evtPath = "hiEvtAnalyzer/HiTree";
   std::string triggerPath = "hltanalysis/HltTree";
   std::string skimPath = "skimanalysis/HltTree";
-  std::string jetPath = "ak4PFJetAnalyzer/t";
+
+  cout << "Using jet tree: " << jetPath << endl;
 
   cout << "Opening input file" << endl;
   //  TFile *inFile = new TFile(inFileName.c_str(), "READ"); // TODO: safety checks about opening file successfully

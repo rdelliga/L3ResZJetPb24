@@ -42,7 +42,7 @@ bool debug = false;
 bool applyjetvetomap = false;
 
 //void analyse(string era = "RERECOMC", string outputfiletag = "AK4_nojetid", bool isMC = true, bool checkjetid = false, bool iszb = false, bool dol2res = false, bool dojer = false, bool fillforJER = false) {
-void analyse(string input = "RERECOHP", string outputfiletag = "AK4_nojetid", bool isMC = false, bool checkjetid = false, bool iszb = false, bool dol2res = false, bool dojer = false, bool fillforJER = false, string inputType = "era", int maxFiles = -1, int maxEvents = -1, string outputDir = "", int batchIndex = -1, int totalBatches = 1) {
+void analyse(string input = "RERECOHP", string outputfiletag = "AK4_nojetid", bool isMC = false, bool checkjetid = false, bool iszb = false, bool dol2res = false, bool dojer = false, bool fillforJER = false, string inputType = "era", int maxFiles = -1, int maxEvents = -1, string outputDir = "", int batchIndex = -1, int totalBatches = 1, string jetPath = "ak4PFJetAnalyzer/t") {
 
   bool usecalotrig = false;
   bool checkvalidjet = false; // this is for checking valid jet range after applying l2. now for tightly limited range. TODO: do something smarter
@@ -113,10 +113,8 @@ void analyse(string input = "RERECOHP", string outputfiletag = "AK4_nojetid", bo
   std::string triggerPath = "hltanalysis/HltTree";
   std::string skimPath = "skimanalysis/HltTree";
 //   std::string egmPath = "ggHiNtuplizer/EventTree"; 
-  
-  // TODO: jet type ; rereco has PF and PFCHS jets
-  std::string jetPath = "ak4PFCHSJetAnalyzer/t";
-  if (!isMC) jetPath = "ak0PFJetAnalyzer/t";
+
+  cout << "Using jet tree: " << jetPath << endl;
 
   cout << "Building input chains..." << endl;
   TreeChains *chains = BuildChainsFromConfig(config, jetPath, false);
