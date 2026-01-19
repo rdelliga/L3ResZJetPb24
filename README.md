@@ -59,6 +59,16 @@ python3 batch/submit_condor.py \
 | analyse.cc | Dijet analysis | L2 residual histograms |
 | analyse_PhotonJet.cc | Photon+Jet analysis | L3 residual histograms |
 | analyse_JER.cc | JER scale factor | JER SF histograms |
+| dofits_L3.C | Fit L3 residuals, optional raw MC/Data and alpha-extrapolation plots | L3 text/plots |
+
+### dofits_L3 helper flags
+- `plotRawResponses` (default false): also draw MC and Data balance vs pT (no ratio/fits) in `L3fits_<tag>/raw/`.
+- `saveAlphaExtrap` (default false): build MC/Data/ratio vs alpha for each (pT,|eta|), fit a linear alpha→0 extrapolation, and save PNGs in `L3fits_<tag>/alpha_extrap/`.
+
+Example:
+```bash
+root -l -b -q 'dofits_L3.C("L3_derived.root", 30, 150, "L3Res_photonjet", false, "2024ppRef", "pp Reference", true, true)'
+```
 
 ## Function Parameters
 

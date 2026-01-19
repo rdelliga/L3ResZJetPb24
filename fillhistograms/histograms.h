@@ -244,8 +244,9 @@ class histograms {
   };
   static constexpr unsigned int nwabsetas = sizeof(wabsetarange)/sizeof(wabsetarange[0])-1;
 
-  static constexpr double dwabsetarange[] = {0.0, 0.522, 1.044,  1.479, 1.93, 2.322,  2.65, 2.964, 5.191 // Super wide binning for 2023 PbPb JEC in high pT
-  };
+  static constexpr double dwabsetarange[] = {0.0, 1.479}; // Single bin in Eta for Photon+Jet L3res
+  // static constexpr double dwabsetarange[] = {0.0, 0.522, 1.044,  1.479, 1.93, 2.322,  2.65, 2.964, 5.191}; // Super wide binning for 2023 PbPb JEC in high pT
+
   static constexpr unsigned int ndwabsetas = sizeof(dwabsetarange)/sizeof(dwabsetarange[0])-1;
 
 

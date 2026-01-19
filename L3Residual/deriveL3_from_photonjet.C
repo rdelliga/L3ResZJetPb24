@@ -41,6 +41,7 @@ void deriveL3_from_photonjet(
   int i = 0;
 
   map<string, TProfile3D*> mc3d, data3d;
+  map<string, TH3D*> counts_mc3d, counts_data3d;
   map<string, TH1D*> responses;
   map<int, TH1D*> respETA;
 
@@ -65,6 +66,8 @@ void deriveL3_from_photonjet(
 
     mc3d[etabins[i].c_str()] = (TProfile3D*)inFileMC->Get("hibin_-1.0_0.0/eta_-5.2_5.2/photonjet_balance3Dabseta");
     data3d[etabins[i].c_str()] = (TProfile3D*)inFileDT->Get("hibin_-1.0_0.0/eta_-5.2_5.2/photonjet_balance3Dabseta");
+    counts_mc3d[etabins[i].c_str()] = (TH3D*)inFileMC->Get("hibin_-1.0_0.0/eta_-5.2_5.2/photonjet_balance3Dabseta_counts");
+    counts_data3d[etabins[i].c_str()] = (TH3D*)inFileDT->Get("hibin_-1.0_0.0/eta_-5.2_5.2/photonjet_balance3Dabseta_counts");
   }
   else if (usewideabs) {
     vseta_mc = new TH1D("vseta_mc", "MC balance; |#eta_{jet}|; balance", histograms::ndwabsetas, &histograms::dwabsetarange[0]);
@@ -74,6 +77,8 @@ void deriveL3_from_photonjet(
 
     mc3d[etabins[i].c_str()] = (TProfile3D*)inFileMC->Get("hibin_-1.0_0.0/eta_-5.2_5.2/photonjet_balance3Dabsetawide");
     data3d[etabins[i].c_str()] = (TProfile3D*)inFileDT->Get("hibin_-1.0_0.0/eta_-5.2_5.2/photonjet_balance3Dabsetawide");
+    counts_mc3d[etabins[i].c_str()] = (TH3D*)inFileMC->Get("hibin_-1.0_0.0/eta_-5.2_5.2/photonjet_balance3Dabsetawide_counts");
+    counts_data3d[etabins[i].c_str()] = (TH3D*)inFileDT->Get("hibin_-1.0_0.0/eta_-5.2_5.2/photonjet_balance3Dabsetawide_counts");
   }
   else {
     vseta_mc = new TH1D("vseta_mc", "MC balance; #eta_{jet}; balance", histograms::nwetas, &histograms::wetarange[0]);
@@ -83,6 +88,8 @@ void deriveL3_from_photonjet(
 
     mc3d[etabins[i].c_str()] = (TProfile3D*)inFileMC->Get("hibin_-1.0_0.0/eta_-5.2_5.2/photonjet_balance3D");
     data3d[etabins[i].c_str()] = (TProfile3D*)inFileDT->Get("hibin_-1.0_0.0/eta_-5.2_5.2/photonjet_balance3D");
+    counts_mc3d[etabins[i].c_str()] = (TH3D*)inFileMC->Get("hibin_-1.0_0.0/eta_-5.2_5.2/photonjet_balance3D_counts");
+    counts_data3d[etabins[i].c_str()] = (TH3D*)inFileDT->Get("hibin_-1.0_0.0/eta_-5.2_5.2/photonjet_balance3D_counts");
   }
 
   // Check that histograms were found
@@ -275,6 +282,12 @@ void deriveL3_from_photonjet(
   // Get binning from the 3D profile for photon pT (X-axis)
   TAxis* ptaxis = mc3d[etabins[i].c_str()]->GetXaxis();
 
+  // Extract variable bin edges from the pT axis
+  std::vector<double> ptBinEdges(nPtBins + 1);
+  for (int bin = 1; bin <= nPtBins + 1; ++bin) {
+    ptBinEdges[bin-1] = ptaxis->GetBinLowEdge(bin);
+  }
+
   // Create histograms for photon pT dependence for each cumulative alpha cut
   map<int, TH1D*> balance_vsphotonpt_mc;
   map<int, TH1D*> balance_vsphotonpt_data;
@@ -284,17 +297,18 @@ void deriveL3_from_photonjet(
     // Cumulative alpha cut: alpha < upper edge of this bin
     float alpha_cut = mc3d[etabins[i].c_str()]->GetZaxis()->GetBinLowEdge(alphaCutBin+1);
 
+    // Use variable binning from the input histogram
     TH1D* h_mc = new TH1D(Form("balance_vsphotonpt_mc_alpha%d", alphaCutBin),
                           Form("MC Balance vs Photon pT (#alpha < %.2f);Photon p_{T} (GeV);Balance",
                                alpha_cut),
-                          nPtBins, ptaxis->GetXmin(), ptaxis->GetXmax());
+                          nPtBins, ptBinEdges.data());
     h_mc->SetLineColor(kBlue);
     h_mc->SetMarkerColor(kBlue);
 
     TH1D* h_data = new TH1D(Form("balance_vsphotonpt_data_alpha%d", alphaCutBin),
                             Form("Data Balance vs Photon pT (#alpha < %.2f);Photon p_{T} (GeV);Balance",
                                  alpha_cut),
-                            nPtBins, ptaxis->GetXmin(), ptaxis->GetXmax());
+                            nPtBins, ptBinEdges.data());
     h_data->SetLineColor(kRed);
     h_data->SetMarkerColor(kRed);
 
@@ -388,19 +402,19 @@ void deriveL3_from_photonjet(
     // Cumulative alpha cut: alpha < upper edge of this bin
     float alpha_cut = mc3d[etabins[i].c_str()]->GetZaxis()->GetBinLowEdge(alphaCutBin+1);
 
-    // Create histograms with same binning as photon pT (which is pt_avg)
+    // Create histograms with variable binning (same as photon pT bins)
     // The binning represents the derived jet pT values
     TH1D* h_mc = new TH1D(Form("balance_vsjetpt_mc_alpha%d", alphaCutBin),
                           Form("MC Balance vs Derived Jet pT (#alpha < %.2f);Derived Jet p_{T} (GeV);Balance",
                                alpha_cut),
-                          nPtBins, ptaxis->GetXmin(), ptaxis->GetXmax());
+                          nPtBins, ptBinEdges.data());
     h_mc->SetLineColor(kBlue);
     h_mc->SetMarkerColor(kBlue);
 
     TH1D* h_data = new TH1D(Form("balance_vsjetpt_data_alpha%d", alphaCutBin),
                             Form("Data Balance vs Derived Jet pT (#alpha < %.2f);Derived Jet p_{T} (GeV);Balance",
                                  alpha_cut),
-                            nPtBins, ptaxis->GetXmin(), ptaxis->GetXmax());
+                            nPtBins, ptBinEdges.data());
     h_data->SetLineColor(kRed);
     h_data->SetMarkerColor(kRed);
 
@@ -538,23 +552,24 @@ void deriveL3_from_photonjet(
 
   ///////////////// Create summary 2D maps (using cumulative alpha cut)
 
+  // Extract variable bin edges from the eta axis
+  TAxis* etaaxis = mc3d[etabins[i].c_str()]->GetYaxis();
+  std::vector<double> etaBinEdges(nEtaBins + 1);
+  for (int bin = 1; bin <= nEtaBins + 1; ++bin) {
+    etaBinEdges[bin-1] = etaaxis->GetBinLowEdge(bin);
+  }
+
   TH2D* balanceMap_mc = new TH2D("balanceMap_mc", Form("MC Balance (#alpha < %.2f);p_{T}^{#gamma} (GeV);|#eta_{jet}|;Balance", alphaCutValue),
-                                  nPtBins, mc3d[etabins[i].c_str()]->GetXaxis()->GetXmin(),
-                                  mc3d[etabins[i].c_str()]->GetXaxis()->GetXmax(),
-                                  nEtaBins, mc3d[etabins[i].c_str()]->GetYaxis()->GetXmin(),
-                                  mc3d[etabins[i].c_str()]->GetYaxis()->GetXmax());
+                                  nPtBins, ptBinEdges.data(),
+                                  nEtaBins, etaBinEdges.data());
 
   TH2D* balanceMap_data = new TH2D("balanceMap_data", Form("Data Balance (#alpha < %.2f);p_{T}^{#gamma} (GeV);|#eta_{jet}|;Balance", alphaCutValue),
-                                    nPtBins, mc3d[etabins[i].c_str()]->GetXaxis()->GetXmin(),
-                                    mc3d[etabins[i].c_str()]->GetXaxis()->GetXmax(),
-                                    nEtaBins, mc3d[etabins[i].c_str()]->GetYaxis()->GetXmin(),
-                                    mc3d[etabins[i].c_str()]->GetYaxis()->GetXmax());
+                                    nPtBins, ptBinEdges.data(),
+                                    nEtaBins, etaBinEdges.data());
 
   TH2D* l3resMap = new TH2D("l3resMap", Form("L3 Residual (MC/Data) (#alpha < %.2f);p_{T}^{#gamma} (GeV);|#eta_{jet}|;L3Res", alphaCutValue),
-                            nPtBins, mc3d[etabins[i].c_str()]->GetXaxis()->GetXmin(),
-                            mc3d[etabins[i].c_str()]->GetXaxis()->GetXmax(),
-                            nEtaBins, mc3d[etabins[i].c_str()]->GetYaxis()->GetXmin(),
-                            mc3d[etabins[i].c_str()]->GetYaxis()->GetXmax());
+                            nPtBins, ptBinEdges.data(),
+                            nEtaBins, etaBinEdges.data());
 
   for (int etabin = 1; etabin <= nEtaBins; ++etabin) {
     for (int ptbin = 1; ptbin <= nPtBins; ++ptbin) {
@@ -601,6 +616,12 @@ void deriveL3_from_photonjet(
   // Save original 3D histograms for reference
   mc3d[etabins[i].c_str()]->Write("balance3D_mc");
   data3d[etabins[i].c_str()]->Write("balance3D_data");
+
+  // Save counts histograms if available
+  if (counts_mc3d[etabins[i].c_str()])
+    counts_mc3d[etabins[i].c_str()]->Write("counts3D_mc");
+  if (counts_data3d[etabins[i].c_str()])
+    counts_data3d[etabins[i].c_str()]->Write("counts3D_data");
 
   outfile->Close();
   cout << "Output ROOT file: " << outfilename << endl;

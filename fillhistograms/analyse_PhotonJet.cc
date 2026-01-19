@@ -352,9 +352,13 @@ void analyse_PhotonJet(string input = "PHOTONHP",
   cout << "Applying MC JEC from file " << jecfile.c_str() << endl;
   FactorizedJetCorrector *corr;
   vector<JetCorrectorParameters> vpar;
-  // This is MCTruth
+  // This is MCTruth (L2Relative)
   vpar.push_back(JetCorrectorParameters(jecfile.c_str()));
-  // No L2 residual for photon+jet analysis (L3 only)
+  // L2 residual for data only
+  if (!isMC) {
+    cout << "Applying L2 Residual from file " << l2file.c_str() << endl;
+    vpar.push_back(JetCorrectorParameters(l2file.c_str()));
+  }
   corr = new FactorizedJetCorrector(vpar);
 #endif
 
