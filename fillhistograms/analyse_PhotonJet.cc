@@ -109,10 +109,18 @@ void analyse_PhotonJet(string input = "PHOTONHP",
       inputName = inputName.substr(lastSlash + 1);
     }
   }
+  // For filelist, strip the .txt extension if present
+  if (inputType == "filelist") {
+    size_t extPos = inputName.rfind(".txt");
+    if (extPos != string::npos && extPos == inputName.size() - 4) {
+      inputName = inputName.substr(0, extPos);
+    }
+  }
 
   if (batchIndex >= 0) {
-    outputfilename = Form("%s/%s_%s_batch%d_of_%d.root",
-                         config.outputDir.c_str(), inputName.c_str(),
+    // For batch mode, use just the outputfiletag (cleaner naming)
+    outputfilename = Form("%s/%s_batch%d_of_%d.root",
+                         config.outputDir.c_str(),
                          outputfiletag.c_str(), batchIndex, totalBatches);
   } else {
     outputfilename = Form("%s/%s_%s.root", config.outputDir.c_str(),
@@ -131,7 +139,8 @@ void analyse_PhotonJet(string input = "PHOTONHP",
 
   // TODO: jet type ; rereco has PF and PFCHS jets
   // std::string jetPath = "ak4PFCHSJetAnalyzer/t";
-  std::string jetPath = "ak4PFJetAnalyzer/t";
+  // std::string jetPath = "ak4PFJetAnalyzer/t";
+  std::string jetPath = "ak4PFJetAnalyzerSDZcut1/t";
   // if (!isMC) jetPath = "ak0PFJetAnalyzer/t";
 
   cout << "Building input chains..." << endl;
@@ -144,6 +153,8 @@ void analyse_PhotonJet(string input = "PHOTONHP",
   auto evtTree = chains->evtChain;
   auto photonTree = chains->photonChain;
   auto jetTree = chains->jetChain;
+  auto triggerTree = chains->triggerChain;
+  auto skimTree = chains->skimChain;
 
   // Cuts and weights from event tree
   Int_t hiBin = -1;
@@ -193,16 +204,16 @@ void analyse_PhotonJet(string input = "PHOTONHP",
   Int_t trigger = 0;
 
   // Photon trigger
-  Int_t HLT_Photon30 = 0;
+  Int_t HLT_Photon30 = 1;
 
   // auto triggerTree = (TTree*)inFile->Get(triggerPath.c_str());
 
-  // if (!isMC) {
-  //   cout << "Use Photon trigger: HLT_PPRefGEDPhoton30_v1" << endl;
-  //   triggerTree->SetBranchStatus("*", 0);
-  //   triggerTree->SetBranchStatus("HLT_PPRefGEDPhoton30_v1", 1);
-  //   triggerTree->SetBranchAddress("HLT_PPRefGEDPhoton30_v1", &HLT_Photon30);
-  // }
+  if (!isMC) {
+  //   cout << "Use Photon trigger: HLT_PPRefGEDPhoton30_v6" << endl;
+    triggerTree->SetBranchStatus("*", 0);
+    triggerTree->SetBranchStatus("HLT_PPRefGEDPhoton30_v6", 1);
+    triggerTree->SetBranchAddress("HLT_PPRefGEDPhoton30_v6", &HLT_Photon30);
+  }
 
   // JETS
   // Disable all branches first, then enable only what we need
@@ -235,16 +246,22 @@ void analyse_PhotonJet(string input = "PHOTONHP",
   
   jetTree->SetBranchStatus("evt", 1);
   jetTree->SetBranchStatus("nref", 1);
-  jetTree->SetBranchStatus("jtpt", 1);
+  jetTree->SetBranchStatus("rawpt", 1);
   jetTree->SetBranchStatus("jteta", 1);
   jetTree->SetBranchStatus("jtphi", 1);
 
-  // jetTree->SetBranchAddress("jtPfNHF", &jtnhf);
-  // jetTree->SetBranchAddress("jtPfCHF", &jtchf);
-  // jetTree->SetBranchAddress("jtPfNEF", &jtnef);
-  // jetTree->SetBranchAddress("jtPfCEF", &jtcef);
-  // jetTree->SetBranchAddress("jtPfMUF", &jtmuf);
-  // jetTree->SetBranchAddress("jtPfCHM", &jtchm);
+  jetTree->SetBranchAddress("jtPfNHF", &jtnhf);
+  jetTree->SetBranchAddress("jtPfCHF", &jtchf);
+  jetTree->SetBranchAddress("jtPfNEF", &jtnef);
+  jetTree->SetBranchAddress("jtPfCEF", &jtcef);
+  jetTree->SetBranchAddress("jtPfMUF", &jtmuf);
+  jetTree->SetBranchAddress("jtPfCHM", &jtchm);
+  jetTree->SetBranchStatus("jtPfNHF", 1);
+  jetTree->SetBranchStatus("jtPfCHF", 1);
+  jetTree->SetBranchStatus("jtPfNEF", 1);
+  jetTree->SetBranchStatus("jtPfCEF", 1);
+  jetTree->SetBranchStatus("jtPfMUF", 1);
+  jetTree->SetBranchStatus("jtPfCHM", 1);
 
   // Gen level jet information
   Float_t jtpt_gen[MAXJETS];
@@ -318,8 +335,9 @@ void analyse_PhotonJet(string input = "PHOTONHP",
           assert(dir2);
           dir2->cd();
 
+          // Use PHOTONJET analysis type - only creates photon+jet specific histograms
           histograms *h = new histograms(dir2, etaedges[i], etaedges[i + 1],
-                                         hibins[j], hibins[j + 1], isMC);
+                                         hibins[j], hibins[j + 1], isMC, AnalysisType::PHOTONJET);
           _histos[name2.c_str()].push_back(h);
         }
       }
@@ -360,16 +378,16 @@ void analyse_PhotonJet(string input = "PHOTONHP",
   cout << "Processing " << nentries << " events" << endl;
   for (Long64_t i = 0; i < nentries; ++i) {
     evtTree->GetEntry(i);
-    //  triggerTree->GetEntry(i);
+    triggerTree->GetEntry(i);
     photonTree->GetEntry(i);
 
     // Photon trigger logic
-    //  if (!isMC) {
-    //    trigger = HLT_Photon30;
-    //  }
-    //  if (isMC) trigger = true; // MC: no trigger requirement
+     if (!isMC) {
+       trigger = HLT_Photon30;
+     }
+     if (isMC) trigger = true; // MC: no trigger requirement
 
-    //  if (!trigger) continue;
+     if (!trigger) continue;
 
     evtwt = 1;
     if (isMC) {
@@ -431,44 +449,44 @@ void analyse_PhotonJet(string input = "PHOTONHP",
     bool passjetid[nref];
     for (int j = 0; j < nref; ++j) {
       passjetid[j] = true;
-      // if (checkjetid) {
-      //   if (abs(jteta[j]) <= 2.6) {
-      //     if (jtnhf[j] >= 0.99)
-      //       passjetid[j] = false;
-      //     if (jtnef[j] >= 0.9)
-      //       passjetid[j] = false;
-      //     if (jtchf[j] <= 0.01)
-      //       passjetid[j] = false;
-      //     if (jtcef[j] >= 0.8)
-      //       passjetid[j] = false;
-      //     if (jtmuf[j] >= 0.8)
-      //       passjetid[j] = false;
-      //     if (jtchm[j] <= 0)
-      //       passjetid[j] = false;
-      //   } else if (abs(jteta[j]) <= 2.7) {
-      //     if (jtnhf[j] >= 0.9)
-      //       passjetid[j] = false;
-      //     if (jtnef[j] >= 0.99)
-      //       passjetid[j] = false;
-      //     if (jtmuf[j] >= 0.8)
-      //       passjetid[j] = false;
-      //     if (jtcef[j] >= 0.8)
-      //       passjetid[j] = false;
+      if (checkjetid) {
+        if (abs(jteta[j]) <= 2.6) {
+          if (jtnhf[j] >= 0.99)
+            passjetid[j] = false;
+          if (jtnef[j] >= 0.9)
+            passjetid[j] = false;
+          if (jtchf[j] <= 0.01)
+            passjetid[j] = false;
+          if (jtcef[j] >= 0.8)
+            passjetid[j] = false;
+          if (jtmuf[j] >= 0.8)
+            passjetid[j] = false;
+          if (jtchm[j] <= 0)
+            passjetid[j] = false;
+        } else if (abs(jteta[j]) <= 2.7) {
+          if (jtnhf[j] >= 0.9)
+            passjetid[j] = false;
+          if (jtnef[j] >= 0.99)
+            passjetid[j] = false;
+          if (jtmuf[j] >= 0.8)
+            passjetid[j] = false;
+          if (jtcef[j] >= 0.8)
+            passjetid[j] = false;
 
-      //   } else if (abs(jteta[j]) <= 3.0) {
-      //     if (jtnhf[j] >= 0.99)
-      //       passjetid[j] = false;
-      //     if (jtnef[j] >= 0.99)
-      //       passjetid[j] = false;
-      //   } else if (abs(jteta[j]) <= 5.0) {
-      //     if (jtnef[j] >= 0.4)
-      //       passjetid[j] = false;
-      //   }
-      //   //	   if (jtpt[j] > jtptmin)	   cout << passjetid[j] << endl;
-      //   //  if (passjetid[j] < 2 and nref > 2  and jtpt[j] > 70  and jtpt[1] >
-      //   //  40) cout << "Pass jetid: " << passjetid[j] << " pt: " << jtpt[j] <<
-      //   //  " " << jteta[j] << " " << j << " " << i <<  endl;
-      // }
+        } else if (abs(jteta[j]) <= 3.0) {
+          if (jtnhf[j] >= 0.99)
+            passjetid[j] = false;
+          if (jtnef[j] >= 0.99)
+            passjetid[j] = false;
+        } else if (abs(jteta[j]) <= 5.0) {
+          if (jtnef[j] >= 0.4)
+            passjetid[j] = false;
+        }
+        //	   if (jtpt[j] > jtptmin)	   cout << passjetid[j] << endl;
+        //  if (passjetid[j] < 2 and nref > 2  and jtpt[j] > 70  and jtpt[1] >
+        //  40) cout << "Pass jetid: " << passjetid[j] << " pt: " << jtpt[j] <<
+        //  " " << jteta[j] << " " << j << " " << i <<  endl;
+      }
     }
 
     // Apply JEC
@@ -507,13 +525,8 @@ void analyse_PhotonJet(string input = "PHOTONHP",
         continue; // Trigger threshold
       if (abs((*phoEta)[ipho]) > 1.44)
         continue; // Barrel only
-
-      // Photon ID cuts
-      if ((*phoHoverE)[ipho] > 0.3)
-        continue;
+      
       if ((*phoSigmaIEtaIEta)[ipho] < 0.002)
-        continue;
-      if ((*phoSigmaIEtaIEta)[ipho] > 0.03)
         continue;
 
       // Find highest pT photon
@@ -523,12 +536,25 @@ void analyse_PhotonJet(string input = "PHOTONHP",
       }
     }
 
-    // No good photon found
+    // Stop early if no photon passes the kinematic preselection
     if (leadPhotonIdx < 0)
       continue;
 
+    // Photon ID cuts
+    if ((*phoHoverE)[leadPhotonIdx] > 0.3)
+      continue;
+    if ((*phoSigmaIEtaIEta)[leadPhotonIdx] > 0.021)
+      continue;
+
+    if ((*pfcIso3subUEec)[leadPhotonIdx] > 2.0)
+      continue;
+    if ((*pfnIso3subUEec)[leadPhotonIdx] > 3.0)
+      continue;
+    if ((*pfpIso3subUEec)[leadPhotonIdx] > 3.0)
+      continue;
+
     // 2. Find leading and subleading away-side jets
-    // First: identify all jets back-to-back with photon (dphi > 2.7)
+    // First: identify all jets back-to-back with photon (dphi > 2.7)// No just apply a small dR requirement
     int awayJetIndices[MAXJETS];
     int nAwayJets = 0;
 
@@ -547,8 +573,8 @@ void analyse_PhotonJet(string input = "PHOTONHP",
         dphi = 2 * TMath::Pi() - dphi;
 
       // Back-to-back requirement
-      if (dphi < 2.0943951)
-        continue; // 2*pi/3 = 2.0943951
+      // if (dphi < 2.0943951)
+      //   continue; // 2*pi/3 = 2.0943951
 
       // Calculate delta-R (reject jets close to photon)
       float deta = jteta[j] - (*phoEta)[leadPhotonIdx];
@@ -692,6 +718,18 @@ void analyse_PhotonJet(string input = "PHOTONHP",
                                                    balance, evtwt);
             h->photonjet_balance3Dabsetanarrow->Fill(ptavgtp, abs(jet_eta),
                                                      alpha, balance, evtwt);
+            if (h->photonjet_balance3D_counts)
+              h->photonjet_balance3D_counts->Fill(ptavgtp, jet_eta, alpha, evtwt);
+            if (h->photonjet_balance3Dwide_counts)
+              h->photonjet_balance3Dwide_counts->Fill(ptavgtp, jet_eta, alpha, evtwt);
+            if (h->photonjet_balance3Dnarrow_counts)
+              h->photonjet_balance3Dnarrow_counts->Fill(ptavgtp, jet_eta, alpha, evtwt);
+            if (h->photonjet_balance3Dabseta_counts)
+              h->photonjet_balance3Dabseta_counts->Fill(ptavgtp, abs(jet_eta), alpha, evtwt);
+            if (h->photonjet_balance3Dabsetawide_counts)
+              h->photonjet_balance3Dabsetawide_counts->Fill(ptavgtp, abs(jet_eta), alpha, evtwt);
+            if (h->photonjet_balance3Dabsetanarrow_counts)
+              h->photonjet_balance3Dabsetanarrow_counts->Fill(ptavgtp, abs(jet_eta), alpha, evtwt);
           }
         }
       }
@@ -747,12 +785,18 @@ void analyse_PhotonJet(string input = "PHOTONHP",
               h->ptrecovsweight->Fill(jtpt[j], weight);
               h->ptgenvsweight->Fill(jtpt_gen[j], weight);
 
-              h->responses3D->Fill(jtpt_gen[j], jteta_gen[j],
-                                   jtpt[j] / jtpt_gen[j], evtwt);
-              h->phiresponse->Fill(jtpt_gen[j], jteta_gen[j],
-                                   jtphi[j] - jtphi_gen[j], evtwt);
-              h->etaresponse->Fill(jtpt_gen[j], jteta_gen[j],
-                                   jteta[j] - jteta_gen[j], evtwt);
+              if (h->responses3D) {
+                h->responses3D->Fill(jtpt_gen[j], jteta_gen[j],
+                                     jtpt[j] / jtpt_gen[j], evtwt);
+              }
+              if (h->phiresponse) {
+                h->phiresponse->Fill(jtpt_gen[j], jteta_gen[j],
+                                     jtphi[j] - jtphi_gen[j], evtwt);
+              }
+              if (h->etaresponse) {
+                h->etaresponse->Fill(jtpt_gen[j], jteta_gen[j],
+                                     jteta[j] - jteta_gen[j], evtwt);
+              }
             }
           }
         }

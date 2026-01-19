@@ -88,7 +88,7 @@ def main():
 
     # Create batch directory with timestamp
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    batch_dir = os.path.join(base_dir, 'batch', f'{args.era}_{timestamp}')
+    batch_dir = os.path.join(base_dir, 'batch/jobs/', f'{args.era}_{timestamp}')
     os.makedirs(batch_dir, exist_ok=True)
     os.makedirs(os.path.join(batch_dir, 'logs'), exist_ok=True)
 
@@ -106,16 +106,18 @@ ANALYSIS=$1
 INPUT_PATH=$2
 OUTPUT_TAG=$3
 IS_MC=$4
-INPUT_TYPE=$5
-MAX_FILES=$6
-MAX_EVENTS=$7
-OUTPUT_DIR=$8
-BATCH_INDEX=$9
-TOTAL_BATCHES=${{10}}
+JET_ID=$5
+INPUT_TYPE=$6
+MAX_FILES=$7
+MAX_EVENTS=$8
+OUTPUT_DIR=$9
+BATCH_INDEX=${{10}}
+TOTAL_BATCHES=${{11}}
 
 echo "Starting job at $(date)"
 echo "Analysis: $ANALYSIS"
 echo "Input: $INPUT_PATH"
+echo "Jet ID: $JET_ID"
 echo "Batch: $BATCH_INDEX of $TOTAL_BATCHES"
 
 # Setup CMSSW
@@ -127,7 +129,7 @@ eval `scramv1 runtime -sh`
 cd {analysis_dir}
 
 # Run analysis
-root -l -b -q "analyse_${{ANALYSIS}}.cc(\\"$INPUT_PATH\\", \\"$OUTPUT_TAG\\", $IS_MC, false, \\"$INPUT_TYPE\\", $MAX_FILES, $MAX_EVENTS, \\"$OUTPUT_DIR\\", $BATCH_INDEX, $TOTAL_BATCHES)"
+root -l -b -q "analyse_${{ANALYSIS}}.cc(\\"$INPUT_PATH\\", \\"$OUTPUT_TAG\\", $IS_MC, $JET_ID, \\"$INPUT_TYPE\\", $MAX_FILES, $MAX_EVENTS, \\"$OUTPUT_DIR\\", $BATCH_INDEX, $TOTAL_BATCHES)"
 
 echo "Job completed at $(date)"
 '''
@@ -139,10 +141,11 @@ echo "Job completed at $(date)"
     # Create job arguments file
     args_file = os.path.join(batch_dir, 'job_args.txt')
     is_mc = 'true' if args.mc else 'false'
+    jet_id = 'true' if args.jet_id else 'false'
 
     with open(args_file, 'w') as f:
         for i in range(total_jobs):
-            line = f"{args.analysis} {args.input} {args.output_tag} {is_mc} {args.input_type} {args.files_per_job} {args.events_per_job} {args.output_dir} {i} {total_jobs}\n"
+            line = f"{args.analysis} {args.input} {args.output_tag} {is_mc} {jet_id} {args.input_type} {args.files_per_job} {args.events_per_job} {args.output_dir} {i} {total_jobs}\n"
             f.write(line)
 
     # Create condor submit file

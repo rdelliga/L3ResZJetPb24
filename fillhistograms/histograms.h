@@ -3,11 +3,18 @@
 
 #include "TH1D.h"
 #include "TH2D.h"
+#include "TH3D.h"
 #include "TProfile.h"
 #include "TProfile2D.h"
 #include "TProfile3D.h"
 #include "TDirectory.h"
 
+// Analysis type enum for conditional histogram creation
+enum class AnalysisType {
+  DIJET = 0,      // L2 Residual dijet analysis
+  PHOTONJET = 1,  // L3 Residual photon+jet analysis
+  ALL = 2         // Create all histograms (default, backward compatible)
+};
 
 class histograms {
 
@@ -19,6 +26,7 @@ class histograms {
   Float_t isMC;
   Float_t hibinmin;
   Float_t hibinmax;
+  AnalysisType analysisType;
   
 // Jet histograms
 
@@ -135,6 +143,12 @@ class histograms {
   TProfile3D* photonjet_balance3Dabseta;
   TProfile3D* photonjet_balance3Dabsetawide;
   TProfile3D* photonjet_balance3Dabsetanarrow;
+  TH3D* photonjet_balance3D_counts;
+  TH3D* photonjet_balance3Dwide_counts;
+  TH3D* photonjet_balance3Dnarrow_counts;
+  TH3D* photonjet_balance3Dabseta_counts;
+  TH3D* photonjet_balance3Dabsetawide_counts;
+  TH3D* photonjet_balance3Dabsetanarrow_counts;
 
   // Photon trigger histograms
   TH1D* HLTPhoton30;
@@ -261,7 +275,8 @@ class histograms {
   //   static constexpr double ptforjec[] = {40, 60, 80, 100, 120, 140, 180, 220, 300, 500, 700, 5000};
   //  static constexpr double ptforjec[] = {40, 55, 80, 120, 170, 1000};
   //  static constexpr double ptforjec[] = {15 , 25, 55, 80, 120, 170, 1000};   // Low pT as Nick
-    static constexpr double ptforjec[] = {15, 25, 80, 120, 1000};   // Low pT as Nick
+    // static constexpr double ptforjec[] = {15, 25, 80, 120, 1000};   // Low pT as Nick
+  static constexpr double ptforjec[] = {30, 60, 80, 100, 120, 150, 200, 300, 500}; // Photon pT bins Bharad
   static constexpr unsigned int nptforjec = sizeof(ptforjec)/sizeof(ptforjec[0])-1;
 
   //  static constexpr double ptforJER[] = {15, 21, 28, 37, 49, 64, 84, 114, 153, 196, 245, 300, 362, 430, 507, 592, 686, 790, 905, 1032, 2238};
@@ -285,12 +300,16 @@ class histograms {
   static constexpr unsigned int nalphavaluesgraphjer = sizeof(alphavaluesgraphjer)/sizeof(alphavaluesgraphjer[0])-1;
 
  
+  // Original constructor (backward compatible - creates all histograms)
   histograms(TDirectory *dir, float ptmin, float ptmax, float hibinmin, float hibinmax, bool ismc);
-  //   ~histograms();
   
- void Write();
-
+  // Overloaded constructor with analysis type selection
+  histograms(TDirectory *dir, float ptmin, float ptmax, float hibinmin, float hibinmax, bool ismc, AnalysisType type);
+  
+  void Write();
+  
   private:
+  void initializePointers();  // Helper to initialize all histogram pointers to nullptr
 
 
 };
