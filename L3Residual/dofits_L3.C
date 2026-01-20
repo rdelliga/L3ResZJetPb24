@@ -152,6 +152,10 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
   TFile* outfile = new TFile(Form("%s/%s.root", outfolder.c_str(), outfilename.c_str()), "RECREATE");
 
   // Optional: build alpha-extrapolation (per pT, eta) from the 3D profiles
+  // Storage for kFSR extrapolation results (per pT bin, collapsed over eta)
+  map<int, double> kFSR_vsPt;       // kFSR = p0 from linear fit at alpha->0
+  map<int, double> kFSR_err_vsPt;   // error on p0
+  
   if (saveAlphaExtrap) {
     cout << "Saving alpha extrapolation histograms to " << alphaFolder << endl;
     TAxis* zaxis = balance3D_mc->GetZaxis();
@@ -159,12 +163,18 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     std::vector<double> alphaEdges(nAlphaBins + 1);
     for (int b = 1; b <= nAlphaBins + 1; ++b) alphaEdges[b-1] = zaxis->GetBinLowEdge(b);
 
+    // Colors for multiple pT bins on overlay plots
+    int ptColors[] = {kBlue, kRed, kGreen+2, kMagenta+2, kOrange+2, kCyan+2, kViolet+2, kTeal+2, kPink+2, kAzure+2};
+    int nPtColors = sizeof(ptColors)/sizeof(ptColors[0]);
+
+    // First loop: per-pT, per-eta alpha fits (detailed)
     for (int ptbin = 1; ptbin <= nptbins; ++ptbin) {
       for (int etabin = 1; etabin <= netabins; ++etabin) {
         TH1D* hAlphaMc = new TH1D(Form("alpha_mc_pt%d_eta%d", ptbin, etabin), "MC balance vs #alpha;#alpha;Balance", nAlphaBins, alphaEdges.data());
         TH1D* hAlphaDt = new TH1D(Form("alpha_dt_pt%d_eta%d", ptbin, etabin), "Data balance vs #alpha;#alpha;Balance", nAlphaBins, alphaEdges.data());
-        TH1D* hAlphaRatio = new TH1D(Form("alpha_ratio_pt%d_eta%d", ptbin, etabin), "MC/Data vs #alpha;#alpha;L3Res", nAlphaBins, alphaEdges.data());
+        TH1D* hAlphaRatio = new TH1D(Form("alpha_ratio_pt%d_eta%d", ptbin, etabin), "Balance Ratio (MC/Data) vs #alpha;#alpha;Balance Ratio", nAlphaBins, alphaEdges.data());
 
+        int nValidBins = 0;
         for (int abin = 1; abin <= nAlphaBins; ++abin) {
           double mc = balance3D_mc->GetBinContent(ptbin, etabin, abin);
           double emc = balance3D_mc->GetBinError(ptbin, etabin, abin);
@@ -183,24 +193,74 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
             if (dt > 0 && edt > 0) relErr2 += pow(edt / dt, 2);
             hAlphaRatio->SetBinContent(abin, ratio);
             hAlphaRatio->SetBinError(abin, ratio * sqrt(relErr2));
+            nValidBins++;
           }
         }
 
-        // Fit ratio vs alpha with linear function to extrapolate to alpha->0
-        TF1* fAlpha = new TF1(Form("fAlpha_pt%d_eta%d", ptbin, etabin), "[0]+[1]*x", alphaEdges.front(), alphaEdges.back());
-        fAlpha->SetParameters(1.0, 0.0);
-        hAlphaRatio->Fit(fAlpha, "QNR");
+        // Get readable pT and eta bin ranges for labeling
+        double ptBinLo = balance3D_mc->GetXaxis()->GetBinLowEdge(ptbin);
+        double ptBinHi = balance3D_mc->GetXaxis()->GetBinLowEdge(ptbin+1);
+        double etaBinLo = balance3D_mc->GetYaxis()->GetBinLowEdge(etabin);
+        double etaBinHi = balance3D_mc->GetYaxis()->GetBinLowEdge(etabin+1);
 
-        TCanvas* cAlpha = new TCanvas(Form("cAlpha_%d_%d", ptbin, etabin), Form("cAlpha_%d_%d", ptbin, etabin), 800, 600);
+        // Fit ratio vs alpha with linear function to extrapolate to alpha->0
+        // Use fit range that excludes potentially empty low-alpha bins
+        double fitMin = 0.1;  // Start from alpha > 0.1 to avoid empty bins
+        double fitMax = 0.35; // End before high-alpha bins which may have different behavior
+        TF1* fAlpha = new TF1(Form("fAlpha_pt%d_eta%d", ptbin, etabin), "[0]+[1]*x", fitMin, fitMax);
+        fAlpha->SetParameters(1.0, 0.0);
+        
+        // Only fit if we have enough valid bins
+        if (nValidBins >= 3) {
+          hAlphaRatio->Fit(fAlpha, "QNR");
+        }
+
+        TCanvas* cAlpha = new TCanvas(Form("cAlpha_pt%.0fto%.0f_eta%.3fto%.3f", ptBinLo, ptBinHi, etaBinLo, etaBinHi), 
+                                       Form("cAlpha_pt%.0fto%.0f_eta%.3fto%.3f", ptBinLo, ptBinHi, etaBinLo, etaBinHi), 800, 600);
         cAlpha->cd();
-        hAlphaRatio->SetMinimum(0.5);
-        hAlphaRatio->SetMaximum(1.5);
+        hAlphaRatio->SetMinimum(0.8);
+        hAlphaRatio->SetMaximum(1.2);
+        hAlphaRatio->SetMarkerStyle(kFullCircle);
+        hAlphaRatio->SetMarkerColor(kBlue);
+        hAlphaRatio->SetLineColor(kBlue);
+        hAlphaRatio->GetXaxis()->SetTitle("#alpha");
+        hAlphaRatio->GetYaxis()->SetTitle("Balance Ratio (MC/Data)");
         hAlphaRatio->Draw("PE");
+        
         fAlpha->SetLineColor(kRed);
         fAlpha->SetLineWidth(2);
         fAlpha->Draw("SAME");
+        
+        // Add reference line at 1.0
+        TLine* lineRef = new TLine(alphaEdges.front(), 1.0, alphaEdges.back(), 1.0);
+        lineRef->SetLineStyle(kDashed);
+        lineRef->SetLineColor(kGray+1);
+        lineRef->Draw("SAME");
+        
+        // Legend following dofits.C style
+        TLegend* legAlpha = new TLegend(0.55, 0.70, 0.88, 0.88);
+        legAlpha->SetBorderSize(0);
+        legAlpha->SetFillStyle(0);
+        legAlpha->SetTextFont(42);
+        legAlpha->SetTextSize(0.030);
+        legAlpha->AddEntry(hAlphaRatio, "Balance Ratio vs #alpha", "PLE");
+        legAlpha->AddEntry(fAlpha, Form("Linear fit (%.2f < #alpha < %.2f)", fitMin, fitMax), "L");
+        legAlpha->Draw();
+        
+        // Labels following dofits.C style
+        TLatex* tbin = new TLatex();
+        tbin->SetNDC();
+        tbin->SetTextFont(42);
+        tbin->SetTextSize(0.035);
+        tbin->DrawLatex(0.18, 0.85, Form("%.0f < p_{T}^{#gamma} < %.0f GeV", ptBinLo, ptBinHi));
+        tbin->DrawLatex(0.18, 0.80, Form("%.3f < |#eta_{jet}| < %.3f", etaBinLo, etaBinHi));
+        tbin->DrawLatex(0.18, 0.75, Form("p0 = %.4f #pm %.4f", fAlpha->GetParameter(0), fAlpha->GetParError(0)));
+        tbin->DrawLatex(0.18, 0.70, Form("p1 = %.4f #pm %.4f", fAlpha->GetParameter(1), fAlpha->GetParError(1)));
+        
         CMS_lumi(cAlpha, 0, 0);
-        cAlpha->SaveAs(Form("%s/L3Res_%s_ptbin%d_etabin%d_alpha.png", alphaFolder.c_str(), _run.c_str(), ptbin, etabin));
+        
+        string alphaFile = Form("%s/L3Res_%s_pt%.0fto%.0f_eta%.3fto%.3f_alpha.png", alphaFolder.c_str(), _run.c_str(), ptBinLo, ptBinHi, etaBinLo, etaBinHi);
+        cAlpha->SaveAs(alphaFile.c_str());
 
         outfile->cd();
         hAlphaMc->Write();
@@ -208,6 +268,9 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         hAlphaRatio->Write();
         fAlpha->Write();
 
+        delete lineRef;
+        delete legAlpha;
+        delete tbin;
         delete cAlpha;
         delete hAlphaMc;
         delete hAlphaDt;
@@ -215,6 +278,204 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         delete fAlpha;
       }
     }
+    
+    // Second loop: kFSR extraction per pT bin (collapsed over eta)
+    // This creates the plot of extrapolated alpha->0 value vs photon pT
+    cout << "\n=== Extracting kFSR vs photon pT (alpha->0 extrapolation) ===" << endl;
+    
+    // Create histogram for kFSR vs pT
+    std::vector<double> ptEdges(nptbins + 1);
+    for (int b = 1; b <= nptbins + 1; ++b) ptEdges[b-1] = balance3D_mc->GetXaxis()->GetBinLowEdge(b);
+    
+    TH1D* hkFSR = new TH1D("kFSR_vsPt", "k_{FSR} (Balance Ratio extrapolated to #alpha#rightarrow0) vs p_{T}^{#gamma};p_{T}^{#gamma} (GeV);k_{FSR}", 
+                           nptbins, ptEdges.data());
+    
+    // Also create overlay plot with all pT bins on same canvas
+    TCanvas* cAlphaOverlay = new TCanvas("cAlphaOverlay", "Balance Ratio vs alpha (all pT bins)", 900, 700);
+    cAlphaOverlay->cd();
+    TH1D* hFrameAlpha = new TH1D("hFrameAlpha", ";#alpha;Balance Ratio (MC/Data)", 100, 0, 0.5);
+    hFrameAlpha->SetMinimum(0.8);
+    hFrameAlpha->SetMaximum(1.2);
+    hFrameAlpha->Draw();
+    TLine* lineRefOverlay = new TLine(0, 1.0, 0.5, 1.0);
+    lineRefOverlay->SetLineStyle(kDashed);
+    lineRefOverlay->SetLineColor(kGray+1);
+    lineRefOverlay->Draw("SAME");
+    
+    TLegend* legOverlay = new TLegend(0.55, 0.55, 0.88, 0.88);
+    legOverlay->SetBorderSize(0);
+    legOverlay->SetFillStyle(0);
+    legOverlay->SetTextFont(42);
+    legOverlay->SetTextSize(0.025);
+    
+    for (int ptbin = 1; ptbin <= nptbins; ++ptbin) {
+      double ptBinLo = balance3D_mc->GetXaxis()->GetBinLowEdge(ptbin);
+      double ptBinHi = balance3D_mc->GetXaxis()->GetBinLowEdge(ptbin+1);
+      double ptCenter = balance3D_mc->GetXaxis()->GetBinCenter(ptbin);
+      
+      // Create ratio histogram collapsed over eta
+      TH1D* hAlphaRatioCol = new TH1D(Form("alpha_ratio_pt%d_collapsed", ptbin), 
+                                       Form("Balance Ratio vs #alpha (%.0f-%.0f GeV)", ptBinLo, ptBinHi),
+                                       nAlphaBins, alphaEdges.data());
+      
+      for (int abin = 1; abin <= nAlphaBins; ++abin) {
+        double sum_mc = 0., entries_mc = 0.;
+        double sum_dt = 0., entries_dt = 0.;
+        
+        for (int etabin = 1; etabin <= netabins; ++etabin) {
+          double mc = balance3D_mc->GetBinContent(ptbin, etabin, abin);
+          double ent_mc = balance3D_mc->GetBinEntries(balance3D_mc->GetBin(ptbin, etabin, abin));
+          double dt = balance3D_data->GetBinContent(ptbin, etabin, abin);
+          double ent_dt = balance3D_data->GetBinEntries(balance3D_data->GetBin(ptbin, etabin, abin));
+          
+          if (mc > 0 && ent_mc > 0 && !TMath::IsNaN(mc)) {
+            sum_mc += mc * ent_mc;
+            entries_mc += ent_mc;
+          }
+          if (dt > 0 && ent_dt > 0 && !TMath::IsNaN(dt)) {
+            sum_dt += dt * ent_dt;
+            entries_dt += ent_dt;
+          }
+        }
+        
+        if (entries_mc > 0 && entries_dt > 0) {
+          double mc_avg = sum_mc / entries_mc;
+          double dt_avg = sum_dt / entries_dt;
+          double ratio = mc_avg / dt_avg;
+          double err_mc = mc_avg / sqrt(entries_mc);
+          double err_dt = dt_avg / sqrt(entries_dt);
+          double rel_err = sqrt(pow(err_mc/mc_avg, 2) + pow(err_dt/dt_avg, 2));
+          
+          hAlphaRatioCol->SetBinContent(abin, ratio);
+          hAlphaRatioCol->SetBinError(abin, ratio * rel_err);
+        }
+      }
+      
+      // Fit to extract kFSR (alpha -> 0 extrapolation)
+      double fitMin = 0.1;
+      double fitMax = 0.35;
+      TF1* fAlphaCol = new TF1(Form("fAlpha_pt%d_col", ptbin), "[0]+[1]*x", fitMin, fitMax);
+      fAlphaCol->SetParameters(1.0, 0.0);
+      hAlphaRatioCol->Fit(fAlphaCol, "QNR");
+      
+      // Store kFSR value (p0 = value at alpha=0)
+      double kfsr = fAlphaCol->GetParameter(0);
+      double kfsr_err = fAlphaCol->GetParError(0);
+      kFSR_vsPt[ptbin] = kfsr;
+      kFSR_err_vsPt[ptbin] = kfsr_err;
+      
+      hkFSR->SetBinContent(ptbin, kfsr);
+      hkFSR->SetBinError(ptbin, kfsr_err);
+      
+      cout << "  pT [" << ptBinLo << "-" << ptBinHi << "]: kFSR = " << kfsr << " +/- " << kfsr_err << endl;
+      
+      // Add to overlay plot
+      int colorIdx = (ptbin - 1) % nPtColors;
+      hAlphaRatioCol->SetMarkerStyle(kFullCircle);
+      hAlphaRatioCol->SetMarkerColor(ptColors[colorIdx]);
+      hAlphaRatioCol->SetLineColor(ptColors[colorIdx]);
+      hAlphaRatioCol->Draw("PE SAME");
+      
+      fAlphaCol->SetLineColor(ptColors[colorIdx]);
+      fAlphaCol->SetLineWidth(2);
+      fAlphaCol->Draw("SAME");
+      
+      legOverlay->AddEntry(hAlphaRatioCol, Form("%.0f-%.0f GeV (k_{FSR}=%.3f)", ptBinLo, ptBinHi, kfsr), "PLE");
+      
+      outfile->cd();
+      hAlphaRatioCol->Write();
+      fAlphaCol->Write();
+    }
+    
+    legOverlay->Draw();
+    CMS_lumi(cAlphaOverlay, 0, 0);
+    cAlphaOverlay->SaveAs(Form("%s/L3Res_%s_alpha_overlay.png", alphaFolder.c_str(), _run.c_str()));
+    delete cAlphaOverlay;
+    delete hFrameAlpha;
+    delete lineRefOverlay;
+    delete legOverlay;
+    
+    // Create kFSR vs pT plot with fit
+    cout << "\n=== Fitting kFSR vs photon pT ===" << endl;
+    
+    TCanvas* ckFSR = new TCanvas("ckFSR", "kFSR vs photon pT", 800, 600);
+    ckFSR->SetLogx();
+    ckFSR->cd();
+    
+    TH1D* hFramekFSR = new TH1D("hFramekFSR", ";p_{T}^{#gamma} (GeV);k_{FSR} (Balance Ratio at #alpha#rightarrow0)", 100, 20, 600);
+    hFramekFSR->SetMinimum(0.9);
+    hFramekFSR->SetMaximum(1.1);
+    hFramekFSR->Draw();
+    
+    TLine* linekFSR = new TLine(20, 1.0, 600, 1.0);
+    linekFSR->SetLineStyle(kDashed);
+    linekFSR->SetLineColor(kGray+1);
+    linekFSR->Draw("SAME");
+    
+    hkFSR->SetMarkerStyle(kFullCircle);
+    hkFSR->SetMarkerColor(kBlue);
+    hkFSR->SetLineColor(kBlue);
+    hkFSR->Draw("PE SAME");
+    
+    // Fit kFSR vs pT with various functions
+    TF1* fkFSR_const = new TF1("fkFSR_const", "[0]", ptEdges.front(), ptEdges.back());
+    TF1* fkFSR_log = new TF1("fkFSR_log", "[0]+[1]*log10(x)", ptEdges.front(), ptEdges.back());
+    TF1* fkFSR_invpt = new TF1("fkFSR_invpt", "[0]+[1]/x", ptEdges.front(), ptEdges.back());
+    
+    fkFSR_const->SetParameter(0, 1.0);
+    hkFSR->Fit(fkFSR_const, "QNR");
+    
+    fkFSR_log->SetParameters(fkFSR_const->GetParameter(0), 0.01);
+    hkFSR->Fit(fkFSR_log, "QNR");
+    
+    fkFSR_invpt->SetParameters(fkFSR_const->GetParameter(0), 0.0);
+    hkFSR->Fit(fkFSR_invpt, "QNR");
+    
+    fkFSR_const->SetLineColor(kMagenta+2);
+    fkFSR_const->SetLineStyle(kDotted);
+    fkFSR_const->Draw("SAME");
+    
+    fkFSR_log->SetLineColor(kGreen+2);
+    fkFSR_log->SetLineWidth(2);
+    fkFSR_log->Draw("SAME");
+    
+    fkFSR_invpt->SetLineColor(kRed);
+    fkFSR_invpt->SetLineWidth(2);
+    fkFSR_invpt->Draw("SAME");
+    
+    TLegend* legkFSR = new TLegend(0.50, 0.65, 0.88, 0.88);
+    legkFSR->SetBorderSize(0);
+    legkFSR->SetFillStyle(0);
+    legkFSR->SetTextFont(42);
+    legkFSR->SetTextSize(0.030);
+    legkFSR->AddEntry(hkFSR, "k_{FSR} (#alpha#rightarrow0 extrap.)", "PLE");
+    legkFSR->AddEntry(fkFSR_const, Form("Const: %.4f", fkFSR_const->GetParameter(0)), "L");
+    legkFSR->AddEntry(fkFSR_log, Form("Log: %.4f + %.4f*log_{10}(p_{T})", fkFSR_log->GetParameter(0), fkFSR_log->GetParameter(1)), "L");
+    legkFSR->AddEntry(fkFSR_invpt, Form("1/p_{T}: %.4f + %.2f/p_{T}", fkFSR_invpt->GetParameter(0), fkFSR_invpt->GetParameter(1)), "L");
+    legkFSR->Draw();
+    
+    TLatex* texkFSR = new TLatex();
+    texkFSR->SetNDC();
+    texkFSR->SetTextFont(42);
+    texkFSR->SetTextSize(0.035);
+    texkFSR->DrawLatex(0.18, 0.25, Form("#chi^{2}/ndf (const) = %.1f/%d", fkFSR_const->GetChisquare(), fkFSR_const->GetNDF()));
+    texkFSR->DrawLatex(0.18, 0.20, Form("#chi^{2}/ndf (log) = %.1f/%d", fkFSR_log->GetChisquare(), fkFSR_log->GetNDF()));
+    texkFSR->DrawLatex(0.18, 0.15, Form("#chi^{2}/ndf (1/p_{T}) = %.1f/%d", fkFSR_invpt->GetChisquare(), fkFSR_invpt->GetNDF()));
+    
+    CMS_lumi(ckFSR, 0, 0);
+    ckFSR->SaveAs(Form("%s/L3Res_%s_kFSR_vspT.png", alphaFolder.c_str(), _run.c_str()));
+    
+    outfile->cd();
+    hkFSR->Write();
+    fkFSR_const->Write();
+    fkFSR_log->Write();
+    fkFSR_invpt->Write();
+    
+    delete ckFSR;
+    delete hFramekFSR;
+    delete linekFSR;
+    delete legkFSR;
+    delete texkFSR;
   }
 
   cout << "\n=== Loading pT-dependent response ratios ===" << endl;
@@ -454,10 +715,12 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       cCounts->SetLeftMargin(0.12);
       cCounts->SetLogx();
       cCounts->cd();
-      gStyle->SetPaintTextFormat("%.0f");
-      h2dCounts->Draw("COLZ");
+      // draw as color map (no overlaid text) and use log-x for pT readability
+      gStyle->SetPaintTextFormat("0.0f");
+      h2dCounts->SetMarkerSize(1.4);
+      h2dCounts->Draw("TEXTCOLZ");
       CMS_lumi(cCounts, 0, 0);
-      cCounts->SaveAs(Form("%s/L3Res_%s_alpha%d_counts_mc.png", pngFolder.c_str(), _run.c_str(), alphaBin));
+      cCounts->SaveAs(Form("%s/L3Res_%s_alpha%d_counts_mc_pt%.0fto%.0f_eta%.3fto%.3f.png", pngFolder.c_str(), _run.c_str(), alphaBin, ptMinAll, ptMaxAll, etaMinAll, etaMaxAll));
       outfile->cd();
       h2dCounts->Write();
       delete cCounts;
@@ -477,14 +740,83 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       cCountsData->SetLeftMargin(0.12);
       cCountsData->SetLogx();
       cCountsData->cd();
-      gStyle->SetPaintTextFormat("%.0f");
-      h2dCountsData->Draw("COLZ");
+      gStyle->SetPaintTextFormat("0.0f");
+      h2dCountsData->SetMarkerSize(1.4);
+      h2dCountsData->Draw("TEXTCOLZ");
       CMS_lumi(cCountsData, 0, 0);
-      cCountsData->SaveAs(Form("%s/L3Res_%s_alpha%d_counts_data.png", pngFolder.c_str(), _run.c_str(), alphaBin));
+      cCountsData->SaveAs(Form("%s/L3Res_%s_alpha%d_counts_data_pt%.0fto%.0f_eta%.3fto%.3f.png", pngFolder.c_str(), _run.c_str(), alphaBin, ptMinAll, ptMaxAll, etaMinAll, etaMaxAll));
       outfile->cd();
       h2dCountsData->Write();
       delete cCountsData;
       counts3D_data->GetZaxis()->SetRange(1, nalphabins);
+    }
+
+    // L3 Residual Map (MC/Data ratio) as 2D TEXTCOLZ plot
+    {
+      double ptMinAll = balance3D_mc->GetXaxis()->GetBinLowEdge(1);
+      double ptMaxAll = balance3D_mc->GetXaxis()->GetBinLowEdge(nptbins+1);
+      
+      // Create 2D histogram for L3Res map
+      std::vector<double> ptEdges(nptbins + 1), etaEdges(netabins + 1);
+      for (int b = 1; b <= nptbins + 1; ++b) ptEdges[b-1] = balance3D_mc->GetXaxis()->GetBinLowEdge(b);
+      for (int b = 1; b <= netabins + 1; ++b) etaEdges[b-1] = balance3D_mc->GetYaxis()->GetBinLowEdge(b);
+      
+      TH2D* h2dL3Res = new TH2D(Form("l3res_pteta_alpha%d", alphaBin),
+                                 Form("L3 Residual (MC/Data) (#alpha < %.2f);p_{T}^{#gamma} (GeV) [%.0f-%.0f];|#eta_{jet}| [%.3f-%.3f]",
+                                      alphaCutVal, ptMinAll, ptMaxAll, etaMinAll, etaMaxAll),
+                                 nptbins, ptEdges.data(), netabins, etaEdges.data());
+      
+      // Fill from 3D profiles with cumulative alpha cut
+      balance3D_mc->GetZaxis()->SetRange(1, alphaBin);
+      balance3D_data->GetZaxis()->SetRange(1, alphaBin);
+      
+      for (int ptbin = 1; ptbin <= nptbins; ++ptbin) {
+        for (int etabin = 1; etabin <= netabins; ++etabin) {
+          double sum_mc = 0., entries_mc = 0.;
+          double sum_dt = 0., entries_dt = 0.;
+          
+          for (int abin = 1; abin <= alphaBin; ++abin) {
+            double val_mc = balance3D_mc->GetBinContent(ptbin, etabin, abin);
+            double ent_mc = balance3D_mc->GetBinEntries(balance3D_mc->GetBin(ptbin, etabin, abin));
+            double val_dt = balance3D_data->GetBinContent(ptbin, etabin, abin);
+            double ent_dt = balance3D_data->GetBinEntries(balance3D_data->GetBin(ptbin, etabin, abin));
+            
+            if (val_mc > 0 && ent_mc > 0 && !TMath::IsNaN(val_mc)) {
+              sum_mc += val_mc * ent_mc;
+              entries_mc += ent_mc;
+            }
+            if (val_dt > 0 && ent_dt > 0 && !TMath::IsNaN(val_dt)) {
+              sum_dt += val_dt * ent_dt;
+              entries_dt += ent_dt;
+            }
+          }
+          
+          double mc_val = (entries_mc > 0) ? sum_mc / entries_mc : 0.;
+          double dt_val = (entries_dt > 0) ? sum_dt / entries_dt : 0.;
+          double l3res = (dt_val > 0 && mc_val > 0) ? mc_val / dt_val : 1.0;
+          
+          h2dL3Res->SetBinContent(ptbin, etabin, l3res);
+        }
+      }
+      
+      balance3D_mc->GetZaxis()->SetRange(1, nalphabins);
+      balance3D_data->GetZaxis()->SetRange(1, nalphabins);
+      
+      TCanvas* cL3Res = new TCanvas(Form("cL3Res_a%d", alphaBin), Form("cL3Res_a%d", alphaBin), 1000, 700);
+      cL3Res->SetRightMargin(0.15);
+      cL3Res->SetLeftMargin(0.12);
+      cL3Res->SetLogx();
+      cL3Res->cd();
+      gStyle->SetPaintTextFormat("0.3f");
+      h2dL3Res->SetMarkerSize(1.4);
+      h2dL3Res->SetMinimum(0.9);
+      h2dL3Res->SetMaximum(1.1);
+      h2dL3Res->Draw("TEXTCOLZ");
+      CMS_lumi(cL3Res, 0, 0);
+      cL3Res->SaveAs(Form("%s/L3Res_%s_alpha%d_l3resmap_pt%.0fto%.0f_eta%.3fto%.3f.png", pngFolder.c_str(), _run.c_str(), alphaBin, ptMinAll, ptMaxAll, etaMinAll, etaMaxAll));
+      outfile->cd();
+      h2dL3Res->Write();
+      delete cL3Res;
     }
 
     outfile->cd();

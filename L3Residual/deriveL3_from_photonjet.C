@@ -113,6 +113,8 @@ void deriveL3_from_photonjet(
   string alphastr = Form("alpha%.2f", alphaCutValue);
 
   ///////////////// Balance vs eta in bins of pT (for a given alpha cut)
+  // NOTE: With cumulative filling in analyse_PhotonJet.cc, each alpha bin 
+  // already represents "alpha < threshold", so we read directly from alphabin
 
   for (int ptbin = 1; ptbin <= mc3d[etabins[i].c_str()]->GetXaxis()->GetNbins(); ++ptbin) {
 
@@ -124,58 +126,25 @@ void deriveL3_from_photonjet(
                         mc3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin),
                         mc3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin+1));
 
-    // Process MC: get balance vs eta for this pT bin with alpha < cut (sum bins 1 to alphabin)
+    // Process MC: get balance vs eta for this pT bin at the specified alpha cut
+    // With cumulative filling, alphabin directly corresponds to "alpha < threshold"
     for (int etabin = 1; etabin <= mc3d[etabins[i].c_str()]->GetYaxis()->GetNbins(); ++etabin) {
-      double sum_val = 0., sum_err2 = 0.;
-      double total_entries = 0.;
-      
-      // Sum over alpha bins 1 to alphabin (cumulative alpha cut)
-      for (int abin = 1; abin <= alphabin; ++abin) {
-        double val = mc3d[etabins[i].c_str()]->GetBinContent(ptbin, etabin, abin);
-        double err = mc3d[etabins[i].c_str()]->GetBinError(ptbin, etabin, abin);
-        double entries = mc3d[etabins[i].c_str()]->GetBinEntries(
-            mc3d[etabins[i].c_str()]->GetBin(ptbin, etabin, abin));
-        
-        if (val > 0 && entries > 0 && !TMath::IsNaN(val)) {
-          sum_val += val * entries;  // weighted sum
-          sum_err2 += (err * err) * (entries * entries);
-          total_entries += entries;
-        }
-      }
-      
-      double avg_val = (total_entries > 0) ? sum_val / total_entries : 0.;
-      double avg_err = (total_entries > 0) ? sqrt(sum_err2) / total_entries : 0.;
+      double val = mc3d[etabins[i].c_str()]->GetBinContent(ptbin, etabin, alphabin);
+      double err = mc3d[etabins[i].c_str()]->GetBinError(ptbin, etabin, alphabin);
 
-      vseta_mc->SetBinContent(etabin, avg_val);
-      vseta_mc->SetBinError(etabin, (TMath::IsNaN(avg_err) ? 0. : avg_err));
-      aerrormc->SetBinContent(etabin, (TMath::IsNaN(avg_err) ? 0. : avg_err));
+      vseta_mc->SetBinContent(etabin, val);
+      vseta_mc->SetBinError(etabin, (TMath::IsNaN(err) ? 0. : err));
+      aerrormc->SetBinContent(etabin, (TMath::IsNaN(err) ? 0. : err));
     }
 
-    // Process Data: get balance vs eta for this pT bin with alpha < cut (sum bins 1 to alphabin)
+    // Process Data: get balance vs eta for this pT bin at the specified alpha cut
     for (int etabin = 1; etabin <= data3d[etabins[i].c_str()]->GetYaxis()->GetNbins(); ++etabin) {
-      double sum_val = 0., sum_err2 = 0.;
-      double total_entries = 0.;
-      
-      // Sum over alpha bins 1 to alphabin (cumulative alpha cut)
-      for (int abin = 1; abin <= alphabin; ++abin) {
-        double val = data3d[etabins[i].c_str()]->GetBinContent(ptbin, etabin, abin);
-        double err = data3d[etabins[i].c_str()]->GetBinError(ptbin, etabin, abin);
-        double entries = data3d[etabins[i].c_str()]->GetBinEntries(
-            data3d[etabins[i].c_str()]->GetBin(ptbin, etabin, abin));
-        
-        if (val > 0 && entries > 0 && !TMath::IsNaN(val)) {
-          sum_val += val * entries;  // weighted sum
-          sum_err2 += (err * err) * (entries * entries);
-          total_entries += entries;
-        }
-      }
-      
-      double avg_val = (total_entries > 0) ? sum_val / total_entries : 0.;
-      double avg_err = (total_entries > 0) ? sqrt(sum_err2) / total_entries : 0.;
+      double val = data3d[etabins[i].c_str()]->GetBinContent(ptbin, etabin, alphabin);
+      double err = data3d[etabins[i].c_str()]->GetBinError(ptbin, etabin, alphabin);
 
-      vseta_data->SetBinContent(etabin, avg_val);
-      vseta_data->SetBinError(etabin, (TMath::IsNaN(avg_err) ? 0. : avg_err));
-      aerrordt->SetBinContent(etabin, (TMath::IsNaN(avg_err) ? 0. : avg_err));
+      vseta_data->SetBinContent(etabin, val);
+      vseta_data->SetBinError(etabin, (TMath::IsNaN(err) ? 0. : err));
+      aerrordt->SetBinContent(etabin, (TMath::IsNaN(err) ? 0. : err));
     }
 
     // Clone and save MC balance
@@ -312,29 +281,28 @@ void deriveL3_from_photonjet(
     h_data->SetLineColor(kRed);
     h_data->SetMarkerColor(kRed);
 
-    // Collapse over eta bins, summing alpha bins 1 to alphaCutBin (cumulative cut)
+    // Collapse over eta bins, reading from alphaCutBin directly (cumulative fill)
+    // With cumulative filling, bin N already represents "alpha < threshold_N"
     for (int ptbin = 1; ptbin <= nPtBins; ++ptbin) {
       double sum_mc = 0., sum_mc_entries = 0.;
       double sum_data = 0., sum_data_entries = 0.;
 
       for (int etabin = 1; etabin <= nEtaBins; ++etabin) {
-        // Sum over alpha bins 1 to alphaCutBin
-        for (int abin = 1; abin <= alphaCutBin; ++abin) {
-          double val_mc = mc3d[etabins[i].c_str()]->GetBinContent(ptbin, etabin, abin);
-          double entries_mc = mc3d[etabins[i].c_str()]->GetBinEntries(
-              mc3d[etabins[i].c_str()]->GetBin(ptbin, etabin, abin));
-          double val_data = data3d[etabins[i].c_str()]->GetBinContent(ptbin, etabin, abin);
-          double entries_data = data3d[etabins[i].c_str()]->GetBinEntries(
-              data3d[etabins[i].c_str()]->GetBin(ptbin, etabin, abin));
+        // Read directly from alphaCutBin (cumulative fill, no need to sum)
+        double val_mc = mc3d[etabins[i].c_str()]->GetBinContent(ptbin, etabin, alphaCutBin);
+        double entries_mc = mc3d[etabins[i].c_str()]->GetBinEntries(
+            mc3d[etabins[i].c_str()]->GetBin(ptbin, etabin, alphaCutBin));
+        double val_data = data3d[etabins[i].c_str()]->GetBinContent(ptbin, etabin, alphaCutBin);
+        double entries_data = data3d[etabins[i].c_str()]->GetBinEntries(
+            data3d[etabins[i].c_str()]->GetBin(ptbin, etabin, alphaCutBin));
 
-          if (val_mc > 0 && entries_mc > 0 && !TMath::IsNaN(val_mc)) {
-            sum_mc += val_mc * entries_mc;
-            sum_mc_entries += entries_mc;
-          }
-          if (val_data > 0 && entries_data > 0 && !TMath::IsNaN(val_data)) {
-            sum_data += val_data * entries_data;
-            sum_data_entries += entries_data;
-          }
+        if (val_mc > 0 && entries_mc > 0 && !TMath::IsNaN(val_mc)) {
+          sum_mc += val_mc * entries_mc;
+          sum_mc_entries += entries_mc;
+        }
+        if (val_data > 0 && entries_data > 0 && !TMath::IsNaN(val_data)) {
+          sum_data += val_data * entries_data;
+          sum_data_entries += entries_data;
         }
       }
 
@@ -361,7 +329,7 @@ void deriveL3_from_photonjet(
     // Compute ratio
     TH1D* h_ratio = (TH1D*)h_mc->Clone(Form("ratio_vsphotonpt_alpha%d", alphaCutBin));
     h_ratio->Divide(h_data);
-    h_ratio->SetTitle(Form("L3 Residual (MC/Data) vs Photon pT (#alpha < %.2f)", alpha_cut));
+    h_ratio->SetTitle(Form("Balance Ratio (MC/Data) vs Photon pT (#alpha < %.2f)", alpha_cut));
     h_ratio->SetLineColor(kBlack);
     h_ratio->SetMarkerColor(kBlack);
 
@@ -419,7 +387,7 @@ void deriveL3_from_photonjet(
     h_data->SetMarkerColor(kRed);
 
     // For each photon pT bin, collect jet pT values weighted by balance from all eta bins
-    // jet_pT = balance * photon_pT, using cumulative alpha cut
+    // jet_pT = balance * photon_pT, using cumulative alpha cut (read directly from alphaCutBin)
     for (int ptbin = 1; ptbin <= nPtBins; ++ptbin) {
       double photon_pt_low = ptaxis->GetBinLowEdge(ptbin);
       double photon_pt_high = ptaxis->GetBinLowEdge(ptbin + 1);
@@ -428,24 +396,22 @@ void deriveL3_from_photonjet(
       double sum_mc = 0., sum_mc_entries = 0.;
       double sum_data = 0., sum_data_entries = 0.;
 
-      // Collapse over eta bins, summing alpha bins 1 to alphaCutBin
+      // Collapse over eta bins, reading directly from alphaCutBin (cumulative fill)
       for (int etabin = 1; etabin <= nEtaBins; ++etabin) {
-        for (int abin = 1; abin <= alphaCutBin; ++abin) {
-          double val_mc = mc3d[etabins[i].c_str()]->GetBinContent(ptbin, etabin, abin);
-          double entries_mc = mc3d[etabins[i].c_str()]->GetBinEntries(
-              mc3d[etabins[i].c_str()]->GetBin(ptbin, etabin, abin));
-          double val_data = data3d[etabins[i].c_str()]->GetBinContent(ptbin, etabin, abin);
-          double entries_data = data3d[etabins[i].c_str()]->GetBinEntries(
-              data3d[etabins[i].c_str()]->GetBin(ptbin, etabin, abin));
+        double val_mc = mc3d[etabins[i].c_str()]->GetBinContent(ptbin, etabin, alphaCutBin);
+        double entries_mc = mc3d[etabins[i].c_str()]->GetBinEntries(
+            mc3d[etabins[i].c_str()]->GetBin(ptbin, etabin, alphaCutBin));
+        double val_data = data3d[etabins[i].c_str()]->GetBinContent(ptbin, etabin, alphaCutBin);
+        double entries_data = data3d[etabins[i].c_str()]->GetBinEntries(
+            data3d[etabins[i].c_str()]->GetBin(ptbin, etabin, alphaCutBin));
 
-          if (val_mc > 0 && entries_mc > 0 && !TMath::IsNaN(val_mc)) {
-            sum_mc += val_mc * entries_mc;
-            sum_mc_entries += entries_mc;
-          }
-          if (val_data > 0 && entries_data > 0 && !TMath::IsNaN(val_data)) {
-            sum_data += val_data * entries_data;
-            sum_data_entries += entries_data;
-          }
+        if (val_mc > 0 && entries_mc > 0 && !TMath::IsNaN(val_mc)) {
+          sum_mc += val_mc * entries_mc;
+          sum_mc_entries += entries_mc;
+        }
+        if (val_data > 0 && entries_data > 0 && !TMath::IsNaN(val_data)) {
+          sum_data += val_data * entries_data;
+          sum_data_entries += entries_data;
         }
       }
 
@@ -478,7 +444,7 @@ void deriveL3_from_photonjet(
     // Compute ratio
     TH1D* h_ratio = (TH1D*)h_mc->Clone(Form("ratio_vsjetpt_alpha%d", alphaCutBin));
     h_ratio->Divide(h_data);
-    h_ratio->SetTitle(Form("L3 Residual (MC/Data) vs Derived Jet pT (#alpha < %.2f)", alpha_cut));
+    h_ratio->SetTitle(Form("Balance Ratio (MC/Data) vs Derived Jet pT (#alpha < %.2f)", alpha_cut));
     h_ratio->SetLineColor(kBlack);
     h_ratio->SetMarkerColor(kBlack);
 

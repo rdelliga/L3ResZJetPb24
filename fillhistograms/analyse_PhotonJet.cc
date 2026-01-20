@@ -41,6 +41,36 @@ std::uint32_t _seed = 4;
 bool debug = false;
 bool applyjetvetomap = true;
 
+// Helper function to load pthat weights from file
+std::map<float, double> LoadPthatWeights(const std::string& weightsFile) {
+    std::map<float, double> weights;
+    std::ifstream fin(weightsFile);
+    if (!fin) {
+        cout << "Could not open pthat weights file: " + weightsFile << endl;
+        return weights;
+    }
+    std::string line;
+    while (std::getline(fin, line)) {
+        if (line.empty() || line[0] == '#') continue;
+        std::istringstream iss(line);
+        float bin; double w;
+        if (iss >> bin >> w) {
+            weights[bin] = w;
+        }
+    }
+    return weights;
+}
+
+// Helper function to get the pthat bin for a given value
+float GetPthatBin(float pthat, const std::vector<float>& bins) {
+    float result = bins.front();
+    for (size_t i = 0; i < bins.size(); ++i) {
+        if (pthat >= bins[i]) result = bins[i];
+        else break;
+    }
+    return result;
+}
+
 // Photon+Jet analysis for L3 residual corrections
 // jetTree: jet tree path, e.g. "ak4PFJetAnalyzer/t" or "ak4PFJetAnalyzerSDZcut1/t"
 void analyse_PhotonJet(string input = "PHOTONHP",
@@ -306,6 +336,11 @@ void analyse_PhotonJet(string input = "PHOTONHP",
   photonTree->SetBranchAddress("pfnIso3subUEec", &pfnIso3subUEec);
   photonTree->SetBranchAddress("pfpIso3subUEec", &pfpIso3subUEec);
 
+  auto pthatWeights = LoadPthatWeights("jecfiles/2024_PP_pthat_test_weights.txt");
+  std::vector<float> pthatBins;
+  for (const auto& kv : pthatWeights) pthatBins.push_back(kv.first);
+  std::sort(pthatBins.begin(), pthatBins.end());
+
   TFile *outfile = new TFile(outputfilename.c_str(), "RECREATE");
 
   // Local map for histogram storage (not global to avoid ROOT cleanup issues)
@@ -390,9 +425,16 @@ void analyse_PhotonJet(string input = "PHOTONHP",
 
      if (!trigger) continue;
 
+    auto get_weight = [pthatWeights, pthatBins](float pthat) {
+        float bin = GetPthatBin(pthat, pthatBins);
+        auto it = pthatWeights.find(bin);
+        if (it != pthatWeights.end()) return static_cast<float>(it->second);
+        return 0.f;
+    };
+
     evtwt = 1;
     if (isMC) {
-      evtwt *= weight;
+      evtwt *= weight*get_weight(pthat);
     }
 
     // cout << weight << " " << evtwt << endl;
@@ -574,8 +616,8 @@ void analyse_PhotonJet(string input = "PHOTONHP",
         dphi = 2 * TMath::Pi() - dphi;
 
       // Back-to-back requirement
-      // if (dphi < 2.0943951)
-      //   continue; // 2*pi/3 = 2.0943951
+      if (dphi < 2.0943951)
+        continue; // 2*pi/3 = 2.0943951
 
       // Calculate delta-R (reject jets close to photon)
       float deta = jteta[j] - (*phoEta)[leadPhotonIdx];
@@ -705,32 +747,34 @@ void analyse_PhotonJet(string input = "PHOTONHP",
           }
 
           // 3D balance profiles (KEY HISTOGRAMS for L3 residual derivation)
+          // Fill with CUMULATIVE alpha cuts (matching dijet analyse.cc pattern)
+          // Alpha bins are read from histograms::alphavalues array
+          // Each event with alpha < threshold is filled into the bin corresponding to threshold
           // Only fill in the wide eta bin since these have internal eta binning
           if ((h->etamin - h->etamax) < -10) {
-            h->photonjet_balance3D->Fill(ptavgtp, jet_eta, alpha, balance,
-                                         evtwt);
-            h->photonjet_balance3Dwide->Fill(ptavgtp, jet_eta, alpha, balance,
-                                             evtwt);
-            h->photonjet_balance3Dnarrow->Fill(ptavgtp, jet_eta, alpha, balance,
-                                               evtwt);
-            h->photonjet_balance3Dabseta->Fill(ptavgtp, abs(jet_eta), alpha,
-                                               balance, evtwt);
-            h->photonjet_balance3Dabsetawide->Fill(ptavgtp, abs(jet_eta), alpha,
-                                                   balance, evtwt);
-            h->photonjet_balance3Dabsetanarrow->Fill(ptavgtp, abs(jet_eta),
-                                                     alpha, balance, evtwt);
-            if (h->photonjet_balance3D_counts)
-              h->photonjet_balance3D_counts->Fill(ptavgtp, jet_eta, alpha, evtwt);
-            if (h->photonjet_balance3Dwide_counts)
-              h->photonjet_balance3Dwide_counts->Fill(ptavgtp, jet_eta, alpha, evtwt);
-            if (h->photonjet_balance3Dnarrow_counts)
-              h->photonjet_balance3Dnarrow_counts->Fill(ptavgtp, jet_eta, alpha, evtwt);
-            if (h->photonjet_balance3Dabseta_counts)
-              h->photonjet_balance3Dabseta_counts->Fill(ptavgtp, abs(jet_eta), alpha, evtwt);
-            if (h->photonjet_balance3Dabsetawide_counts)
-              h->photonjet_balance3Dabsetawide_counts->Fill(ptavgtp, abs(jet_eta), alpha, evtwt);
-            if (h->photonjet_balance3Dabsetanarrow_counts)
-              h->photonjet_balance3Dabsetanarrow_counts->Fill(ptavgtp, abs(jet_eta), alpha, evtwt);
+            // Loop over alpha thresholds from histograms::alphavalues (skip first bin which is 0)
+            for (unsigned int ia = 1; ia <= histograms::nalphavalues; ++ia) {
+              double alphaThreshold = histograms::alphavalues[ia];
+              double alphaFillValue = alphaThreshold - 0.0001;  // Fill just below threshold to land in correct bin
+              
+              if (alpha < alphaThreshold) {
+                // Fill balance profiles (weighted)
+                h->photonjet_balance3D->Fill(ptavgtp, jet_eta, alphaFillValue, balance, evtwt);
+                h->photonjet_balance3Dwide->Fill(ptavgtp, jet_eta, alphaFillValue, balance, evtwt);
+                h->photonjet_balance3Dnarrow->Fill(ptavgtp, jet_eta, alphaFillValue, balance, evtwt);
+                h->photonjet_balance3Dabseta->Fill(ptavgtp, abs(jet_eta), alphaFillValue, balance, evtwt);
+                h->photonjet_balance3Dabsetawide->Fill(ptavgtp, abs(jet_eta), alphaFillValue, balance, evtwt);
+                h->photonjet_balance3Dabsetanarrow->Fill(ptavgtp, abs(jet_eta), alphaFillValue, balance, evtwt);
+                
+                // Fill counts histograms (UNWEIGHTED - just count entries)
+                if (h->photonjet_balance3D_counts) h->photonjet_balance3D_counts->Fill(ptavgtp, jet_eta, alphaFillValue);
+                if (h->photonjet_balance3Dwide_counts) h->photonjet_balance3Dwide_counts->Fill(ptavgtp, jet_eta, alphaFillValue);
+                if (h->photonjet_balance3Dnarrow_counts) h->photonjet_balance3Dnarrow_counts->Fill(ptavgtp, jet_eta, alphaFillValue);
+                if (h->photonjet_balance3Dabseta_counts) h->photonjet_balance3Dabseta_counts->Fill(ptavgtp, abs(jet_eta), alphaFillValue);
+                if (h->photonjet_balance3Dabsetawide_counts) h->photonjet_balance3Dabsetawide_counts->Fill(ptavgtp, abs(jet_eta), alphaFillValue);
+                if (h->photonjet_balance3Dabsetanarrow_counts) h->photonjet_balance3Dabsetanarrow_counts->Fill(ptavgtp, abs(jet_eta), alphaFillValue);
+              }
+            }
           }
         }
       }

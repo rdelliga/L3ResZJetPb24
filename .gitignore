@@ -7,6 +7,9 @@ fillhistograms/*_rdict.pcm
 *.d
 *.so
 
+*.png
+*.pdf
+
 # Output files
 *.root
 !fillhistograms/jecfiles/*.root
