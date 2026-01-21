@@ -218,14 +218,14 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         TCanvas* cAlpha = new TCanvas(Form("cAlpha_pt%.0fto%.0f_eta%.3fto%.3f", ptBinLo, ptBinHi, etaBinLo, etaBinHi), 
                                        Form("cAlpha_pt%.0fto%.0f_eta%.3fto%.3f", ptBinLo, ptBinHi, etaBinLo, etaBinHi), 800, 600);
         cAlpha->cd();
-        hAlphaRatio->SetMinimum(0.8);
-        hAlphaRatio->SetMaximum(1.2);
+        hAlphaRatio->SetMinimum(0.7);
+        hAlphaRatio->SetMaximum(1.5);
         hAlphaRatio->SetMarkerStyle(kFullCircle);
         hAlphaRatio->SetMarkerColor(kBlue);
         hAlphaRatio->SetLineColor(kBlue);
         hAlphaRatio->GetXaxis()->SetTitle("#alpha");
         hAlphaRatio->GetYaxis()->SetTitle("Balance Ratio (MC/Data)");
-        hAlphaRatio->Draw("PE");
+        hAlphaRatio->Draw("PE1");
         
         fAlpha->SetLineColor(kRed);
         fAlpha->SetLineWidth(2);
@@ -294,8 +294,8 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     TCanvas* cAlphaOverlay = new TCanvas("cAlphaOverlay", "Balance Ratio vs alpha (all pT bins)", 900, 700);
     cAlphaOverlay->cd();
     TH1D* hFrameAlpha = new TH1D("hFrameAlpha", ";#alpha;Balance Ratio (MC/Data)", 100, 0, 0.5);
-    hFrameAlpha->SetMinimum(0.8);
-    hFrameAlpha->SetMaximum(1.2);
+    hFrameAlpha->SetMinimum(0.7);
+    hFrameAlpha->SetMaximum(1.5);
     hFrameAlpha->Draw();
     TLine* lineRefOverlay = new TLine(0, 1.0, 0.5, 1.0);
     lineRefOverlay->SetLineStyle(kDashed);
@@ -374,7 +374,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       hAlphaRatioCol->SetMarkerStyle(kFullCircle);
       hAlphaRatioCol->SetMarkerColor(ptColors[colorIdx]);
       hAlphaRatioCol->SetLineColor(ptColors[colorIdx]);
-      hAlphaRatioCol->Draw("PE SAME");
+      hAlphaRatioCol->Draw("PE1 SAME");
       
       fAlphaCol->SetLineColor(ptColors[colorIdx]);
       fAlphaCol->SetLineWidth(2);
@@ -403,8 +403,8 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     ckFSR->cd();
     
     TH1D* hFramekFSR = new TH1D("hFramekFSR", ";p_{T}^{#gamma} (GeV);k_{FSR} (Balance Ratio at #alpha#rightarrow0)", 100, 20, 600);
-    hFramekFSR->SetMinimum(0.9);
-    hFramekFSR->SetMaximum(1.1);
+    hFramekFSR->SetMinimum(0.7);
+    hFramekFSR->SetMaximum(1.5);
     hFramekFSR->Draw();
     
     TLine* linekFSR = new TLine(20, 1.0, 600, 1.0);
@@ -415,7 +415,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     hkFSR->SetMarkerStyle(kFullCircle);
     hkFSR->SetMarkerColor(kBlue);
     hkFSR->SetLineColor(kBlue);
-    hkFSR->Draw("PE SAME");
+    hkFSR->Draw("PE1 SAME");
     
     // Fit kFSR vs pT with various functions
     TF1* fkFSR_const = new TF1("fkFSR_const", "[0]", ptEdges.front(), ptEdges.back());
@@ -509,8 +509,8 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
 
     // Ratio plot
     TH1D* hFrame1 = new TH1D(Form("hFrame1_a%d", alphaBin), ";p_{T}^{#gamma} (GeV);Response (MC/Data)", 100, 20, 600);
-    hFrame1->SetMinimum(0.5);
-    hFrame1->SetMaximum(1.2);
+    hFrame1->SetMinimum(0.7);
+    hFrame1->SetMaximum(1.5);
     TCanvas* c1 = new TCanvas(Form("c1_a%d", alphaBin), Form("c1_a%d", alphaBin), 800, 600);
     c1->SetLogx();
     c1->cd();
@@ -522,7 +522,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     hRatio->SetMarkerStyle(kFullCircle);
     hRatio->SetMarkerColor(kBlue);
     hRatio->SetLineColor(kBlue);
-    hRatio->Draw("PE SAME");
+    hRatio->Draw("PE1 SAME");
     TLegend* leg1 = new TLegend(0.55, 0.75, 0.88, 0.88);
     leg1->SetBorderSize(0);
     leg1->SetFillStyle(0);
@@ -551,17 +551,17 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         TCanvas* cRaw = new TCanvas(Form("cRaw_a%d", alphaBin), Form("cRaw_a%d", alphaBin), 800, 600);
         cRaw->SetLogx();
         TH1D* frameRaw = new TH1D(Form("hFrameRaw_a%d", alphaBin), ";p_{T}^{#gamma} (GeV);Balance", 100, 20, 600);
-        frameRaw->SetMinimum(0.5);
+        frameRaw->SetMinimum(0.7);
         frameRaw->SetMaximum(1.5);
         frameRaw->Draw();
         hMcRaw->SetMarkerStyle(kFullCircle);
         hMcRaw->SetMarkerColor(kBlue);
         hMcRaw->SetLineColor(kBlue);
-        hMcRaw->Draw("PE SAME");
+        hMcRaw->Draw("PE1 SAME");
         hDtRaw->SetMarkerStyle(kFullSquare);
         hDtRaw->SetMarkerColor(kRed);
         hDtRaw->SetLineColor(kRed);
-        hDtRaw->Draw("PE SAME");
+        hDtRaw->Draw("PE1 SAME");
         TLegend* legRaw = new TLegend(0.55, 0.75, 0.88, 0.88);
         legRaw->SetBorderSize(0);
         legRaw->SetFillStyle(0);
@@ -579,8 +579,8 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
 
     // Fits
     TH1D* hFrame2 = new TH1D(Form("hFrame2_a%d", alphaBin), ";p_{T}^{#gamma} (GeV);Response (MC/Data)", 100, 20, 600);
-    hFrame2->SetMinimum(0.5);
-    hFrame2->SetMaximum(1.2);
+    hFrame2->SetMinimum(0.7);
+    hFrame2->SetMaximum(1.5);
     TCanvas* c2 = new TCanvas(Form("c2_a%d", alphaBin), Form("c2_a%d", alphaBin), 800, 600);
     c2->SetLogx();
     c2->cd();
@@ -596,9 +596,9 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     hRatioFull->SetMarkerStyle(kOpenCircle);
     hRatioFull->SetMarkerColor(kGray);
     hRatioFull->SetLineColor(kGray);
-    hRatioFull->Draw("PE SAME");
+    hRatioFull->Draw("PE1 SAME");
     TH1D* hRatioClean = drawCleaned(hRatio, "G", ptminG, ptmaxG, kFullCircle, kBlue);
-    hRatioClean->Draw("PE SAME");
+    hRatioClean->Draw("PE1 SAME");
     TMultiGraph* mg = new TMultiGraph(Form("mg_a%d", alphaBin), "mg");
     if (fitG && hRatioClean) {
       TGraphErrors* gG = cleanGraph(new TGraphErrors(hRatioClean));
@@ -679,12 +679,12 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       hCorrected->SetMarkerStyle(kFullSquare);
       hCorrected->SetMarkerColor(kRed);
       hCorrected->SetLineColor(kRed);
-      hCorrected->Draw("PE SAME");
+      hCorrected->Draw("PE1 SAME");
       TH1D* hUncorr = (TH1D*)hRatio->Clone(Form("hUncorr_a%d", alphaBin));
       hUncorr->SetMarkerStyle(kOpenCircle);
       hUncorr->SetMarkerColor(kBlue);
       hUncorr->SetLineColor(kBlue);
-      hUncorr->Draw("PE SAME");
+      hUncorr->Draw("PE1 SAME");
       TLegend* leg3 = new TLegend(0.55, 0.70, 0.88, 0.88);
       leg3->SetBorderSize(0);
       leg3->SetFillStyle(0);
@@ -809,8 +809,8 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       cL3Res->cd();
       gStyle->SetPaintTextFormat("0.3f");
       h2dL3Res->SetMarkerSize(1.4);
-      h2dL3Res->SetMinimum(0.9);
-      h2dL3Res->SetMaximum(1.1);
+      h2dL3Res->SetMinimum(0.7);
+      h2dL3Res->SetMaximum(1.5);
       h2dL3Res->Draw("TEXTCOLZ");
       CMS_lumi(cL3Res, 0, 0);
       cL3Res->SaveAs(Form("%s/L3Res_%s_alpha%d_l3resmap_pt%.0fto%.0f_eta%.3fto%.3f.png", pngFolder.c_str(), _run.c_str(), alphaBin, ptMinAll, ptMaxAll, etaMinAll, etaMaxAll));

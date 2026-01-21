@@ -75,6 +75,13 @@ class histograms {
   TH1D* genjet_eta;
   TH1D* genjet_phi;
 
+  // Gen photon histograms (MC only)
+  TH1D* genphoton_pt;
+  TH1D* genphoton_eta;
+  TH1D* genphoton_phi;
+  TProfile* photonresponse;
+  TH1D* photon_ptres;
+
   TH1D* genjetdyn_kt;
   TH1D* genjetdyn_deltaR;
   TH1D* genjetdyn_z;
@@ -244,7 +251,7 @@ class histograms {
   };
   static constexpr unsigned int nwabsetas = sizeof(wabsetarange)/sizeof(wabsetarange[0])-1;
 
-  static constexpr double dwabsetarange[] = {0.0, 1.479}; // Single bin in Eta for Photon+Jet L3res
+  static constexpr double dwabsetarange[] = {0.0, 1.3}; // Single bin in Eta for Photon+Jet L3res
   // static constexpr double dwabsetarange[] = {0.0, 0.522, 1.044,  1.479, 1.93, 2.322,  2.65, 2.964, 5.191}; // Super wide binning for 2023 PbPb JEC in high pT
 
   static constexpr unsigned int ndwabsetas = sizeof(dwabsetarange)/sizeof(dwabsetarange[0])-1;
@@ -277,7 +284,7 @@ class histograms {
   //  static constexpr double ptforjec[] = {40, 55, 80, 120, 170, 1000};
   //  static constexpr double ptforjec[] = {15 , 25, 55, 80, 120, 170, 1000};   // Low pT as Nick
     // static constexpr double ptforjec[] = {15, 25, 80, 120, 1000};   // Low pT as Nick
-  static constexpr double ptforjec[] = {30, 60, 80, 100, 120, 150, 200, 300, 500}; // Photon pT bins Bharad
+  static constexpr double ptforjec[] = {60, 70, 80, 90, 100, 120, 140, 160, 200, 300}; // Photon pT bins Bharad
   static constexpr unsigned int nptforjec = sizeof(ptforjec)/sizeof(ptforjec[0])-1;
 
   //  static constexpr double ptforJER[] = {15, 21, 28, 37, 49, 64, 84, 114, 153, 196, 245, 300, 362, 430, 507, 592, 686, 790, 905, 1032, 2238};
@@ -286,7 +293,7 @@ class histograms {
 
   // Wider bins
   static constexpr double wptforjec[] = {40, 60, 80, 100, 120, 140, 180, 220, 300, 1000};
-  static constexpr unsigned int nwptforjec = sizeof(ptforjec)/sizeof(ptforjec[0])-1;
+  static constexpr unsigned int nwptforjec = sizeof(wptforjec)/sizeof(wptforjec[0])-1;
 
   static constexpr double alphavalues[] = {0.0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5}; 
   //static constexpr double alphavalues[] = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6};

@@ -22,8 +22,10 @@ void histograms::initializePointers() {
   genjet_pt = nullptr; genjet_eta = nullptr; genjet_phi = nullptr;
   genjetdyn_kt = nullptr; genjetdyn_deltaR = nullptr;
   genjetdyn_z = nullptr; genjetdyn_z_cutdeltaR = nullptr;
+  genphoton_pt = nullptr; genphoton_eta = nullptr; genphoton_phi = nullptr;
   plane_inclusive = nullptr; jetresponse = nullptr;
-  ptres = nullptr; ktres = nullptr; deltaRres = nullptr; zres = nullptr;
+  photonresponse = nullptr; ptres = nullptr; photon_ptres = nullptr;
+  ktres = nullptr; deltaRres = nullptr; zres = nullptr;
   
   // Dijet histograms
   dijetasymmetry = nullptr; dijetasymmetry_now = nullptr;
@@ -130,6 +132,11 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
     genjet_phi = new TH1D("gen jet phi"," gen jet #phi; gen jet #phi;", 20, -2.5, 2.5);
     jetresponse = new TProfile("response","",100,100,1000);
     ptres = new TH1D("pT res"," pT ; (pT_reco-pT_gen)/pT_gen;", 40, -2, 2);
+    genphoton_pt = new TH1D("gen photon pT", "gen photon p_{T}; gen photon p_{T};", 100, 0, 500);
+    genphoton_eta = new TH1D("gen photon eta", "gen photon #eta; gen photon #eta;", 50, -2.5, 2.5);
+    genphoton_phi = new TH1D("gen photon phi", "gen photon #phi; gen photon #phi;", nphis, phirange);
+    photonresponse = new TProfile("photon response", "", 100, 0, 500);
+    photon_ptres = new TH1D("photon pT res", "photon p_{T}; (p_{T,reco}-p_{T,gen})/p_{T,gen};", 40, -0.5, 0.5);
   }
   
   // Weight histograms (common)

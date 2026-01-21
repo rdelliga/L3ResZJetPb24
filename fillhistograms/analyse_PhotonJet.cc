@@ -202,6 +202,15 @@ void analyse_PhotonJet(string input = "PHOTONHP",
   std::vector<float> *pfnIso3subUEec = 0;  // PF neutral hadron isolation
   std::vector<float> *pfpIso3subUEec = 0;  // PF photon isolation
 
+  // MC truth matching branches (only used for MC)
+  std::vector<int> *mcPID = 0;
+  std::vector<int> *mcMomPID = 0;
+  std::vector<float> *mcCalIsoDR04 = 0;
+  std::vector<float> *mcPt = 0;
+  std::vector<float> *mcEta = 0;
+  std::vector<float> *mcPhi = 0;
+  std::vector<int> *pho_genMatchedIndex = 0;
+
   
 
   // Now enable only the branches we need
@@ -322,6 +331,15 @@ void analyse_PhotonJet(string input = "PHOTONHP",
   photonTree->SetBranchStatus("pfcIso3subUEec", 1);
   photonTree->SetBranchStatus("pfnIso3subUEec", 1);
   photonTree->SetBranchStatus("pfpIso3subUEec", 1);
+  if (isMC) {
+    photonTree->SetBranchStatus("mcPID", 1);
+    photonTree->SetBranchStatus("mcMomPID", 1);
+    photonTree->SetBranchStatus("mcCalIsoDR04", 1);
+    photonTree->SetBranchStatus("mcPt", 1);
+    photonTree->SetBranchStatus("mcEta", 1);
+    photonTree->SetBranchStatus("mcPhi", 1);
+    photonTree->SetBranchStatus("pho_genMatchedIndex", 1);
+  }
   photonTree->SetBranchAddress("nPho", &nPho);
   photonTree->SetBranchAddress("phoEt", &phoEt);
   photonTree->SetBranchAddress("phoEta", &phoEta);
@@ -335,8 +353,17 @@ void analyse_PhotonJet(string input = "PHOTONHP",
   photonTree->SetBranchAddress("pfcIso3subUEec", &pfcIso3subUEec);
   photonTree->SetBranchAddress("pfnIso3subUEec", &pfnIso3subUEec);
   photonTree->SetBranchAddress("pfpIso3subUEec", &pfpIso3subUEec);
+  if (isMC) {
+    photonTree->SetBranchAddress("mcPID", &mcPID);
+    photonTree->SetBranchAddress("mcMomPID", &mcMomPID);
+    photonTree->SetBranchAddress("mcCalIsoDR04", &mcCalIsoDR04);
+    photonTree->SetBranchAddress("mcPt", &mcPt);
+    photonTree->SetBranchAddress("mcEta", &mcEta);
+    photonTree->SetBranchAddress("mcPhi", &mcPhi);
+    photonTree->SetBranchAddress("pho_genMatchedIndex", &pho_genMatchedIndex);
+  }
 
-  auto pthatWeights = LoadPthatWeights("jecfiles/2024_PP_pthat_test_weights.txt");
+  auto pthatWeights = LoadPthatWeights("jecfiles/2024_PP_private_test_weights.txt");
   std::vector<float> pthatBins;
   for (const auto& kv : pthatWeights) pthatBins.push_back(kv.first);
   std::sort(pthatBins.begin(), pthatBins.end());
@@ -400,8 +427,14 @@ void analyse_PhotonJet(string input = "PHOTONHP",
   // JER not needed for photon+jet L3 residual analysis
 
   // Jet veto map
-    auto mapfile = new TFile("jecfiles/Summer24Prompt24_RunBCDEFGHI.root","READ"); 
-    auto vetomap = (TH2D*)mapfile->Get("jetvetomap_all");
+  auto mapfile = new TFile("jecfiles/Summer24Prompt24_RunBCDEFGHI.root","READ"); 
+  auto vetomap = (TH2D*)mapfile->Get("jetvetomap_all");
+  
+  // Null check for veto map
+  if (applyjetvetomap && (!mapfile || mapfile->IsZombie() || !vetomap)) {
+    cerr << "WARNING: Veto map unavailable, disabling veto map selection" << endl;
+    applyjetvetomap = false;
+  }
 
   cout << "Number of entries :" << chains->nEntries << endl;
   Long64_t nentries = chains->nEntries;
@@ -561,21 +594,42 @@ void analyse_PhotonJet(string input = "PHOTONHP",
     // 1. Find leading photon passing selection
     int leadPhotonIdx = -1;
     float leadPhotonPt = 0;
+    int leadPhotonGenIdx = -1;
 
     for (int ipho = 0; ipho < nPho; ipho++) {
+      int currentGenIdx = -1;
       // Kinematic cuts
-      if ((*phoEt)[ipho] < 30.0)
+      if ((*phoEt)[ipho] < 50.0)
         continue; // Trigger threshold
-      if (abs((*phoEta)[ipho]) > 1.44)
+      if (abs((*phoEta)[ipho]) > 1.3)
         continue; // Barrel only
       
       if ((*phoSigmaIEtaIEta)[ipho] < 0.002)
         continue;
 
+      // MC gen-matching selection: require matched generator photon with
+      // reasonable mother PID and low calorimeter isolation. Only for MC.
+      if (isMC) {
+        if (!pho_genMatchedIndex) continue;
+        if (ipho >= (int)pho_genMatchedIndex->size()) continue;
+        int genIdx = (*pho_genMatchedIndex)[ipho];
+        if (genIdx == -1) continue;
+        if (!mcPID || genIdx >= (int)mcPID->size()) continue;
+        if ((*mcPID)[genIdx] != 22) continue;
+        if (!mcMomPID || genIdx >= (int)mcMomPID->size()) continue;
+        int mom = (*mcMomPID)[genIdx];
+        int absMom = std::abs(mom);
+        if (!(absMom <= 22 || mom == -999)) continue;
+        if (!mcCalIsoDR04 || genIdx >= (int)mcCalIsoDR04->size()) continue;
+        if (!((*mcCalIsoDR04)[genIdx] < 3.0)) continue;
+        currentGenIdx = genIdx;
+      }
+
       // Find highest pT photon
       if ((*phoEt)[ipho] > leadPhotonPt) {
         leadPhotonPt = (*phoEt)[ipho];
         leadPhotonIdx = ipho;
+        if (isMC) leadPhotonGenIdx = currentGenIdx;
       }
     }
 
@@ -584,16 +638,16 @@ void analyse_PhotonJet(string input = "PHOTONHP",
       continue;
 
     // Photon ID cuts
-    if ((*phoHoverE)[leadPhotonIdx] > 0.3)
+    if ((*phoHoverE)[leadPhotonIdx] > 0.2)
       continue;
     if ((*phoSigmaIEtaIEta)[leadPhotonIdx] > 0.021)
       continue;
 
     if ((*pfcIso3subUEec)[leadPhotonIdx] > 2.0)
       continue;
-    if ((*pfnIso3subUEec)[leadPhotonIdx] > 3.0)
+    if ((*pfnIso3subUEec)[leadPhotonIdx] > 2.0)
       continue;
-    if ((*pfpIso3subUEec)[leadPhotonIdx] > 3.0)
+    if ((*pfpIso3subUEec)[leadPhotonIdx] > 2.0)
       continue;
 
     // 2. Find leading and subleading away-side jets
@@ -663,6 +717,19 @@ void analyse_PhotonJet(string input = "PHOTONHP",
     photon_eta = (*phoEta)[leadPhotonIdx];
     photon_phi = (*phoPhi)[leadPhotonIdx];
 
+    float genPhotonPt = -1;
+    float genPhotonEta = 0;
+    float genPhotonPhi = 0;
+    bool hasGenPhoton = false;
+    if (isMC && leadPhotonGenIdx >= 0 && mcPt && mcEta && mcPhi) {
+      if (leadPhotonGenIdx < (int)mcPt->size() && leadPhotonGenIdx < (int)mcEta->size() && leadPhotonGenIdx < (int)mcPhi->size()) {
+        genPhotonPt = (*mcPt)[leadPhotonGenIdx];
+        genPhotonEta = (*mcEta)[leadPhotonGenIdx];
+        genPhotonPhi = (*mcPhi)[leadPhotonGenIdx];
+        hasGenPhoton = true;
+      }
+    }
+
     jet_pt = jtpt[awayJetIdx];
     jet_eta = jteta[awayJetIdx];
     jet_phi = jtphi[awayJetIdx];
@@ -674,6 +741,30 @@ void analyse_PhotonJet(string input = "PHOTONHP",
     ptavgtp = photon_pt;
     balance = jet_pt / photon_pt; // Response
     asymmtp = balance;            // For compatibility with histogram filling
+
+    // Apply jet veto map to photon and leading/subleading away-side jets
+    if (applyjetvetomap && vetomap) {
+      bool passVetoMap = true;
+      
+      // Check photon position
+      int pho_bin = vetomap->FindBin(photon_eta, photon_phi);
+      if (vetomap->GetBinContent(pho_bin) > 0) passVetoMap = false;
+      
+      // Check leading away-side jet (probe)
+      if (passVetoMap) {
+        int jet_bin = vetomap->FindBin(jet_eta, jet_phi);
+        if (vetomap->GetBinContent(jet_bin) > 0) passVetoMap = false;
+      }
+      
+      // Check subleading away-side jet if available
+      if (passVetoMap && nAwayJets >= 2) {
+        int secondAwayJetIdx = awayJetIndices[1];
+        int subjet_bin = vetomap->FindBin(jteta[secondAwayJetIdx], jtphi[secondAwayJetIdx]);
+        if (vetomap->GetBinContent(subjet_bin) > 0) passVetoMap = false;
+      }
+      
+      if (!passVetoMap) continue;
+    }
 
     // cout << "TP:" << tagpt << " " << probept << " " << alpha << endl;
     // ========================================
@@ -694,6 +785,14 @@ void analyse_PhotonJet(string input = "PHOTONHP",
           h->photon_HoverE->Fill((*phoHoverE)[leadPhotonIdx], evtwt);
           h->photon_sigmaIetaIeta->Fill((*phoSigmaIEtaIEta)[leadPhotonIdx],
                                         evtwt);
+
+          if (isMC && hasGenPhoton) {
+            if (h->genphoton_pt) h->genphoton_pt->Fill(genPhotonPt, evtwt);
+            if (h->genphoton_eta) h->genphoton_eta->Fill(genPhotonEta, evtwt);
+            if (h->genphoton_phi) h->genphoton_phi->Fill(genPhotonPhi, evtwt);
+            if (h->photonresponse && genPhotonPt > 0) h->photonresponse->Fill(genPhotonPt, photon_pt / genPhotonPt, evtwt);
+            if (h->photon_ptres && genPhotonPt > 0) h->photon_ptres->Fill((photon_pt - genPhotonPt) / genPhotonPt, evtwt);
+          }
 
           // Away-side jet properties
           h->awayside_jet_pt->Fill(jet_pt, evtwt);
