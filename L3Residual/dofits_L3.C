@@ -84,7 +84,10 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
                string runLabel = "2024ppRef",
                string lumiLabel = "pp Reference",
                bool plotRawResponses = false,
-               bool saveAlphaExtrap = false) {
+               bool saveAlphaExtrap = false,
+               int refAlphaBin = 5,
+               double fitAlphaMin = 0.15,
+               double fitAlphaMax = 0.35) {
 
   doClosure = closure;
   _run = runLabel;
@@ -118,6 +121,8 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
   cout << "L3 Residual Fitting" << endl;
   cout << "Input file: " << inFileL3Derived << endl;
   cout << "Photon+jet pT range: " << ptminG << " - " << ptmaxG << " GeV" << endl;
+  cout << "Reference alpha bin: " << refAlphaBin << endl;
+  cout << "Alpha fit range: " << fitAlphaMin << " - " << fitAlphaMax << endl;
   cout << "Closure test: " << (doClosure ? "YES" : "NO") << endl;
   cout << "============================================" << endl;
 
@@ -156,8 +161,17 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
   map<int, double> kFSR_vsPt;       // kFSR = p0 from linear fit at alpha->0
   map<int, double> kFSR_err_vsPt;   // error on p0
   
+  // Get reference alpha bin value
+  double refAlphaVal = balance3D_mc->GetZaxis()->GetBinLowEdge(refAlphaBin + 1);
+  cout << "Reference alpha cut: alpha < " << refAlphaVal << " (bin " << refAlphaBin << ")" << endl;
+  
   if (saveAlphaExtrap) {
+    cout << "\n=== kFSR Extraction: fitting normalized ratio vs alpha ===" << endl;
+    cout << "Normalized ratio = (MC/Data at α) / (MC/Data at ref α)" << endl;
+    cout << "Reference alpha bin " << refAlphaBin << " excluded from fit (=1 by construction)" << endl;
+    cout << "Fit range: " << fitAlphaMin << " < alpha < " << fitAlphaMax << endl;
     cout << "Saving alpha extrapolation histograms to " << alphaFolder << endl;
+    
     TAxis* zaxis = balance3D_mc->GetZaxis();
     int nAlphaBins = zaxis->GetNbins();
     std::vector<double> alphaEdges(nAlphaBins + 1);
@@ -167,13 +181,44 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     int ptColors[] = {kBlue, kRed, kGreen+2, kMagenta+2, kOrange+2, kCyan+2, kViolet+2, kTeal+2, kPink+2, kAzure+2};
     int nPtColors = sizeof(ptColors)/sizeof(ptColors[0]);
 
+    // First compute reference alpha bin MC/Data ratio (for normalization)
+    // Store reference ratio for each pT, eta bin
+    map<pair<int,int>, double> refRatio;     // (ptbin, etabin) -> MC/Data ratio at ref alpha
+    map<pair<int,int>, double> refRatioErr;  // error on ratio
+    
+    for (int ptbin = 1; ptbin <= nptbins; ++ptbin) {
+      for (int etabin = 1; etabin <= netabins; ++etabin) {
+        double mc_ref = balance3D_mc->GetBinContent(ptbin, etabin, refAlphaBin);
+        double emc_ref = balance3D_mc->GetBinError(ptbin, etabin, refAlphaBin);
+        double dt_ref = balance3D_data->GetBinContent(ptbin, etabin, refAlphaBin);
+        double edt_ref = balance3D_data->GetBinError(ptbin, etabin, refAlphaBin);
+        
+        if (dt_ref > 0 && mc_ref > 0) {
+          double ratio = mc_ref / dt_ref;
+          double relErr2 = 0.0;
+          if (mc_ref > 0 && emc_ref > 0) relErr2 += pow(emc_ref / mc_ref, 2);
+          if (dt_ref > 0 && edt_ref > 0) relErr2 += pow(edt_ref / dt_ref, 2);
+          refRatio[{ptbin, etabin}] = ratio;
+          refRatioErr[{ptbin, etabin}] = ratio * sqrt(relErr2);
+        } else {
+          refRatio[{ptbin, etabin}] = 1.0;
+          refRatioErr[{ptbin, etabin}] = 0.0;
+        }
+      }
+    }
+
     // First loop: per-pT, per-eta alpha fits (detailed)
     for (int ptbin = 1; ptbin <= nptbins; ++ptbin) {
       for (int etabin = 1; etabin <= netabins; ++etabin) {
         TH1D* hAlphaMc = new TH1D(Form("alpha_mc_pt%d_eta%d", ptbin, etabin), "MC balance vs #alpha;#alpha;Balance", nAlphaBins, alphaEdges.data());
         TH1D* hAlphaDt = new TH1D(Form("alpha_dt_pt%d_eta%d", ptbin, etabin), "Data balance vs #alpha;#alpha;Balance", nAlphaBins, alphaEdges.data());
         TH1D* hAlphaRatio = new TH1D(Form("alpha_ratio_pt%d_eta%d", ptbin, etabin), "Balance Ratio (MC/Data) vs #alpha;#alpha;Balance Ratio", nAlphaBins, alphaEdges.data());
+        TH1D* hAlphaRatioNorm = new TH1D(Form("alpha_ratio_norm_pt%d_eta%d", ptbin, etabin), 
+                                          "Normalized Ratio vs #alpha;#alpha;Normalized Ratio", nAlphaBins, alphaEdges.data());
 
+        double ref_ratio = refRatio[{ptbin, etabin}];
+        double ref_err = refRatioErr[{ptbin, etabin}];
+        
         int nValidBins = 0;
         for (int abin = 1; abin <= nAlphaBins; ++abin) {
           double mc = balance3D_mc->GetBinContent(ptbin, etabin, abin);
@@ -193,7 +238,17 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
             if (dt > 0 && edt > 0) relErr2 += pow(edt / dt, 2);
             hAlphaRatio->SetBinContent(abin, ratio);
             hAlphaRatio->SetBinError(abin, ratio * sqrt(relErr2));
-            nValidBins++;
+            
+            // Normalized ratio = ratio / ref_ratio
+            if (ref_ratio > 0) {
+              double norm_ratio = ratio / ref_ratio;
+              double norm_err = norm_ratio * sqrt(relErr2 + pow(ref_err/ref_ratio, 2));
+              hAlphaRatioNorm->SetBinContent(abin, norm_ratio);
+              hAlphaRatioNorm->SetBinError(abin, norm_err);
+              
+              // Don't count reference bin for fit
+              if (abin != refAlphaBin) nValidBins++;
+            }
           }
         }
 
@@ -203,29 +258,52 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         double etaBinLo = balance3D_mc->GetYaxis()->GetBinLowEdge(etabin);
         double etaBinHi = balance3D_mc->GetYaxis()->GetBinLowEdge(etabin+1);
 
-        // Fit ratio vs alpha with linear function to extrapolate to alpha->0
-        // Use fit range that excludes potentially empty low-alpha bins
-        double fitMin = 0.1;  // Start from alpha > 0.1 to avoid empty bins
-        double fitMax = 0.35; // End before high-alpha bins which may have different behavior
-        TF1* fAlpha = new TF1(Form("fAlpha_pt%d_eta%d", ptbin, etabin), "[0]+[1]*x", fitMin, fitMax);
+        // Fit NORMALIZED ratio vs alpha with linear function to extrapolate to alpha->0
+        // Exclude reference bin from fit (it's 1 by construction)
+        TF1* fAlpha = new TF1(Form("fAlpha_pt%d_eta%d", ptbin, etabin), "[0]+[1]*x", fitAlphaMin, fitAlphaMax);
         fAlpha->SetParameters(1.0, 0.0);
         
-        // Only fit if we have enough valid bins
-        if (nValidBins >= 3) {
-          hAlphaRatio->Fit(fAlpha, "QNR");
+        // Create TGraph excluding reference bin for fitting
+        std::vector<double> x_fit, y_fit, ex_fit, ey_fit;
+        for (int abin = 1; abin <= nAlphaBins; ++abin) {
+          if (abin == refAlphaBin) continue; // Skip reference bin
+          double alpha_center = zaxis->GetBinCenter(abin);
+          double val = hAlphaRatioNorm->GetBinContent(abin);
+          double err = hAlphaRatioNorm->GetBinError(abin);
+          if (val > 0 && err > 0 && alpha_center >= fitAlphaMin && alpha_center <= fitAlphaMax) {
+            x_fit.push_back(alpha_center);
+            y_fit.push_back(val);
+            ex_fit.push_back(0.0);
+            ey_fit.push_back(err);
+          }
+        }
+        
+        TGraphErrors* gFit = nullptr;
+        if (x_fit.size() >= 2) {
+          gFit = new TGraphErrors(x_fit.size(), x_fit.data(), y_fit.data(), ex_fit.data(), ey_fit.data());
+          gFit->Fit(fAlpha, "QNR");
         }
 
         TCanvas* cAlpha = new TCanvas(Form("cAlpha_pt%.0fto%.0f_eta%.3fto%.3f", ptBinLo, ptBinHi, etaBinLo, etaBinHi), 
                                        Form("cAlpha_pt%.0fto%.0f_eta%.3fto%.3f", ptBinLo, ptBinHi, etaBinLo, etaBinHi), 800, 600);
         cAlpha->cd();
-        hAlphaRatio->SetMinimum(0.7);
-        hAlphaRatio->SetMaximum(1.5);
-        hAlphaRatio->SetMarkerStyle(kFullCircle);
-        hAlphaRatio->SetMarkerColor(kBlue);
-        hAlphaRatio->SetLineColor(kBlue);
-        hAlphaRatio->GetXaxis()->SetTitle("#alpha");
-        hAlphaRatio->GetYaxis()->SetTitle("Balance Ratio (MC/Data)");
-        hAlphaRatio->Draw("PE1");
+        hAlphaRatioNorm->SetMinimum(0.85);
+        hAlphaRatioNorm->SetMaximum(1.15);
+        hAlphaRatioNorm->SetMarkerStyle(kFullCircle);
+        hAlphaRatioNorm->SetMarkerColor(kBlue);
+        hAlphaRatioNorm->SetLineColor(kBlue);
+        hAlphaRatioNorm->GetXaxis()->SetTitle("#alpha");
+        hAlphaRatioNorm->GetYaxis()->SetTitle("Normalized Ratio (/ ref #alpha)");
+        hAlphaRatioNorm->Draw("PE1");
+        
+        // Mark reference bin differently
+        TH1D* hRefPoint = new TH1D(Form("hRefPoint_pt%d_eta%d", ptbin, etabin), "", nAlphaBins, alphaEdges.data());
+        hRefPoint->SetBinContent(refAlphaBin, hAlphaRatioNorm->GetBinContent(refAlphaBin));
+        hRefPoint->SetBinError(refAlphaBin, hAlphaRatioNorm->GetBinError(refAlphaBin));
+        hRefPoint->SetMarkerStyle(kOpenCircle);
+        hRefPoint->SetMarkerColor(kGray+1);
+        hRefPoint->SetLineColor(kGray+1);
+        hRefPoint->Draw("PE1 SAME");
         
         fAlpha->SetLineColor(kRed);
         fAlpha->SetLineWidth(2);
@@ -243,8 +321,9 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         legAlpha->SetFillStyle(0);
         legAlpha->SetTextFont(42);
         legAlpha->SetTextSize(0.030);
-        legAlpha->AddEntry(hAlphaRatio, "Balance Ratio vs #alpha", "PLE");
-        legAlpha->AddEntry(fAlpha, Form("Linear fit (%.2f < #alpha < %.2f)", fitMin, fitMax), "L");
+        legAlpha->AddEntry(hAlphaRatioNorm, "Normalized Ratio vs #alpha", "PLE");
+        legAlpha->AddEntry(hRefPoint, Form("Reference (#alpha < %.2f, excluded)", refAlphaVal), "PLE");
+        legAlpha->AddEntry(fAlpha, Form("Linear fit (%.2f < #alpha < %.2f)", fitAlphaMin, fitAlphaMax), "L");
         legAlpha->Draw();
         
         // Labels following dofits.C style
@@ -266,6 +345,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         hAlphaMc->Write();
         hAlphaDt->Write();
         hAlphaRatio->Write();
+        hAlphaRatioNorm->Write();
         fAlpha->Write();
 
         delete lineRef;
@@ -275,27 +355,68 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         delete hAlphaMc;
         delete hAlphaDt;
         delete hAlphaRatio;
+        delete hAlphaRatioNorm;
+        delete hRefPoint;
+        if (gFit) delete gFit;
         delete fAlpha;
       }
     }
     
-    // Second loop: kFSR extraction per pT bin (collapsed over eta)
+    // Second loop: kFSR extraction per pT bin (collapsed over eta) with multi-pT fit
     // This creates the plot of extrapolated alpha->0 value vs photon pT
     cout << "\n=== Extracting kFSR vs photon pT (alpha->0 extrapolation) ===" << endl;
+    cout << "Multi-pT fit: fitting all pT bins simultaneously" << endl;
     
     // Create histogram for kFSR vs pT
     std::vector<double> ptEdges(nptbins + 1);
     for (int b = 1; b <= nptbins + 1; ++b) ptEdges[b-1] = balance3D_mc->GetXaxis()->GetBinLowEdge(b);
     
-    TH1D* hkFSR = new TH1D("kFSR_vsPt", "k_{FSR} (Balance Ratio extrapolated to #alpha#rightarrow0) vs p_{T}^{#gamma};p_{T}^{#gamma} (GeV);k_{FSR}", 
+    TH1D* hkFSR = new TH1D("kFSR_vsPt", "k_{FSR} (Normalized Ratio extrapolated to #alpha#rightarrow0) vs p_{T}^{#gamma};p_{T}^{#gamma} (GeV);k_{FSR}", 
                            nptbins, ptEdges.data());
     
-    // Also create overlay plot with all pT bins on same canvas
-    TCanvas* cAlphaOverlay = new TCanvas("cAlphaOverlay", "Balance Ratio vs alpha (all pT bins)", 900, 700);
+    // Reference ratio collapsed over eta (per pT bin)
+    map<int, double> refRatioCollapsed;
+    map<int, double> refRatioCollapsedErr;
+    
+    for (int ptbin = 1; ptbin <= nptbins; ++ptbin) {
+      double sum_mc = 0., entries_mc = 0.;
+      double sum_dt = 0., entries_dt = 0.;
+      
+      for (int etabin = 1; etabin <= netabins; ++etabin) {
+        double mc = balance3D_mc->GetBinContent(ptbin, etabin, refAlphaBin);
+        double ent_mc = balance3D_mc->GetBinEntries(balance3D_mc->GetBin(ptbin, etabin, refAlphaBin));
+        double dt = balance3D_data->GetBinContent(ptbin, etabin, refAlphaBin);
+        double ent_dt = balance3D_data->GetBinEntries(balance3D_data->GetBin(ptbin, etabin, refAlphaBin));
+        
+        if (mc > 0 && ent_mc > 0 && !TMath::IsNaN(mc)) {
+          sum_mc += mc * ent_mc;
+          entries_mc += ent_mc;
+        }
+        if (dt > 0 && ent_dt > 0 && !TMath::IsNaN(dt)) {
+          sum_dt += dt * ent_dt;
+          entries_dt += ent_dt;
+        }
+      }
+      
+      if (entries_mc > 0 && entries_dt > 0) {
+        double mc_avg = sum_mc / entries_mc;
+        double dt_avg = sum_dt / entries_dt;
+        refRatioCollapsed[ptbin] = mc_avg / dt_avg;
+        double err_mc = mc_avg / sqrt(entries_mc);
+        double err_dt = dt_avg / sqrt(entries_dt);
+        refRatioCollapsedErr[ptbin] = refRatioCollapsed[ptbin] * sqrt(pow(err_mc/mc_avg, 2) + pow(err_dt/dt_avg, 2));
+      } else {
+        refRatioCollapsed[ptbin] = 1.0;
+        refRatioCollapsedErr[ptbin] = 0.0;
+      }
+    }
+    
+    // Create overlay plot with all pT bins on same canvas
+    TCanvas* cAlphaOverlay = new TCanvas("cAlphaOverlay", "Normalized Ratio vs alpha (all pT bins)", 900, 700);
     cAlphaOverlay->cd();
-    TH1D* hFrameAlpha = new TH1D("hFrameAlpha", ";#alpha;Balance Ratio (MC/Data)", 100, 0, 0.5);
-    hFrameAlpha->SetMinimum(0.7);
-    hFrameAlpha->SetMaximum(1.5);
+    TH1D* hFrameAlpha = new TH1D("hFrameAlpha", ";#alpha;Normalized Ratio (/ ref #alpha)", 100, 0, 0.5);
+    hFrameAlpha->SetMinimum(0.85);
+    hFrameAlpha->SetMaximum(1.15);
     hFrameAlpha->Draw();
     TLine* lineRefOverlay = new TLine(0, 1.0, 0.5, 1.0);
     lineRefOverlay->SetLineStyle(kDashed);
@@ -308,15 +429,25 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     legOverlay->SetTextFont(42);
     legOverlay->SetTextSize(0.025);
     
+    // Multi-graph for combined fit
+    TMultiGraph* mgMultiFit = new TMultiGraph("mgMultiFit", "Multi-pT fit");
+    
+    // Store histograms for each pT bin
+    map<int, TH1D*> hAlphaRatioNormCol;
+    map<int, TGraphErrors*> gFitCol;
+    
     for (int ptbin = 1; ptbin <= nptbins; ++ptbin) {
       double ptBinLo = balance3D_mc->GetXaxis()->GetBinLowEdge(ptbin);
       double ptBinHi = balance3D_mc->GetXaxis()->GetBinLowEdge(ptbin+1);
       double ptCenter = balance3D_mc->GetXaxis()->GetBinCenter(ptbin);
       
-      // Create ratio histogram collapsed over eta
-      TH1D* hAlphaRatioCol = new TH1D(Form("alpha_ratio_pt%d_collapsed", ptbin), 
-                                       Form("Balance Ratio vs #alpha (%.0f-%.0f GeV)", ptBinLo, ptBinHi),
+      // Create normalized ratio histogram collapsed over eta
+      TH1D* hAlphaRatioCol = new TH1D(Form("alpha_ratio_norm_pt%d_collapsed", ptbin), 
+                                       Form("Normalized Ratio vs #alpha (%.0f-%.0f GeV)", ptBinLo, ptBinHi),
                                        nAlphaBins, alphaEdges.data());
+      
+      double ref_ratio_col = refRatioCollapsed[ptbin];
+      double ref_err_col = refRatioCollapsedErr[ptbin];
       
       for (int abin = 1; abin <= nAlphaBins; ++abin) {
         double sum_mc = 0., entries_mc = 0.;
@@ -338,7 +469,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
           }
         }
         
-        if (entries_mc > 0 && entries_dt > 0) {
+        if (entries_mc > 0 && entries_dt > 0 && ref_ratio_col > 0) {
           double mc_avg = sum_mc / entries_mc;
           double dt_avg = sum_dt / entries_dt;
           double ratio = mc_avg / dt_avg;
@@ -346,17 +477,76 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
           double err_dt = dt_avg / sqrt(entries_dt);
           double rel_err = sqrt(pow(err_mc/mc_avg, 2) + pow(err_dt/dt_avg, 2));
           
-          hAlphaRatioCol->SetBinContent(abin, ratio);
-          hAlphaRatioCol->SetBinError(abin, ratio * rel_err);
+          // Normalize to reference
+          double norm_ratio = ratio / ref_ratio_col;
+          double norm_err = norm_ratio * sqrt(pow(rel_err, 2) + pow(ref_err_col/ref_ratio_col, 2));
+          
+          hAlphaRatioCol->SetBinContent(abin, norm_ratio);
+          hAlphaRatioCol->SetBinError(abin, norm_err);
         }
       }
       
-      // Fit to extract kFSR (alpha -> 0 extrapolation)
-      double fitMin = 0.1;
-      double fitMax = 0.35;
-      TF1* fAlphaCol = new TF1(Form("fAlpha_pt%d_col", ptbin), "[0]+[1]*x", fitMin, fitMax);
+      hAlphaRatioNormCol[ptbin] = hAlphaRatioCol;
+      
+      // Create TGraph for fitting (exclude reference bin)
+      std::vector<double> x_fit, y_fit, ex_fit, ey_fit;
+      for (int abin = 1; abin <= nAlphaBins; ++abin) {
+        if (abin == refAlphaBin) continue; // Skip reference bin
+        double alpha_center = zaxis->GetBinCenter(abin);
+        double val = hAlphaRatioCol->GetBinContent(abin);
+        double err = hAlphaRatioCol->GetBinError(abin);
+        if (val > 0 && err > 0 && alpha_center >= fitAlphaMin && alpha_center <= fitAlphaMax) {
+          x_fit.push_back(alpha_center);
+          y_fit.push_back(val);
+          ex_fit.push_back(0.0);
+          ey_fit.push_back(err);
+        }
+      }
+      
+      if (x_fit.size() >= 2) {
+        TGraphErrors* gFit = new TGraphErrors(x_fit.size(), x_fit.data(), y_fit.data(), ex_fit.data(), ey_fit.data());
+        gFit->SetName(Form("gFit_pt%d", ptbin));
+        int colorIdx = (ptbin - 1) % nPtColors;
+        gFit->SetMarkerStyle(kFullCircle);
+        gFit->SetMarkerColor(ptColors[colorIdx]);
+        gFit->SetLineColor(ptColors[colorIdx]);
+        gFitCol[ptbin] = gFit;
+        mgMultiFit->Add(gFit, "P");
+      }
+      
+      // Add to overlay plot
+      int colorIdx = (ptbin - 1) % nPtColors;
+      hAlphaRatioCol->SetMarkerStyle(kFullCircle);
+      hAlphaRatioCol->SetMarkerColor(ptColors[colorIdx]);
+      hAlphaRatioCol->SetLineColor(ptColors[colorIdx]);
+      hAlphaRatioCol->Draw("PE1 SAME");
+    }
+    
+    // Multi-pT fit: single linear fit to all pT bins combined
+    TF1* fMulti = new TF1("fMulti", "[0]+[1]*x", fitAlphaMin, fitAlphaMax);
+    fMulti->SetParameters(1.0, 0.0);
+    mgMultiFit->Fit(fMulti, "QR");
+    
+    double kfsr_combined = fMulti->GetParameter(0);
+    double kfsr_combined_err = fMulti->GetParError(0);
+    cout << "Combined multi-pT fit: kFSR = " << kfsr_combined << " +/- " << kfsr_combined_err << endl;
+    cout << "  Chi2/ndf = " << fMulti->GetChisquare() << "/" << fMulti->GetNDF() << endl;
+    
+    // Draw combined fit on overlay
+    fMulti->SetLineColor(kBlack);
+    fMulti->SetLineWidth(2);
+    fMulti->Draw("SAME");
+    
+    // Also do individual fits per pT bin for kFSR vs pT plot
+    for (int ptbin = 1; ptbin <= nptbins; ++ptbin) {
+      double ptBinLo = balance3D_mc->GetXaxis()->GetBinLowEdge(ptbin);
+      double ptBinHi = balance3D_mc->GetXaxis()->GetBinLowEdge(ptbin+1);
+      
+      if (gFitCol.find(ptbin) == gFitCol.end()) continue;
+      
+      TF1* fAlphaCol = new TF1(Form("fAlpha_pt%d_col", ptbin), "[0]+[1]*x", fitAlphaMin, fitAlphaMax);
       fAlphaCol->SetParameters(1.0, 0.0);
-      hAlphaRatioCol->Fit(fAlphaCol, "QNR");
+      gFitCol[ptbin]->Fit(fAlphaCol, "QNR");
       
       // Store kFSR value (p0 = value at alpha=0)
       double kfsr = fAlphaCol->GetParameter(0);
@@ -369,31 +559,38 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       
       cout << "  pT [" << ptBinLo << "-" << ptBinHi << "]: kFSR = " << kfsr << " +/- " << kfsr_err << endl;
       
-      // Add to overlay plot
       int colorIdx = (ptbin - 1) % nPtColors;
-      hAlphaRatioCol->SetMarkerStyle(kFullCircle);
-      hAlphaRatioCol->SetMarkerColor(ptColors[colorIdx]);
-      hAlphaRatioCol->SetLineColor(ptColors[colorIdx]);
-      hAlphaRatioCol->Draw("PE1 SAME");
-      
-      fAlphaCol->SetLineColor(ptColors[colorIdx]);
-      fAlphaCol->SetLineWidth(2);
-      fAlphaCol->Draw("SAME");
-      
-      legOverlay->AddEntry(hAlphaRatioCol, Form("%.0f-%.0f GeV (k_{FSR}=%.3f)", ptBinLo, ptBinHi, kfsr), "PLE");
+      legOverlay->AddEntry(hAlphaRatioNormCol[ptbin], Form("%.0f-%.0f GeV (k_{FSR}=%.3f)", ptBinLo, ptBinHi, kfsr), "PLE");
       
       outfile->cd();
-      hAlphaRatioCol->Write();
+      hAlphaRatioNormCol[ptbin]->Write();
       fAlphaCol->Write();
+      delete fAlphaCol;
     }
     
+    legOverlay->AddEntry(fMulti, Form("Combined fit (k_{FSR}=%.4f)", kfsr_combined), "L");
     legOverlay->Draw();
+    
+    TLatex* texOverlay = new TLatex();
+    texOverlay->SetNDC();
+    texOverlay->SetTextFont(42);
+    texOverlay->SetTextSize(0.030);
+    texOverlay->DrawLatex(0.18, 0.85, Form("Ref #alpha < %.2f (bin %d, excluded)", refAlphaVal, refAlphaBin));
+    texOverlay->DrawLatex(0.18, 0.80, Form("Fit: %.2f < #alpha < %.2f", fitAlphaMin, fitAlphaMax));
+    texOverlay->DrawLatex(0.18, 0.75, Form("#chi^{2}/ndf = %.1f/%d", fMulti->GetChisquare(), fMulti->GetNDF()));
+    
     CMS_lumi(cAlphaOverlay, 0, 0);
     cAlphaOverlay->SaveAs(Form("%s/L3Res_%s_alpha_overlay.png", alphaFolder.c_str(), _run.c_str()));
+    
+    outfile->cd();
+    mgMultiFit->Write();
+    fMulti->Write();
+    
     delete cAlphaOverlay;
     delete hFrameAlpha;
     delete lineRefOverlay;
     delete legOverlay;
+    delete texOverlay;
     
     // Create kFSR vs pT plot with fit
     cout << "\n=== Fitting kFSR vs photon pT ===" << endl;
@@ -402,9 +599,9 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     ckFSR->SetLogx();
     ckFSR->cd();
     
-    TH1D* hFramekFSR = new TH1D("hFramekFSR", ";p_{T}^{#gamma} (GeV);k_{FSR} (Balance Ratio at #alpha#rightarrow0)", 100, 20, 600);
-    hFramekFSR->SetMinimum(0.7);
-    hFramekFSR->SetMaximum(1.5);
+    TH1D* hFramekFSR = new TH1D("hFramekFSR", ";p_{T}^{#gamma} (GeV);k_{FSR} (Normalized Ratio at #alpha#rightarrow0)", 100, 20, 600);
+    hFramekFSR->SetMinimum(0.95);
+    hFramekFSR->SetMaximum(1.05);
     hFramekFSR->Draw();
     
     TLine* linekFSR = new TLine(20, 1.0, 600, 1.0);
@@ -458,6 +655,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     texkFSR->SetNDC();
     texkFSR->SetTextFont(42);
     texkFSR->SetTextSize(0.035);
+    texkFSR->DrawLatex(0.18, 0.30, Form("Ref #alpha < %.2f (bin %d)", refAlphaVal, refAlphaBin));
     texkFSR->DrawLatex(0.18, 0.25, Form("#chi^{2}/ndf (const) = %.1f/%d", fkFSR_const->GetChisquare(), fkFSR_const->GetNDF()));
     texkFSR->DrawLatex(0.18, 0.20, Form("#chi^{2}/ndf (log) = %.1f/%d", fkFSR_log->GetChisquare(), fkFSR_log->GetNDF()));
     texkFSR->DrawLatex(0.18, 0.15, Form("#chi^{2}/ndf (1/p_{T}) = %.1f/%d", fkFSR_invpt->GetChisquare(), fkFSR_invpt->GetNDF()));

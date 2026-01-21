@@ -262,6 +262,10 @@ void deriveL3_from_photonjet(
   map<int, TH1D*> balance_vsphotonpt_data;
   map<int, TH1D*> ratio_vsphotonpt;
 
+  // Reference alpha bin MC/Data ratio (for normalization to extract kFSR)
+  // Will be filled first, then used to normalize other alpha bins
+  TH1D* ratio_ref = nullptr;
+  
   for (int alphaCutBin = 1; alphaCutBin <= nAlphaBins; ++alphaCutBin) {
     // Cumulative alpha cut: alpha < upper edge of this bin
     float alpha_cut = mc3d[etabins[i].c_str()]->GetZaxis()->GetBinLowEdge(alphaCutBin+1);
@@ -352,6 +356,52 @@ void deriveL3_from_photonjet(
 
     ratio_vsphotonpt[alphaCutBin] = h_ratio;
     h_ratio->Write();
+    
+    // Store the reference alpha bin ratio for normalization
+    if (alphaCutBin == alphabin) {
+      ratio_ref = (TH1D*)h_ratio->Clone("ratio_ref_vsphotonpt");
+      ratio_ref->Write();
+    }
+  }
+  
+  // Second pass: create normalized ratios (divide by reference alpha bin)
+  // This is for kFSR extraction: normalized_ratio = (MC/Data at α) / (MC/Data at ref α)
+  if (ratio_ref) {
+    cout << "\n===== Creating normalized ratios for kFSR extraction =====" << endl;
+    cout << "Reference alpha bin: " << alphabin << " (alpha < " << alphaCutValue << ")" << endl;
+    
+    for (int alphaCutBin = 1; alphaCutBin <= nAlphaBins; ++alphaCutBin) {
+      float alpha_cut = mc3d[etabins[i].c_str()]->GetZaxis()->GetBinLowEdge(alphaCutBin+1);
+      
+      TH1D* h_ratio_norm = (TH1D*)ratio_vsphotonpt[alphaCutBin]->Clone(
+          Form("ratio_norm_vsphotonpt_alpha%d", alphaCutBin));
+      h_ratio_norm->SetTitle(Form("Normalized Ratio vs Photon pT (#alpha < %.2f / ref #alpha < %.2f)", 
+                                   alpha_cut, alphaCutValue));
+      
+      // Divide by reference
+      for (int bin = 1; bin <= h_ratio_norm->GetXaxis()->GetNbins(); ++bin) {
+        double val = h_ratio_norm->GetBinContent(bin);
+        double err = h_ratio_norm->GetBinError(bin);
+        double ref_val = ratio_ref->GetBinContent(bin);
+        double ref_err = ratio_ref->GetBinError(bin);
+        
+        if (ref_val > 0 && val > 0) {
+          double norm_val = val / ref_val;
+          double rel_err = sqrt(pow(err/val, 2) + pow(ref_err/ref_val, 2));
+          h_ratio_norm->SetBinContent(bin, norm_val);
+          h_ratio_norm->SetBinError(bin, norm_val * rel_err);
+        } else {
+          h_ratio_norm->SetBinContent(bin, 0);
+          h_ratio_norm->SetBinError(bin, 0);
+        }
+      }
+      
+      h_ratio_norm->Write();
+      
+      if (alphaCutBin == alphabin) {
+        cout << "  Alpha bin " << alphaCutBin << " (reference): all values should be 1.0" << endl;
+      }
+    }
   }
 
   ///////////////// Balance vs Leading Jet pT (derived from balance = jet_pT/photon_pT)
