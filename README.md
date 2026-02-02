@@ -52,6 +52,15 @@ python3 batch/submit_condor.py \
     --analysis PhotonJet
 ```
 
+For full batch processing of MC and data (to be updated with forest after EGM corrections):
+
+```
+python3 submit_condor.py --era PHOTONMC --input /eos/cms/store/group/phys_heavyions/bharikri/Forest/GammaJetSubstructure/2024_PP_MC/2026_01_18_Pythia8_2024_ppRef_QCDPhoton/ --input-type directory --output-dir /eos/cms/store/group/phys_heavyions/bharikri/JetMinPOG/L3ResPhotonJet/PhotonMCbatch/ --output-tag 2026_02_02_QCDPhoton_balance_dist --files-per-job 1 --analysis PhotonJet --jet-id --jet-tree "ak4PFJetAnalyzerSDZcut1/t" --mc
+
+python3 submit_condor.py --era PHOTONHP --input /eos/home-b/bharikri/lxplus_private/EGamma/residualanalysis/batch/input/filelist_forests_2024p
+pRef_HP_ALL.txt --input-type filelist --output-dir /eos/cms/store/group/phys_heavyions/bharikri/JetMinPOG/L3ResPhotonJet/HPbatch/ --output-tag 2026_02_02_PHOTONHP_balance_dist --files-per-job 20 --analysis PhotonJet --jet-id
+```
+
 ## Analysis Scripts
 
 | Script | Purpose | Output |

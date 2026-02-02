@@ -296,6 +296,29 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
       photonjet_balance3Dabseta_counts = new TH3D("photonjet_balance3Dabseta_counts", "Entries vs p_{T,avg}, |#eta_{jet}|, #alpha", nptforjec, &ptforjec[0], nwabsetas, &wabsetarange[0], nalphavalues, &alphavalues[0]);
       photonjet_balance3Dabsetawide_counts = new TH3D("photonjet_balance3Dabsetawide_counts", "Entries (wide |#eta| bins)", nptforjec, &ptforjec[0], ndwabsetas, &dwabsetarange[0], nalphavalues, &alphavalues[0]);
       photonjet_balance3Dabsetanarrow_counts = new TH3D("photonjet_balance3Dabsetanarrow_counts", "Entries (narrow |#eta| bins)", nptforjec, &ptforjec[0], nabsetas, &absetarange[0], nalphavalues, &alphavalues[0]);
+      
+      // Balance distribution: (photon_pT, alpha, balance_value)
+      // Match the standard binning used elsewhere (histograms.h):
+      //   X: ptforjec (variable bins)
+      //   Y: alphavalues (variable bins)
+      //   Z: balance (50 uniform bins from 0 to 2)
+      // NOTE: In this ROOT build, TH3D does not provide a constructor for
+      //       (variable x bins, variable y bins, uniform z range). We therefore
+      //       pass an explicit z-edge array with uniform spacing (0..2).
+      static double balanceEdges[51];
+      static bool balanceEdgesInit = false;
+      if (!balanceEdgesInit) {
+        for (int i = 0; i <= 50; ++i) {
+          balanceEdges[i] = 0.0 + (2.0 / 50.0) * i;
+        }
+        balanceEdgesInit = true;
+      }
+
+      photonjet_balance_dist = new TH3D("photonjet_balance_dist",
+                                         "Balance distribution;p_{T}^{#gamma} (GeV);#alpha;p_{T}^{jet}/p_{T}^{#gamma}",
+                                         nptforjec, &ptforjec[0],
+                                         nalphavalues, &alphavalues[0],
+                                         50, balanceEdges);
     }
   }
 }

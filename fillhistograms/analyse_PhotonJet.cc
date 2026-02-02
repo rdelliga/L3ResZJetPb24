@@ -363,6 +363,8 @@ void analyse_PhotonJet(string input = "PHOTONHP",
     photonTree->SetBranchAddress("pho_genMatchedIndex", &pho_genMatchedIndex);
   }
 
+  //TODO: Add electron veto for photons
+
   auto pthatWeights = LoadPthatWeights("jecfiles/2024_PP_private_test_weights.txt");
   std::vector<float> pthatBins;
   for (const auto& kv : pthatWeights) pthatBins.push_back(kv.first);
@@ -599,7 +601,7 @@ void analyse_PhotonJet(string input = "PHOTONHP",
     for (int ipho = 0; ipho < nPho; ipho++) {
       int currentGenIdx = -1;
       // Kinematic cuts
-      if ((*phoEt)[ipho] < 50.0)
+      if ((*phoEt)[ipho] < 60.0)
         continue; // Trigger threshold
       if (abs((*phoEta)[ipho]) > 1.3)
         continue; // Barrel only
@@ -638,12 +640,12 @@ void analyse_PhotonJet(string input = "PHOTONHP",
       continue;
 
     // Photon ID cuts
-    if ((*phoHoverE)[leadPhotonIdx] > 0.2)
+    if ((*phoHoverE)[leadPhotonIdx] > 0.129991)
       continue;
-    if ((*phoSigmaIEtaIEta)[leadPhotonIdx] > 0.021)
+    if ((*phoSigmaIEtaIEta)[leadPhotonIdx] > 0.0114521)
       continue;
 
-    if ((*pfcIso3subUEec)[leadPhotonIdx] > 2.0)
+    if ((*pfcIso3subUEec)[leadPhotonIdx] > 1.88518)
       continue;
     if ((*pfnIso3subUEec)[leadPhotonIdx] > 2.0)
       continue;
@@ -670,7 +672,7 @@ void analyse_PhotonJet(string input = "PHOTONHP",
         dphi = 2 * TMath::Pi() - dphi;
 
       // Back-to-back requirement
-      if (dphi < 2.0943951)
+      if (dphi < 2.7488935)
         continue; // 2*pi/3 = 2.0943951
 
       // Calculate delta-R (reject jets close to photon)
@@ -746,9 +748,9 @@ void analyse_PhotonJet(string input = "PHOTONHP",
     if (applyjetvetomap && vetomap) {
       bool passVetoMap = true;
       
-      // Check photon position
-      int pho_bin = vetomap->FindBin(photon_eta, photon_phi);
-      if (vetomap->GetBinContent(pho_bin) > 0) passVetoMap = false;
+      // Check photon position - Not required for photon since the vetomap is mostly due to pixel failures
+      // int pho_bin = vetomap->FindBin(photon_eta, photon_phi);
+      // if (vetomap->GetBinContent(pho_bin) > 0) passVetoMap = false;
       
       // Check leading away-side jet (probe)
       if (passVetoMap) {
@@ -872,6 +874,10 @@ void analyse_PhotonJet(string input = "PHOTONHP",
                 if (h->photonjet_balance3Dabseta_counts) h->photonjet_balance3Dabseta_counts->Fill(ptavgtp, abs(jet_eta), alphaFillValue);
                 if (h->photonjet_balance3Dabsetawide_counts) h->photonjet_balance3Dabsetawide_counts->Fill(ptavgtp, abs(jet_eta), alphaFillValue);
                 if (h->photonjet_balance3Dabsetanarrow_counts) h->photonjet_balance3Dabsetanarrow_counts->Fill(ptavgtp, abs(jet_eta), alphaFillValue);
+                
+                // Fill balance distribution (photon_pT, alpha, balance_value)
+                // Fill with weight for each cumulative alpha cut
+                if (h->photonjet_balance_dist) h->photonjet_balance_dist->Fill(ptavgtp, alphaFillValue, balance, evtwt);
               }
             }
           }

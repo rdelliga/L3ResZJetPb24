@@ -4,7 +4,39 @@ This directory contains scripts for deriving and fitting L3 residual corrections
 
 ## Workflow Overview
 
-The L3 residual correction workflow consists of two main steps:
+The L3 residual correction workflow consists of these main steps:
+
+### Step 0: Plot Balance Distributions and Kinematics
+**Script:** `plotresponse_L3.C`
+
+This script reads the photon+jet analysis output directly and creates diagnostic plots of balance distributions and kinematic variables using TDR style.
+
+**Usage:**
+```cpp
+root -l -b -q 'plotresponse_L3.C("PHOTONHP_AK4_photonjet.root", "Data")'
+root -l -b -q 'plotresponse_L3.C("PHOTONMC_AK4_photonjet.root", "MC", "2024ppRef", "pp Reference", true)'
+```
+
+```cpp
+root -l -b -q 'plotresponse_L3.C("/eos/cms/store/group/phys_heavyions/bharikri/JetMinPOG/L3ResPhotonJet/2026_02_02_PHOTONHP_balance_distroot","2026_02_02_balance_dist_comparison",true,"/eos/cms/store/group/phys_heavyions/bharikri/JetMinPOG/L3ResPhotonJet/2026_02_02_QCDPhoton_balance_dist.root")'
+```
+
+**Parameters:**
+- `inputFile`: Path to analyse_PhotonJet.cc output ROOT file
+- `tag`: Label for output (e.g., "Data", "MC") 
+- `runLabel`: Run label for CMS lumi text (default: "2024ppRef")
+- `lumiLabel`: Luminosity label (default: "pp Reference")
+- `isMC`: Is this MC sample (default: false)
+
+**Output:** Creates `L3plots_{tag}/` directory with:
+- `kinematics/`: Photon pT, eta, phi; Jet pT, eta, phi; Δφ, α, pT,avg distributions
+- `balance_dist/`: Balance distributions for various pT and α bins
+- `balance_dist/balance_map_{tag}.pdf`: 2D map of mean balance vs (pT, α)
+- `balance_dist/balance_dist_pt*.pdf`: Balance distributions with Gaussian fits
+- `balance_dist/balance_resolution_{tag}.pdf`: Balance RMS vs pT for different α cuts
+- `balance_dist/balance_mean_{tag}.pdf`: Mean balance vs pT for different α cuts
+
+**Note:** This uses the new `photonjet_balance_dist` (TH3D) histogram which stores full balance distributions (photon_pT, α, balance_value) without eta binning. To use this, you must reprocess your data with the updated `analyse_PhotonJet.cc`.
 
 ### Step 1: Derive L3 Residuals from 3D Balance Profiles
 **Script:** `deriveL3_from_photonjet.C`
@@ -62,16 +94,21 @@ root -l -b -q 'dofits_L3.C("L3_derived.root", 0.15, 0.35, "L3kfactor_photonjet",
 ```bash
 cd /path/to/L3Residual/
 
-# Generate input files with analyse_PhotonJet.cc
-# (assumes PHOTONHP_output_tag.root and PHOTONMC_output_tag.root exist)
+# Generate input files with analyse_PhotonJet.cc (see ../fillhistograms/)
+# (assumes PHOTONHP_AK4_photonjet.root and PHOTONMC_AK4_photonjet.root exist)
 
-# Step 1: Derive L3 residuals
-root -l -b -q 'deriveL3_from_photonjet.C("../PHOTONMC_output_tag.root", "../PHOTONHP_output_tag.root", "L3_derived.root", true, 5, true, false)'
+# Step 0 (Optional): Plot balance distributions and kinematics for quality checks
+root -l -b -q 'plotresponse_L3.C("../PHOTONHP_AK4_photonjet.root", "HP_Data")'
+root -l -b -q 'plotresponse_L3.C("../PHOTONMC_AK4_photonjet.root", "QCD_MC", "2024ppRef", "pp Reference", true)'
+
+# Step 1: Derive L3 residuals from balance profiles
+root -l -b -q 'deriveL3_from_photonjet.C("../PHOTONMC_AK4_photonjet.root", "../PHOTONHP_AK4_photonjet.root", "L3_derived.root", true, 5, true, false)'
 
 # Step 2: Fit and extract correction factors
-root -l -b -q 'dofits_L3.C("L3_derived.root", 30, 100, "L3kfactor_photonjet", true)'
+root -l -b -q 'dofits_L3.C("L3_derived.root", 30, 100, "L3Res_photonjet", false)'
 
-# Results are in L3fits/ directory
+# Results are in L3fits_L3Res_photonjet/ directory
+# Diagnostic plots are in L3plots_HP_Data/ and L3plots_QCD_MC/
 ```
 
 ## Key Differences from L2 (Dijet) Residuals
@@ -103,7 +140,9 @@ A pol1 fit gives: Correction(α) = p0 + p1*α
 
 ## Notes
 
-1. **Alpha Bin Selection**: Alpha bin 5 corresponds to α < 0.3 (alpha cut). This is the reference alpha value to which other alpha bins are normalized.
+1. **Balance Distribution Histogram**: The new `photonjet_balance_dist` (TH3D) histogram stores full balance distributions with axes (photon_pT, alpha, balance_value). This enables detailed analysis of balance shapes and resolutions. The histogram uses fixed binning: 12 pT bins (60-300 GeV), 50 alpha bins (0-0.5), and 200 balance bins (0-2). No eta binning is included - balance is integrated over the full detector acceptance.
+
+2. **Alpha Bin Selection**: Alpha bin 5 corresponds to α < 0.3 (alpha cut). This is the reference alpha value to which other alpha bins are normalized.
 
 2. **Eta Binning**: The script uses absolute eta binning (|η|) with 18 bins spanning 0 to 5.191. The loop stops at eta bin 14 to handle low-statistics regions.
 

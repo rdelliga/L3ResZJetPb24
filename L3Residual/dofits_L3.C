@@ -293,16 +293,16 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         hAlphaRatioNorm->SetMarkerColor(kBlue);
         hAlphaRatioNorm->SetLineColor(kBlue);
         hAlphaRatioNorm->GetXaxis()->SetTitle("#alpha");
-        hAlphaRatioNorm->GetYaxis()->SetTitle("Normalized Ratio (/ ref #alpha)");
+        hAlphaRatioNorm->GetYaxis()->SetTitle(Form("Balance ratio(#alpha)/Balance ratio(#alpha=%.2f)", refAlphaVal));
         hAlphaRatioNorm->Draw("PE1");
         
         // Mark reference bin differently
         TH1D* hRefPoint = new TH1D(Form("hRefPoint_pt%d_eta%d", ptbin, etabin), "", nAlphaBins, alphaEdges.data());
         hRefPoint->SetBinContent(refAlphaBin, hAlphaRatioNorm->GetBinContent(refAlphaBin));
         hRefPoint->SetBinError(refAlphaBin, hAlphaRatioNorm->GetBinError(refAlphaBin));
-        hRefPoint->SetMarkerStyle(kOpenCircle);
-        hRefPoint->SetMarkerColor(kGray+1);
-        hRefPoint->SetLineColor(kGray+1);
+        hRefPoint->SetMarkerStyle(kFullSquare);
+        hRefPoint->SetMarkerColor(kBlack);
+        hRefPoint->SetLineColor(kBlack);
         hRefPoint->Draw("PE1 SAME");
         
         fAlpha->SetLineColor(kRed);
@@ -600,8 +600,8 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     ckFSR->cd();
     
     TH1D* hFramekFSR = new TH1D("hFramekFSR", ";p_{T}^{#gamma} (GeV);k_{FSR} (Normalized Ratio at #alpha#rightarrow0)", 100, 20, 600);
-    hFramekFSR->SetMinimum(0.95);
-    hFramekFSR->SetMaximum(1.05);
+    hFramekFSR->SetMinimum(0.9);
+    hFramekFSR->SetMaximum(1.1);
     hFramekFSR->Draw();
     
     TLine* linekFSR = new TLine(20, 1.0, 600, 1.0);

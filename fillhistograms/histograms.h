@@ -157,6 +157,10 @@ class histograms {
   TH3D* photonjet_balance3Dabsetawide_counts;
   TH3D* photonjet_balance3Dabsetanarrow_counts;
 
+  // Balance distribution histogram (photon_pT, alpha, balance_value)
+  // No eta binning - for distribution analysis
+  TH3D* photonjet_balance_dist;
+
   // Photon trigger histograms
   TH1D* HLTPhoton30;
   TH1D* HLTPhoton30_ptav;
