@@ -48,7 +48,8 @@ This script takes photon+jet balance histograms (3D profiles: pT, η, α) from t
 
 **Usage:**
 ```cpp
-root -l -b -q 'deriveL3_from_photonjet.C("PHOTONMC_output_tag.root", "PHOTONHP_output_tag.root", "L3_derived.root", true, 5, true, false)'
+// For L3 pT-only (barrel) studies, use the wide-|eta| profile (single bin 0<|eta|<1.3)
+root -l -b -q 'deriveL3_from_photonjet.C("PHOTONMC_output_tag.root", "PHOTONHP_output_tag.root", "L3_derived.root", true, 5, false, true)'
 ```
 
 **Parameters:**
@@ -67,27 +68,62 @@ root -l -b -q 'deriveL3_from_photonjet.C("PHOTONMC_output_tag.root", "PHOTONHP_o
 ### Step 2: Fit L3 Corrections vs Alpha
 **Script:** `dofits_L3.C`
 
-This script reads the `L3Res_vsa_norm_` histograms and fits them as a function of alpha to extract correction factors.
+This script reads the derived photon+jet balance products (ratios vs pT for each alpha cut, plus the underlying 3D profiles) and:
+
+- Fits the **normalized ratio vs alpha** to extract `k_FSR` and extrapolate to $\alpha \to 0$.
+- Builds a **pT-only** correction shape and fits it vs pT to write an L3Residual JEC text.
+- The application of `k_FSR` to the pT-shape fit is optional (user flag).
 
 **Usage:**
 ```cpp
-root -l -b -q 'dofits_L3.C("L3_derived.root", 0.15, 0.35, "L3kfactor_photonjet", true)'
+// Run from the repo top-level (recommended) so the default jecfiles paths work
+root -l -b -q 'L3Residual/dofits_L3.C("L3_derived.root", 60, 300, "L3Res_photonjet", false, "2024ppRef", "pp Reference", false, true)'
+
+// Multi-input combined fit (e.g. photon+jet + Z+jet derived products)
+// - First argument is a comma-separated list of derived ROOT files
+// - Optional: provide labels (inputLabelsCSV) and per-input pT ranges (inputPtRangesCSV)
+root -l -b -q 'L3Residual/dofits_L3.C(
+   "L3_derived_photonjet.root,L3_derived_zjet.root",
+   60, 1000,
+   "L3Res_combined",
+   false,
+   "2024ppRef",
+   "pp Reference",
+   true,
+   false,
+   5,
+   0.0,
+   0.4,
+   true,
+   false,
+   true,
+   1,
+   false,
+   false,
+   "",
+   "",
+   false,
+   "fillhistograms/jecfiles/L2Residuals_2024ppRef_fixed.txt",
+   "L3Residual",
+   "L3Residual/jecfiles",
+   "photon+jet,Z+jet",
+   true,
+   "60-300,300-1000"
+)'
 ```
 
 **Parameters:**
 - `inFileL3Derived`: Input ROOT file from Step 1 (default: "L3_derived.root")
-- `fitmin`: Minimum alpha value for fit range (default: 0.15)
-- `fitmax`: Maximum alpha value for fit range (default: 0.35)
-- `outfilename`: Output ROOT file name (default: "L3kfactor_photonjet")
-- `doabseta`: Use absolute eta binning (true) or signed eta (false)
+- `ptminG`, `ptmaxG`: pT range used for the pT-shape fit
+- `outfilename`: Output tag used for folder/file naming
+- `saveAlphaExtrap`: Enable `k_FSR` extraction and alpha→0 extrapolation (recommended)
 
 **Output:**
-- `L3fits/L3kfactor_photonjet.root`: ROOT file containing:
-  - `l3factors`: 1D histogram of correction factors vs |η|
-  - `corrections_*`: L3 corrections per pT bin
-- `L3fits/fits_eta_*.png/pdf`: Individual fit plots for each eta bin
-- `L3fits/kfactors.png/pdf`: Summary plot of correction factors vs eta
-- `L3fits/corrections.png/pdf`: Final L3 corrections vs eta for different pT ranges
+- `L3Residual/L3fits_<tag>/textfiles/<tag>.txt`: L3Residual JEC text
+- `L3Residual/jecfiles/L3Residuals_<runLabel>_photonjet_AK4PF.txt`: copy of the single-input L3Residual JEC text
+- `L3Residual/jecfiles/L3Residuals_<runLabel>_combined_AK4PF.txt`: copy of the multi-input combined-fit L3Residual JEC text
+- Optional: `L3Residual/jecfiles/L2L3Residuals_<runLabel>_photonjet_AK4PF.txt` (only if enabled)
+- Optional: raw-shape overlays from `photonjet_balance_dist` if you provide the raw MC/data files
 
 ## Complete Workflow Example
 
@@ -102,7 +138,7 @@ root -l -b -q 'plotresponse_L3.C("../PHOTONHP_AK4_photonjet.root", "HP_Data")'
 root -l -b -q 'plotresponse_L3.C("../PHOTONMC_AK4_photonjet.root", "QCD_MC", "2024ppRef", "pp Reference", true)'
 
 # Step 1: Derive L3 residuals from balance profiles
-root -l -b -q 'deriveL3_from_photonjet.C("../PHOTONMC_AK4_photonjet.root", "../PHOTONHP_AK4_photonjet.root", "L3_derived.root", true, 5, true, false)'
+root -l -b -q 'deriveL3_from_photonjet.C("../PHOTONMC_AK4_photonjet.root", "../PHOTONHP_AK4_photonjet.root", "L3_derived.root", true, 5, false, true)'
 
 # Step 2: Fit and extract correction factors
 root -l -b -q 'dofits_L3.C("L3_derived.root", 30, 100, "L3Res_photonjet", false)'
@@ -132,7 +168,7 @@ These histograms show how the L3 residual correction varies with alpha (3rd jet 
 - Each histogram is for a specific (pT bin, eta bin) pair
 
 ### Fit Results
-The `dofits_L3.C` script fits these histograms with `pol1` (linear fit) in the range [0.15, 0.35]:
+The `dofits_L3.C` script fits these histograms with `pol1` (linear fit) in the range [0.0, 0.4] by default:
 - **p0**: Correction factor at alpha reference (~0.3)
 - **p1**: Slope (usually close to 0 for well-behaved data)
 

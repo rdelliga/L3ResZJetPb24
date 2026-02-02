@@ -663,7 +663,7 @@ void analyse_PhotonJet(string input = "PHOTONHP",
         continue;
 
       // Jet kinematic cuts
-      if (jtpt[j] < 15.0)
+      if (jtpt[j] < 40.0)
         continue; // Minimum jet pT
 
       // Calculate delta-phi with photon

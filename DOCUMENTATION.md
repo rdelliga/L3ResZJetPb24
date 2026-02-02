@@ -1,8 +1,30 @@
-# L3 Residual Analysis - Complete Workflow Documentation
+# L3 Residual Analysis - Framework Map & Feature Reference
 
-## Overview
+This document is a reference for the residualanalysis repository. It contains:
+- A short framework map (directories, primary scripts, histogram contracts)
+- Detailed usage and modes for the photon+jet (L3) workflow including single-file, directory, and filelist modes.
+- Full description of the L3Residual calculation (derivation, alpha-extrapolation, kFSR, pT fit and multi-input combination).
 
-The L3 residual correction derives absolute pT-dependent corrections for jets using photon+jet balance. Unlike L2 residuals (relative pT-dependent) which are derived from dijet events, L3 residuals correct the absolute jet energy using photons as reference objects.
+Overview: The L3 residual correction derives absolute pT-dependent corrections for jets using photon+jet balance. L2 residuals are eta-dependent corrections derived with dijet, while L3 corrects the absolute jet energy scale using well-measured photons as reference objects.
+
+**Framework Map (quick agent reference)**
+- `fillhistograms/`: analysis code that reads ntuples and fills histograms. Key files: `analyse_PhotonJet.cc`, `histograms.h`, `chain_builder.h`, and `compile.C`.
+- `L3Residual/`: derivation and fitting macros: `deriveL3_from_photonjet.C`, `dofits_L3.C`, `plotresponse_L3.C`, and `jecfiles/` for outputs.
+- `L2Residual/`, `JER/`: sibling analysis directories for L2 and JER workflows.
+- `batch/`: HTCondor submission helpers and filelists. Use `submit_condor.py` to launch `analyse_PhotonJet.cc` across many inputs.
+
+Histograms (important names expected by derivation/fit macros):
+- `photonjet_balance3D` (TProfile3D): axes = (photon-jet average pT, jet |η| or η, α), stores mean balance (jet_pT/photon_pT).
+- `photonjet_balance3Dabseta`, `photonjet_balance3Dwide`: alternative eta binnings; `photonjet_balance_dist` (TH3D) optional: (photon_pT, alpha, balance_value).
+
+Analysis macros:
+- `deriveL3_from_photonjet.C(mcFile, dataFile, outfilename="L3_derived.root", dodt=true, alphabin=5, useabs=true, usewideabs=false)`
+- `dofits_L3.C(inFileL3Derived = "L3_derived.root", ptminG=30., ptmaxG=100., outfilename="L3Res_photonjet", closure=false, runLabel="2024ppRef", lumiLabel="pp Reference", plotRawResponses=true, saveAlphaExtrap=false, refAlphaBin=5, fitAlphaMin=0.0, fitAlphaMax=0.4, applyKFSRToPtFit=true, doEtaBinnedAlphaFits=false, useSingleEtaBin=true, etaBinForL3=1, plotEtaMaps=false, plotBalanceDistOverlay=false, mcRawFileForDist="", dataRawFileForDist="", writeL2L3=false, l2ResidualFile="fillhistograms/jecfiles/L2Residuals_2024ppRef_fixed.txt", outBaseDir="L3Residual", jecOutDir="L3Residual/jecfiles", inputLabelsCSV="", doCombinedPtFit=true, inputPtRangesCSV="")`
+
+Notes for agents:
+- Prefer invoking macros from the repo top-level so relative `jecfiles/` paths resolve correctly.
+- Use `root -l -b -q 'macro.C(args...)'` for batch runs; append `++` for ACLiC compile when iterating.
+
 
 ## Physics Background
 
@@ -20,27 +42,34 @@ The L3 residual correction derives absolute pT-dependent corrections for jets us
 
 ## Detailed Workflow
 
-### 1. Input Generation: analyse_PhotonJet.cc
+### 1. Input Generation: `analyse_PhotonJet.cc`
 
-**What it does:**
-- Reads raw photon+jet events from data and MC
-- Applies photon and jet selection cuts
-- Fills 3D balance profiles: (p_T^(avg), η_jet, α)
+What it does:
+- Reads photon+jet events from input ROOT files (MC and Data)
+- Applies photon and jet selection and fills balance histograms used by the derivation and fitting steps
 
-**Input:**
-- ROOT files from NANOAOD or similar format with:
-  - Photon 4-vectors and quality variables
-  - Jet 4-vectors and properties
-  - Event weights and triggers
+Input modes (supported by `analyse_PhotonJet.cc`):
+- Single-file / Era (legacy) mode (short): useful for quick checks
+  ```bash
+  root -l -b -q 'analyse_PhotonJet.cc("PHOTONHP", "output_tag", false, false)'
+  ```
+- Directory mode (process all files in directory):
+  ```bash
+  root -l -b -q 'analyse_PhotonJet.cc("/path/to/directory", "output_tag", false, false, "directory", 100, 10000, "/output/dir")'
+  ```
+- Filelist mode (recommended for batch):
+  ```bash
+  root -l -b -q 'analyse_PhotonJet.cc("/path/to/filelist.txt", "output_tag", false, false, "filelist", -1, -1, "/output/dir")'
+  ```
 
-**Output:**
-- `PHOTONMC_output_tag.root`: MC photon+jet histograms
-- `PHOTONHP_output_tag.root`: Data photon+jet histograms
+Outputs (per-run):
+- `PHOTONMC_<tag>.root` (MC) and `PHOTONHP_<tag>.root` (Data) — ROOT files containing the histograms below
 
-**Key 3D Histograms Created:**
-- `photonjet_balance3D`: Balance vs (p_T^(avg), η_jet, α)
-- `photonjet_balance3Dabseta`: Balance vs (p_T^(avg), |η_jet|, α)
-- `photonjet_balance3Dwide`: Wider eta binning variant
+Key histogram products created by `analyse_PhotonJet.cc`:
+- `photonjet_balance3D`: TProfile3D (pT_avg, eta, alpha) mean balance
+- `photonjet_balance3Dabseta`: same as above with |eta|
+- `photonjet_balance3Dwide`: variant with wider |eta| bins (useful for pT-only barrel derivation)
+- `photonjet_balance_dist`: optional TH3D storing full balance distributions (photon_pT, alpha, balance) for overlay/shape studies
 
 ### 2. Derivation Step: deriveL3_from_photonjet.C
 
@@ -120,6 +149,59 @@ factors[etabin] = f1->GetParameter(0); // Correction factor
    - L3 corrections per pT bin after applying fit factors
    - Multiple pT ranges shown separately
    - Ready for use in jet energy calibration
+
+### L3Residual calculation details (step-by-step)
+
+This section describes the full logic implemented across `deriveL3_from_photonjet.C` and `dofits_L3.C` so agents can reproduce or audit the calculation.
+
+1) Inputs: merged MC and Data analysis ROOT files containing `photonjet_balance3D*` profiles (and optionally `photonjet_balance_dist` TH3D).
+
+2) Per-(pT,η) derivation (in `deriveL3_from_photonjet.C`):
+  - Extract the profile values $B_{MC}(p_T,\eta,\alpha)$ and $B_{Data}(p_T,\eta,\alpha)$ from the 3D TProfile.
+  - Compute the ratio (raw L3 residual) per alpha bin:
+    $$ R(p_T,\eta,\alpha) = \frac{B_{MC}(p_T,\eta,\alpha)}{B_{Data}(p_T,\eta,\alpha)}. $$
+  - Define a reference alpha bin (e.g. $\alpha_{ref}=0.3$). Build normalized histograms:
+    $$ R_{norm}(p_T,\eta,\alpha) = \frac{R(p_T,\eta,\alpha)}{R(p_T,\eta,\alpha_{ref})}.$$ 
+  - Store `L3Res_vsa_norm_{ptbin}_{etabin}` (useful for alpha fits) and default `ratio_vsphotonpt_alphaN` histograms.
+
+3) Alpha-extrapolation and kFSR extraction (optional, `saveAlphaExtrap=true` in `dofits_L3.C`):
+  - For each pT bin (and optionally each eta bin) build the normalized ratio vs $\alpha$ histogram.
+  - Fit a linear function in $\alpha$ over a configurable range (default $[0.0,0.4]$ or narrower) excluding the reference bin. The linear fit is used to extrapolate to $\alpha\rightarrow 0$.
+  - Extract $k_{FSR}(p_T)$ as the fit intercept at $\alpha=0$ (this captures residual FSR/ISR modeling differences between MC and Data). Store $k_{FSR}(p_T)$ and its uncertainty.
+
+4) Build pT-correction points (final per-input correction histogram):
+  - If alpha-extrapolation was performed, form the alpha->0 corrected pT points by applying $k_{FSR}$ to the nominal pT histogram (nominal = ratio at reference alpha):
+    $$ C(p_T) = R(p_T,\alpha_{ref}) \times k_{FSR}(p_T) $$
+    (propagating relative errors from both factors)
+  - Alternatively, `deriveL3_from_photonjet.C` can produce `corr_vspT` or `ratio_vspT_alpha0` directly which `dofits_L3.C` will use.
+
+5) Combined pT fit (single script, `dofits_L3.C`):
+  - The macro collects all pT-correction histograms from one or more derived ROOT files. For multi-input workflows (e.g., photon+jet + Z+jet), provide a comma-separated list of derived files as the first argument.
+  - Optionally provide `inputPtRangesCSV` with comma-separated `lo-hi` ranges so each input contributes only inside its intended pT window.
+  - Build a `TMultiGraph` containing cleaned pT points (optional cleaning removes zero/empty points and outside-fit-range bins) and fit a single function of the form used in JEC text files:
+    $$ f(p_T) = [0] + [1]\cdot \log_{10}(0.01\,p_T) + [2]/(p_T/10.) $$
+    - Fit is performed in log-x canvas (ROOT `SetLogx()`) and using `TF1(..., "[0]+[1]*log10(0.01*x)+[2]/(x/10.)")` by default.
+  - The fit parameters are written to a JEC-style text block and a copy is placed under `L3Residual/jecfiles/` with a tag that indicates `photonjet` (single-input) or `combined` (multi-input).
+
+6) Optional L2L3 combination (`writeL2L3=true`):
+  - If requested the macro reads an L2Residual text file, samples the L2 shape over each L2 pt range, multiplies with the fitted L3 shape $f(p_T)$, and fits the product to produce a combined L2L3 correction piece for each eta bin.
+
+7) Outputs summary:
+  - ROOT: `L3Residual/L3fits_<tag>/<tag>.root` containing graphs, fits and input histograms.
+  - PNG/PDF: plots per-alpha, per-eta, combined pT fit in `L3Residual/L3fits_<tag>/pdf/` and raw shapes in `.../raw/`.
+  - Text: `L3Residual/L3fits_<tag>/textfiles/<tag>.txt` plus copies in `L3Residual/jecfiles/L3Residuals_<runLabel>_photonjet_AK4PF.txt` or `_combined_AK4PF.txt`.
+
+### Plotting and diagnostic options
+
+- `plotresponse_L3.C`: quick visualization macro that reads a photon+jet analysis output and produces kinematic and balance-distribution plots. Useful flags: `isMC`, `runLabel`, `lumiLabel`, and `useBalanceTH3` to use the `photonjet_balance_dist` if present.
+- `photonjet_balance_dist` (TH3D): new optional histogram (axes: photon_pT, alpha, balance) storing the full balance distribution per pT/alpha bin. When present `dofits_L3.C` can overlay normalized balance distributions (MC vs Data) using `plotBalanceDistOverlay=true` and the `mcRawFileForDist`/`dataRawFileForDist` arguments.
+- `dofits_L3.C` flags of interest:
+  - `plotRawResponses`: saves MC and Data balance vs pT raw plots in `.../raw/` for QC.
+  - `saveAlphaExtrap`: enable alpha->0 extrapolation and kFSR extraction.
+  - `applyKFSRToPtFit`: whether to multiply nominal pT ratios with kFSR(pT) before the pT fit.
+  - `inputLabelsCSV`, `inputPtRangesCSV`: used when passing multiple derived inputs to annotate and restrict per-input contributions.
+
+
 
 ## Test Results
 

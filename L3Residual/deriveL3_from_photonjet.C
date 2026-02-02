@@ -22,6 +22,19 @@ void deriveL3_from_photonjet(
     bool useabs = true,
     bool usewideabs = false) {
 
+  // Wide-|eta| histogram should take precedence over fine |eta| binning
+  // (otherwise the wide histogram branch is never reached).
+  if (usewideabs && useabs) {
+    cout << "WARNING: usewideabs=true and useabs=true; forcing useabs=false to use photonjet_balance3Dabsetawide" << endl;
+    useabs = false;
+  }
+
+  // Keep outputs under L3Residual/ by default
+  if (!outfilename.Contains("/")) {
+    gSystem->mkdir("L3Residual", kTRUE);
+    outfilename = TString("L3Residual/") + outfilename;
+  }
+
   // Open MC file
   TFile *inFileMC = TFile::Open(mcFile);
   if (!inFileMC || inFileMC->IsZombie()) {
