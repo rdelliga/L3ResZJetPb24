@@ -33,7 +33,6 @@
 
 #include "tdrStyle.C"
 #include "CMS_lumi.C"
-#include "../fillhistograms/histograms.h"
 
 using namespace std;
 
@@ -107,6 +106,61 @@ static TH1D* loadPtCorrectionHist(TFile* f, int refAlphaBin) {
   return (TH1D*)f->Get(Form("ratio_vsphotonpt_alpha%d", refAlphaBin));
 }
 
+static TString defaultInputLabel(const TString& path, int indexOneBased) {
+  TString base = gSystem->BaseName(path.Data());
+  TString low = base;
+  low.ToLower();
+  if (low.Contains("photonjet") || (low.Contains("photon") && low.Contains("jet"))) return "#gamma+jet";
+  if (low.Contains("zjet") || low.Contains("z+jet") || (low.Contains("z") && low.Contains("jet"))) return "Z+jet";
+  if (low.Contains("dijet")) return "dijet";
+  if (low.Contains("multijet")) return "multijet";
+  return Form("Input %d", indexOneBased);
+}
+
+static TH1D* makePtFrameFromHist(const TH1* href, const TString& name, const TString& yTitle, double ymin, double ymax) {
+  const TString title = Form(";p_{T}^{#gamma} (GeV);%s", yTitle.Data());
+  if (!href) {
+    TH1D* h = new TH1D(name, title, 100, 20, 600);
+    h->SetMinimum(ymin);
+    h->SetMaximum(ymax);
+    // Slightly reduced sizes for axis titles/labels to improve fit of long fraction titles
+    h->GetXaxis()->SetTitleSize(0.038);
+    h->GetXaxis()->SetLabelSize(0.032);
+    h->GetYaxis()->SetTitleSize(0.038);
+    h->GetYaxis()->SetLabelSize(0.032);
+    // fraction-like labels need more room
+    if (yTitle.Contains("#frac")) h->GetYaxis()->SetTitleOffset(1.7);
+    else h->GetYaxis()->SetTitleOffset(1.4);
+    return h;
+  }
+  const int nb = href->GetXaxis()->GetNbins();
+  const TArrayD* bins = href->GetXaxis()->GetXbins();
+  TH1D* h = nullptr;
+  if (bins && bins->GetSize() > 0) {
+    h = new TH1D(name, title, nb, bins->GetArray());
+  } else {
+    h = new TH1D(name, title, nb, href->GetXaxis()->GetXmin(), href->GetXaxis()->GetXmax());
+  }
+  h->SetMinimum(ymin);
+  h->SetMaximum(ymax);
+  // axis sizing
+  // Slightly reduced sizes for axis titles/labels to improve fit of long fraction titles
+  h->GetXaxis()->SetTitleSize(0.038);
+  h->GetXaxis()->SetLabelSize(0.032);
+  h->GetYaxis()->SetTitleSize(0.038);
+  h->GetYaxis()->SetLabelSize(0.032);
+  if (yTitle.Contains("#frac")) h->GetYaxis()->SetTitleOffset(1.7);
+  else h->GetYaxis()->SetTitleOffset(1.4);
+  return h;
+} 
+
+static void styleLogxAxis(TH1* h) {
+  if (!h) return;
+  h->GetXaxis()->SetMoreLogLabels(kTRUE);
+  h->GetXaxis()->SetNdivisions(510);
+  h->GetXaxis()->SetNoExponent(kTRUE);
+}
+
 static bool isSkippableLine(const std::string& line) {
   for (char c : line) {
     if (c == ' ' || c == '\t' || c == '\r' || c == '\n') continue;
@@ -116,11 +170,11 @@ static bool isSkippableLine(const std::string& line) {
 }
 
 struct JecRecord {
-  double etaMin = 0;
-  double etaMax = 0;
-  int nPar = 0;          // includes 2 range parameters
-  double ptMin = 0;
-  double ptMax = 0;
+  double etaMin;
+  double etaMax;
+  int nPar;          // includes 2 range parameters
+  double ptMin;
+  double ptMax;
   std::vector<double> par; // size = nPar - 2
 };
 
@@ -159,13 +213,18 @@ static bool readSimpleJecFile(const std::string& path, std::string& headerLine, 
   return !records.empty();
 }
 
-static double evalL2ResidualShape(double pt, const std::vector<double>& p) {
-  // Matches the current L2 file used in this repo:
-  // 1./([0]+[1]*log10(0.01*x)+[2]/(x/10.0))
-  if (p.size() < 3 || pt <= 0) return 1.0;
-  const double denom = p[0] + p[1] * log10(0.01 * pt) + p[2] / (pt / 10.0);
-  if (denom == 0) return 1.0;
-  return 1.0 / denom;
+// Centralized fit function for the FINAL L3 correction vs pT.
+// kFSR is extracted from the linear fit vs alpha; only the final correction is fit vs pT.
+static const char* l3PtFitExpr() {
+  // Current choice: constant + log(pT).
+  // Add higher-order terms here in the future if needed.
+  return "[0]+[1]*log10(0.01*x)";
+}
+
+static TF1* makeL3PtFitFunc(const char* name, double xmin, double xmax) {
+  TF1* f = new TF1(name, l3PtFitExpr(), xmin, xmax);
+  f->SetParameters(1.0, 0.0);
+  return f;
 }
 
 void dofits_L3(TString inFileL3Derived = "L3_derived.root",
@@ -174,7 +233,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
                string outfilename = "L3Res_photonjet",
                bool closure = false,
                string runLabel = "2024ppRef",
-               string lumiLabel = "pp Reference",
+               string lumiLabel = "pp 480.4 pb^{-1}",
                bool plotRawResponses = true,
                bool saveAlphaExtrap = false,
                int refAlphaBin = 5,
@@ -185,16 +244,17 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
                bool useSingleEtaBin = true,
                int etaBinForL3 = 1,
                bool plotEtaMaps = false,
-               bool plotBalanceDistOverlay = false,
+               bool plotBalanceDistOverlay = true,
                TString mcRawFileForDist = "",
                TString dataRawFileForDist = "",
-               bool writeL2L3 = false,
+               bool writeL2L3 = true,
                string l2ResidualFile = "fillhistograms/jecfiles/L2Residuals_2024ppRef_fixed.txt",
                string outBaseDir = "L3Residual",
-               string jecOutDir = "L3Residual/jecfiles",
+               string jecOutDir = "",
                TString inputLabelsCSV = "",
-               bool doCombinedPtFit = true,
-               TString inputPtRangesCSV = "") {
+               bool doCombinedPtFit = false,
+               TString inputPtRangesCSV = "",
+               bool plotPerAlphaPtFits = false) {
 
   doClosure = closure;
   _run = runLabel;
@@ -204,10 +264,10 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
   gStyle->SetOptFit(0);
 
   writeExtraText = true;
-  extraText = doClosure ? "Closure Test" : "Preliminary";
+  extraText = "Preliminary";
   lumi_sqrtS = Form("%s, #sqrt{s} = 5.36 TeV", lumiLabel.c_str());
 
-  string outfolder = outBaseDir + "/L3fits_" + outfilename;
+  string outfolder = outBaseDir + "/" + outfilename;
   string pngFolder = outfolder + "/pdf"; // keep folder name for compatibility
   string txtFolder = outfolder + "/textfiles";
   string rawFolder = outfolder + "/raw";
@@ -215,6 +275,12 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
   gSystem->mkdir(outfolder.c_str(), kTRUE);
   gSystem->mkdir(pngFolder.c_str(), kTRUE);
   gSystem->mkdir(txtFolder.c_str(), kTRUE);
+  if (jecOutDir.empty()) jecOutDir = outBaseDir + "/jecfiles";
+  gSystem->mkdir(jecOutDir.c_str(), kTRUE);
+  if (writeL2L3 && l2ResidualFile.empty()) {
+    cout << "WARNING: writeL2L3=true but l2ResidualFile is empty; skipping L2L3 output." << endl;
+    writeL2L3 = false;
+  }
   if (plotRawResponses) gSystem->mkdir(rawFolder.c_str(), kTRUE);
   if (saveAlphaExtrap) gSystem->mkdir(alphaFolder.c_str(), kTRUE);
 
@@ -240,7 +306,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
   // If labels are not provided or mismatched, fall back to file basenames
   if (inputLabels.size() != inputFiles.size()) {
     inputLabels.clear();
-    for (const auto& p : inputFiles) inputLabels.push_back(gSystem->BaseName(p.Data()));
+    for (size_t i = 0; i < inputFiles.size(); ++i) inputLabels.push_back(defaultInputLabel(inputFiles[i], (int)i + 1));
   }
 
   // Optional per-input pT ranges, format like: "60-300,300-1000" (same length as inputs)
@@ -294,7 +360,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
   if (!counts3D_mc) cout << "WARNING: counts3D_mc not found" << endl;
   if (!counts3D_data) cout << "WARNING: counts3D_data not found" << endl;
 
-  TFile* outfile = new TFile(Form("%s/%s.root", outfolder.c_str(), outfilename.c_str()), "RECREATE");
+  TFile* outfile = new TFile(Form("%s/%s_fit.root", outfolder.c_str(), outfilename.c_str()), "RECREATE");
 
   // Optional: build alpha-extrapolation (per pT, eta) from the 3D profiles
   // Storage for kFSR extrapolation results (per pT bin, collapsed over eta)
@@ -428,13 +494,19 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         TCanvas* cAlpha = new TCanvas(Form("cAlpha_pt%.0fto%.0f_eta%.3fto%.3f", ptBinLo, ptBinHi, etaBinLo, etaBinHi), 
                                        Form("cAlpha_pt%.0fto%.0f_eta%.3fto%.3f", ptBinLo, ptBinHi, etaBinLo, etaBinHi), 800, 600);
         cAlpha->cd();
-        hAlphaRatioNorm->SetMinimum(0.85);
-        hAlphaRatioNorm->SetMaximum(1.15);
+        hAlphaRatioNorm->SetMinimum(0.97);
+        hAlphaRatioNorm->SetMaximum(1.05);
         hAlphaRatioNorm->SetMarkerStyle(kFullCircle);
         hAlphaRatioNorm->SetMarkerColor(kBlue);
         hAlphaRatioNorm->SetLineColor(kBlue);
+        const TString yNormPt = Form("#frac{(R_{MC}/R_{Data})(#alpha)}{(R_{MC}/R_{Data})(#alpha < %.2f)}", refAlphaVal);
         hAlphaRatioNorm->GetXaxis()->SetTitle("#alpha");
-        hAlphaRatioNorm->GetYaxis()->SetTitle("R");
+        hAlphaRatioNorm->GetXaxis()->SetTitleSize(0.038);
+        hAlphaRatioNorm->GetXaxis()->SetLabelSize(0.032);
+        hAlphaRatioNorm->GetYaxis()->SetTitle(yNormPt);
+        hAlphaRatioNorm->GetYaxis()->SetTitleSize(0.038);
+        hAlphaRatioNorm->GetYaxis()->SetLabelSize(0.032);
+        hAlphaRatioNorm->GetYaxis()->SetTitleOffset(1.7);
         // Draw points only (no y-errors)
         hAlphaRatioNorm->Draw("P");
         
@@ -549,9 +621,15 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     // Create overlay plot with all pT bins on same canvas
     TCanvas* cAlphaOverlay = new TCanvas("cAlphaOverlay", "Normalized Ratio vs alpha (all pT bins)", 900, 700);
     cAlphaOverlay->cd();
-    TH1D* hFrameAlpha = new TH1D("hFrameAlpha", ";#alpha;R", 100, 0, 0.5);
-    hFrameAlpha->SetMinimum(0.85);
-    hFrameAlpha->SetMaximum(1.15);
+    const TString yNormTitle = Form("#frac{(R_{MC}/R_{Data})(#alpha)}{(R_{MC}/R_{Data})(#alpha < %.2f)}", refAlphaVal);
+    TH1D* hFrameAlpha = new TH1D("hFrameAlpha", Form(";#alpha;%s", yNormTitle.Data()), 100, 0, 0.5);
+    hFrameAlpha->SetMinimum(0.97);
+    hFrameAlpha->SetMaximum(1.05);
+    hFrameAlpha->GetXaxis()->SetTitleSize(0.038);
+    hFrameAlpha->GetXaxis()->SetLabelSize(0.032);
+    hFrameAlpha->GetYaxis()->SetTitleSize(0.038);
+    hFrameAlpha->GetYaxis()->SetLabelSize(0.032);
+    hFrameAlpha->GetYaxis()->SetTitleOffset(1.7);
     hFrameAlpha->Draw();
     TLine* lineRefOverlay = new TLine(0, 1.0, 0.5, 1.0);
     lineRefOverlay->SetLineStyle(kDashed);
@@ -615,6 +693,62 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       hkFSR->SetBinError(ptbin, kfsr_err);
       cout << "  pT [" << ptBinLo << "-" << ptBinHi << "]: kFSR = " << kfsr << " +/- " << kfsr_err << endl;
 
+      // Save a dedicated per-pT plot showing the points and the linear alpha fit.
+      {
+        TCanvas* cPt = new TCanvas(Form("cAlphaFit_pt%d", ptbin), Form("Normalized ratio vs alpha (ptbin %d)", ptbin), 800, 600);
+        cPt->cd();
+        const TString yNormTitlePt = Form("#frac{(R_{MC}/R_{Data})(#alpha)}{(R_{MC}/R_{Data})(#alpha < %.2f)}", refAlphaVal);
+        TH1D* hFramePt = new TH1D(Form("hFrameAlphaFit_pt%d", ptbin), Form(";#alpha;%s", yNormTitlePt.Data()), 100, 0, 0.5);
+        hFramePt->SetMinimum(0.97);
+        hFramePt->SetMaximum(1.05);
+        hFramePt->GetXaxis()->SetTitleSize(0.038);
+        hFramePt->GetXaxis()->SetLabelSize(0.032);
+        hFramePt->GetYaxis()->SetTitleSize(0.038);
+        hFramePt->GetYaxis()->SetLabelSize(0.032);
+        hFramePt->GetYaxis()->SetTitleOffset(1.7);
+        hFramePt->Draw();
+
+        TLine* l1 = new TLine(0, 1.0, 0.5, 1.0);
+        l1->SetLineStyle(kDashed);
+        l1->SetLineColor(kGray+1);
+        l1->Draw("SAME");
+
+        gAll->Draw("P SAME");
+        TGraph* gFitPts = new TGraph(x_fit.size(), x_fit.data(), y_fit.data());
+        gFitPts->SetMarkerStyle(kOpenCircle);
+        gFitPts->SetMarkerColor(kRed+1);
+        gFitPts->SetLineColor(kRed+1);
+        gFitPts->Draw("P SAME");
+
+        TF1* fLine = new TF1(Form("fAlphaLine_pt%d", ptbin), "[0]+[1]*x", fitAlphaMin, fitAlphaMax);
+        fLine->SetParameters(fAlphaCol.GetParameter(0), fAlphaCol.GetParameter(1));
+        fLine->SetLineColor(kRed);
+        fLine->SetLineWidth(2);
+        fLine->Draw("SAME");
+
+        TLatex* t = new TLatex();
+        t->SetNDC();
+        t->SetTextFont(42);
+        t->SetTextSize(0.035);
+        t->DrawLatex(0.18, 0.86, Form("p_{T}^{#gamma}: %.0f-%.0f GeV", ptBinLo, ptBinHi));
+        t->DrawLatex(0.18, 0.81, Form("Ref #alpha < %.2f (bin %d), excluded", refAlphaVal, refAlphaBin));
+        t->DrawLatex(0.18, 0.76, Form("Fit: %.2f < #alpha < %.2f", fitAlphaMin, fitAlphaMax));
+        t->DrawLatex(0.18, 0.71, Form("k_{FSR} = %.4f #pm %.4f", kfsr, kfsr_err));
+        CMS_lumi(cPt, 0, 0);
+        cPt->SaveAs(Form("%s/L3Res_%s_kFSR_alphaFit_pt%.0fto%.0f.png", alphaFolder.c_str(), _run.c_str(), ptBinLo, ptBinHi));
+
+        outfile->cd();
+        gFitPts->Write(Form("gAlphaNorm_fitPts_pt%d", ptbin));
+        fLine->Write();
+
+        delete t;
+        delete fLine;
+        delete gFitPts;
+        delete l1;
+        delete hFramePt;
+        delete cPt;
+      }
+
       legOverlay->AddEntry(gAll, Form("%.0f-%.0f GeV (k_{FSR}=%.3f)", ptBinLo, ptBinHi, kfsr), "P");
 
       outfile->cd();
@@ -628,7 +762,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     texOverlay->SetNDC();
     texOverlay->SetTextFont(42);
     texOverlay->SetTextSize(0.030);
-    texOverlay->DrawLatex(0.18, 0.85, Form("Ref #alpha < %.2f (bin %d, excluded)", refAlphaVal, refAlphaBin));
+    texOverlay->DrawLatex(0.18, 0.85, Form("Denominator: (#alpha < %.2f), bin %d (excluded)", refAlphaVal, refAlphaBin));
     texOverlay->DrawLatex(0.18, 0.80, Form("Fit: %.2f < #alpha < %.2f", fitAlphaMin, fitAlphaMax));
     
     CMS_lumi(cAlphaOverlay, 0, 0);
@@ -642,19 +776,22 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     delete legOverlay;
     delete texOverlay;
     
-    // Create kFSR vs pT plot with fit
-    cout << "\n=== Fitting kFSR vs photon pT ===" << endl;
+    // Create kFSR vs pT diagnostic plot (no functional fit)
+    // kFSR is defined per pT bin from the linear alpha-extrapolation.
+    // Only the FINAL correction is fit vs pT.
+    cout << "\n=== kFSR vs photon pT (diagnostic; no fit) ===" << endl;
     
     TCanvas* ckFSR = new TCanvas("ckFSR", "kFSR vs photon pT", 800, 600);
     ckFSR->SetLogx();
     ckFSR->cd();
     
-    TH1D* hFramekFSR = new TH1D("hFramekFSR", ";p_{T}^{#gamma} (GeV);k_{FSR} (Normalized Ratio at #alpha#rightarrow0)", 100, 20, 600);
-    hFramekFSR->SetMinimum(0.9);
-    hFramekFSR->SetMaximum(1.1);
+    TH1D* hFramekFSR = makePtFrameFromHist(hkFSR, "hFramekFSR", "k_{FSR} (\"#alpha#rightarrow0\" intercept)", 0.9, 1.1);
     hFramekFSR->Draw();
-    
-    TLine* linekFSR = new TLine(20, 1.0, 600, 1.0);
+    styleLogxAxis(hFramekFSR);
+
+    const double xMinK = hFramekFSR->GetXaxis()->GetBinLowEdge(1);
+    const double xMaxK = hFramekFSR->GetXaxis()->GetBinLowEdge(hFramekFSR->GetNbinsX() + 1);
+    TLine* linekFSR = new TLine(xMinK, 1.0, xMaxK, 1.0);
     linekFSR->SetLineStyle(kDashed);
     linekFSR->SetLineColor(kGray+1);
     linekFSR->Draw("SAME");
@@ -664,41 +801,12 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     hkFSR->SetLineColor(kBlue);
     hkFSR->Draw("PE1 SAME");
     
-    // Fit kFSR vs pT with various functions
-    TF1* fkFSR_const = new TF1("fkFSR_const", "[0]", ptEdges.front(), ptEdges.back());
-    TF1* fkFSR_log = new TF1("fkFSR_log", "[0]+[1]*log10(x)", ptEdges.front(), ptEdges.back());
-    TF1* fkFSR_invpt = new TF1("fkFSR_invpt", "[0]+[1]/x", ptEdges.front(), ptEdges.back());
-    
-    fkFSR_const->SetParameter(0, 1.0);
-    hkFSR->Fit(fkFSR_const, "QNR");
-    
-    fkFSR_log->SetParameters(fkFSR_const->GetParameter(0), 0.01);
-    hkFSR->Fit(fkFSR_log, "QNR");
-    
-    fkFSR_invpt->SetParameters(fkFSR_const->GetParameter(0), 0.0);
-    hkFSR->Fit(fkFSR_invpt, "QNR");
-    
-    fkFSR_const->SetLineColor(kMagenta+2);
-    fkFSR_const->SetLineStyle(kDotted);
-    fkFSR_const->Draw("SAME");
-    
-    fkFSR_log->SetLineColor(kGreen+2);
-    fkFSR_log->SetLineWidth(2);
-    fkFSR_log->Draw("SAME");
-    
-    fkFSR_invpt->SetLineColor(kRed);
-    fkFSR_invpt->SetLineWidth(2);
-    fkFSR_invpt->Draw("SAME");
-    
     TLegend* legkFSR = new TLegend(0.50, 0.65, 0.88, 0.88);
     legkFSR->SetBorderSize(0);
     legkFSR->SetFillStyle(0);
     legkFSR->SetTextFont(42);
     legkFSR->SetTextSize(0.030);
     legkFSR->AddEntry(hkFSR, "k_{FSR} (#alpha#rightarrow0 extrap.)", "PLE");
-    legkFSR->AddEntry(fkFSR_const, Form("Const: %.4f", fkFSR_const->GetParameter(0)), "L");
-    legkFSR->AddEntry(fkFSR_log, Form("Log: %.4f + %.4f*log_{10}(p_{T})", fkFSR_log->GetParameter(0), fkFSR_log->GetParameter(1)), "L");
-    legkFSR->AddEntry(fkFSR_invpt, Form("1/p_{T}: %.4f + %.2f/p_{T}", fkFSR_invpt->GetParameter(0), fkFSR_invpt->GetParameter(1)), "L");
     legkFSR->Draw();
     
     TLatex* texkFSR = new TLatex();
@@ -706,18 +814,13 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     texkFSR->SetTextFont(42);
     texkFSR->SetTextSize(0.035);
     texkFSR->DrawLatex(0.18, 0.30, Form("Ref #alpha < %.2f (bin %d)", refAlphaVal, refAlphaBin));
-    texkFSR->DrawLatex(0.18, 0.25, Form("#chi^{2}/ndf (const) = %.1f/%d", fkFSR_const->GetChisquare(), fkFSR_const->GetNDF()));
-    texkFSR->DrawLatex(0.18, 0.20, Form("#chi^{2}/ndf (log) = %.1f/%d", fkFSR_log->GetChisquare(), fkFSR_log->GetNDF()));
-    texkFSR->DrawLatex(0.18, 0.15, Form("#chi^{2}/ndf (1/p_{T}) = %.1f/%d", fkFSR_invpt->GetChisquare(), fkFSR_invpt->GetNDF()));
+    texkFSR->DrawLatex(0.18, 0.25, "No functional fit applied");
     
     CMS_lumi(ckFSR, 0, 0);
     ckFSR->SaveAs(Form("%s/L3Res_%s_kFSR_vspT.png", alphaFolder.c_str(), _run.c_str()));
     
     outfile->cd();
     hkFSR->Write();
-    fkFSR_const->Write();
-    fkFSR_log->Write();
-    fkFSR_invpt->Write();
     
     delete ckFSR;
     delete hFramekFSR;
@@ -740,6 +843,133 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     return;
   }
 
+  // If kFSR was extracted in this run, build the alpha->0 correction histogram explicitly:
+  //   Corr_alpha0(pT) = Ratio_refAlpha(pT) * kFSR(pT)
+  // where Ratio_refAlpha is the MC/Data balance ratio at the reference alpha cut.
+  TH1D* hCorrAlpha0 = nullptr;
+  if (saveAlphaExtrap && applyKFSRToPtFit && ratioVsPt.count(refAlphaBin)) {
+    TH1D* hRef = ratioVsPt[refAlphaBin];
+    if (hRef) {
+      hCorrAlpha0 = (TH1D*)hRef->Clone("ratio_vspT_alpha0_fromkFSR");
+      hCorrAlpha0->SetDirectory(nullptr);
+      for (int b = 1; b <= hCorrAlpha0->GetNbinsX(); ++b) {
+        const double r = hRef->GetBinContent(b);
+        const double er = hRef->GetBinError(b);
+        const double k = (kFSR_vsPt.count(b) ? kFSR_vsPt[b] : 1.0);
+        const double ek = (kFSR_err_vsPt.count(b) ? kFSR_err_vsPt[b] : 0.0);
+        if (r > 0 && k > 0) {
+          const double val = r * k;
+          double rel2 = 0.0;
+          if (er > 0) rel2 += pow(er / r, 2);
+          if (ek > 0) rel2 += pow(ek / k, 2);
+          hCorrAlpha0->SetBinContent(b, val);
+          hCorrAlpha0->SetBinError(b, val * sqrt(rel2));
+        } else {
+          hCorrAlpha0->SetBinContent(b, 0.0);
+          hCorrAlpha0->SetBinError(b, 0.0);
+        }
+      }
+
+      // Plot the reference-alpha ratio and the kFSR-corrected (alpha->0) ratio.
+      TCanvas* cCorr = new TCanvas("cCorrAlpha0", "Ref-alpha ratio and kFSR-corrected alpha->0 ratio", 900, 700);
+      cCorr->SetLogx();
+      cCorr->cd();
+      TH1D* hFrame = makePtFrameFromHist(hRef, "hFrameCorrAlpha0", "#frac{R_{MC}}{R_{Data}}", 0.7, 1.5);
+      hFrame->Draw();
+      styleLogxAxis(hFrame);
+      const double xMin = hFrame->GetXaxis()->GetBinLowEdge(1);
+      const double xMax = hFrame->GetXaxis()->GetBinLowEdge(hFrame->GetNbinsX() + 1);
+      TLine* line = new TLine(xMin, 1.0, xMax, 1.0);
+      line->SetLineStyle(kDashed);
+      line->SetLineColor(kGray+1);
+      line->Draw("SAME");
+
+      hRef->SetMarkerStyle(kOpenCircle);
+      hRef->SetMarkerColor(kBlue);
+      hRef->SetLineColor(kBlue);
+      hRef->Draw("PE1 SAME");
+
+      hCorrAlpha0->SetMarkerStyle(kFullCircle);
+      hCorrAlpha0->SetMarkerColor(kRed);
+      hCorrAlpha0->SetLineColor(kRed);
+      hCorrAlpha0->Draw("PE1 SAME");
+
+      TLegend* leg = new TLegend(0.50, 0.72, 0.88, 0.88);
+      leg->SetBorderSize(0);
+      leg->SetFillStyle(0);
+      leg->SetTextFont(42);
+      leg->SetTextSize(0.030);
+      leg->AddEntry(hRef, Form("Ref #alpha < %.2f (bin %d)", refAlphaVal, refAlphaBin), "PLE");
+      leg->AddEntry(hCorrAlpha0, "k_{FSR}(p_{T}) #times ref(#alpha)  (#alpha#rightarrow0)", "PLE");
+      leg->Draw();
+      CMS_lumi(cCorr, 0, 0);
+      cCorr->SaveAs(Form("%s/L3Res_%s_corr_alpha0_fromkFSR.png", alphaFolder.c_str(), _run.c_str()));
+
+      outfile->cd();
+      hCorrAlpha0->Write("ratio_vspT_alpha0_fromkFSR");
+
+      delete leg;
+      delete line;
+      delete hFrame;
+      delete cCorr;
+    }
+  }
+
+  // Overlay unnormalized balance ratios (MC/Data) vs pT for all alpha cuts.
+  // This is a diagnostic plot only (no normalization to the reference alpha bin).
+  {
+    TCanvas* c = new TCanvas("cRatioOverlayPt", "Unnormalized ratio vs pT (all alpha cuts)", 900, 700);
+    c->SetLogx();
+    c->cd();
+
+    TH1D* href = ratioVsPt.begin()->second;
+    TH1D* hFrame = makePtFrameFromHist(href, Form("hFrame_ratioOverlayPt_%s", outfilename.c_str()), "#frac{R_{MC}}{R_{Data}}", 0.7, 1.5);
+    hFrame->Draw();
+    styleLogxAxis(hFrame);
+
+    const double xMin = hFrame->GetXaxis()->GetBinLowEdge(1);
+    const double xMax = hFrame->GetXaxis()->GetBinLowEdge(hFrame->GetNbinsX() + 1);
+    TLine* line = new TLine(xMin, 1.0, xMax, 1.0);
+    line->SetLineStyle(kDashed);
+    line->SetLineColor(kGray+1);
+    line->Draw("SAME");
+
+    const int colors[] = {kBlack, kBlue, kRed, kGreen+2, kMagenta+2, kOrange+2, kCyan+2, kViolet+2, kTeal+2};
+    const int nColors = sizeof(colors) / sizeof(colors[0]);
+
+    TLegend* leg = new TLegend(0.52, 0.60, 0.88, 0.88);
+    leg->SetBorderSize(0);
+    leg->SetFillStyle(0);
+    leg->SetTextFont(42);
+    leg->SetTextSize(0.028);
+
+    TAxis* zax = balance3D_mc->GetZaxis();
+    int idx = 0;
+    for (const auto& kv : ratioVsPt) {
+      const int alphaBin = kv.first;
+      TH1D* h = kv.second;
+      if (!h) continue;
+      const int col = colors[idx % nColors];
+      h->SetMarkerStyle(kFullCircle);
+      h->SetMarkerSize(0.8);
+      h->SetMarkerColor(col);
+      h->SetLineColor(col);
+      h->Draw("PE1 SAME");
+      const double alphaCut = zax->GetBinLowEdge(alphaBin + 1);
+      leg->AddEntry(h, Form("#alpha < %.2f", alphaCut), "PLE");
+      ++idx;
+    }
+
+    leg->Draw();
+    CMS_lumi(c, 0, 0);
+    c->SaveAs(Form("%s/L3Res_%s_ratio_overlay_vspt.png", pngFolder.c_str(), _run.c_str()));
+
+    delete leg;
+    delete line;
+    delete hFrame;
+    delete c;
+  }
+
   // --- Build per-input pT correction(s) and do one combined pT fit (multi-input) ---
   // For multi-input workflows (photon+jet + Z+jet, etc.), provide a comma-separated list
   // of derived ROOT files as the first argument. This macro will fit all pT points together.
@@ -752,6 +982,12 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
   // Collect pT correction histograms from each input
   std::vector<TH1D*> hCorrInputs;
   std::vector<TString> labelInputs;
+  if (!doCombined && saveAlphaExtrap && applyKFSRToPtFit) {
+    cout << "\n=== Building alpha->0 correction for final pT fit ===" << endl;
+    cout << "Using: Corr_{alpha->0}(pT) = Ratio_{ref}(pT) * kFSR(pT)" << endl;
+    cout << "  - Ratio_ref(pT) is MC/Data at the reference alpha cut (ref bin not used in alpha fit)" << endl;
+    cout << "  - kFSR(pT) is the intercept from the linear fit of normalized ratio vs alpha" << endl;
+  }
   for (size_t i = 0; i < inputFiles2.size(); ++i) {
     if (!doCombined && i > 0) break;
     TFile* fIn = TFile::Open(inputFiles2[i], "READ");
@@ -773,6 +1009,12 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     // If this is single-input and kFSR was computed in this run, optionally apply it.
     // For multi-input, provide corr_vspT / ratio_vspT_alpha0 from the corresponding derive step.
     if (!doCombined && applyKFSRToPtFit && saveAlphaExtrap) {
+      const std::string hname = hIn->GetName() ? std::string(hIn->GetName()) : std::string();
+      const bool alreadyAlpha0 = (hname.find("ratio_vspT_alpha0") != std::string::npos) || (hname.find("corr_vspT") != std::string::npos);
+      if (alreadyAlpha0) {
+        cout << "NOTE: input hist '" << hname << "' already represents an alpha->0 correction; not applying kFSR again." << endl;
+      } else {
+        cout << "Applying kFSR(pT) to input hist '" << hname << "' to build alpha->0 correction." << endl;
       for (int b = 1; b <= hClone->GetNbinsX(); ++b) {
         const double r = hClone->GetBinContent(b);
         const double er = hClone->GetBinError(b);
@@ -790,10 +1032,11 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
           hClone->SetBinError(b, 0.0);
         }
       }
+      }
     }
 
     hCorrInputs.push_back(hClone);
-    TString lbl = (i < inputLabels.size()) ? inputLabels[i] : TString(gSystem->BaseName(inputFiles2[i].Data()));
+    TString lbl = (i < inputLabels.size()) ? inputLabels[i] : defaultInputLabel(inputFiles2[i], (int)i + 1);
     labelInputs.push_back(lbl);
     fIn->Close();
   }
@@ -812,12 +1055,25 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     cFinal->SetLogx();
     cFinal->cd();
 
-    TH1D* hFrame = new TH1D("hFrame_combined", ";p_{T}^{#gamma} (GeV);R", 100, 20, 600);
-    hFrame->SetMinimum(0.7);
-    hFrame->SetMaximum(1.5);
+    TH1D* hFrame = makePtFrameFromHist(hCorrInputs.front(), "hFrame_combined", "#frac{R_{MC}}{R_{Data}}", 0.97, 1.05);
+    hFrame->SetMinimum(0.97);
+    hFrame->SetMaximum(1.05);
     hFrame->Draw();
+    styleLogxAxis(hFrame);
+    cFinal->SetLeftMargin(0.14);
+    // Ensure axis titles/ticks are readable
+    hFrame->GetXaxis()->SetTitleSize(0.038);
+    hFrame->GetXaxis()->SetLabelSize(0.032);
+    hFrame->GetYaxis()->SetTitleSize(0.038);
+    hFrame->GetYaxis()->SetLabelSize(0.032);
+    hFrame->GetYaxis()->SetTitleOffset(1.7);
 
-    TLine* line = new TLine(20, 1, 600, 1);
+    const double xMin = hFrame->GetXaxis()->GetBinLowEdge(1);
+    const double xMax = hFrame->GetXaxis()->GetBinLowEdge(hFrame->GetNbinsX() + 1);
+    const double yMin = hFrame->GetMinimum();
+    const double yMax = hFrame->GetMaximum();
+
+    TLine* line = new TLine(xMin, 1, xMax, 1);
     line->SetLineStyle(kDashed);
     line->SetLineColor(kGray+1);
     line->Draw("SAME");
@@ -836,6 +1092,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
 
     std::vector<TH1D*> cleaned;
     std::vector<TGraphErrors*> graphs;
+    std::vector<TLine*> rangeLines;
     for (size_t i = 0; i < hCorrInputs.size(); ++i) {
       TH1D* h = hCorrInputs[i];
       if (!h) continue;
@@ -857,6 +1114,26 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         }
       }
 
+      // Draw the underlying points lightly (all bins) before drawing fit-range points
+      h->SetMarkerStyle(kOpenCircle);
+      h->SetMarkerColor(kGray+1);
+      h->SetLineColor(kGray+1);
+      h->Draw("PE1 SAME");
+
+      // Show per-source fit range on the plot (use labelInputs in legend)
+      if ((ptminThis > xMin) || (ptmaxThis < xMax)) {
+        TLine* lmin = new TLine(ptminThis, yMin, ptminThis, yMax);
+        lmin->SetLineColor(col);
+        lmin->SetLineStyle(kDotted);
+        lmin->Draw("SAME");
+        rangeLines.push_back(lmin);
+        TLine* lmax = new TLine(ptmaxThis, yMin, ptmaxThis, yMax);
+        lmax->SetLineColor(col);
+        lmax->SetLineStyle(kDotted);
+        lmax->Draw("SAME");
+        rangeLines.push_back(lmax);
+      }
+
       TH1D* hClean = drawCleaned(h, "G", ptminThis, ptmaxThis, mkr, col);
       if (!hClean) continue;
       cleaned.push_back(hClean);
@@ -875,15 +1152,14 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         }
       }
 
-      // Also draw the underlying points lightly
-      h->SetMarkerStyle(kOpenCircle);
-      h->SetMarkerColor(kGray+1);
-      h->SetLineColor(kGray+1);
-      h->Draw("PE1 SAME");
     }
 
-    TF1* fref = new TF1("fref_combined", "[0]+[1]*log10(0.01*x)+[2]/(x/10.)", 15., 3500.);
-    fref->SetParameters(1.0, 0.0, 0.0);
+    // Draw the colored, fit-range points on top of the gray full-range points.
+    mg->Draw("P SAME");
+    // Force the frame axes to be redrawn so title/labels are always visible
+    hFrame->Draw("AXIS SAME");
+
+    TF1* fref = makeL3PtFitFunc("fref_combined", 15., 3500.);
     mg->Fit(fref, "QRN");
     frefFinal = fref;
     fref->SetLineColor(kRed+1);
@@ -897,9 +1173,10 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     tex->SetNDC();
     tex->SetTextFont(42);
     tex->SetTextSize(0.032);
-    tex->DrawLatex(0.18, 0.85, Form("Ref #alpha < %.2f (bin %d)", refAlphaVal, refAlphaBin));
+    tex->DrawLatex(0.18, 0.85, Form("Denominator: (#alpha < %.2f), bin %d", refAlphaVal, refAlphaBin));
     tex->DrawLatex(0.18, 0.80, Form("Inputs: %zu", hCorrInputs.size()));
-    tex->DrawLatex(0.18, 0.75, Form("p0=%.5f, p1=%.5f, p2=%.5f", fref->GetParameter(0), fref->GetParameter(1), fref->GetParameter(2)));
+    tex->DrawLatex(0.18, 0.75, Form("p0=%.5f, p1=%.5f", fref->GetParameter(0), fref->GetParameter(1)));
+    tex->DrawLatex(0.18, 0.70, Form("Fit: %s", l3PtFitExpr()));
     CMS_lumi(cFinal, 0, 0);
     cFinal->SaveAs(Form("%s/L3Res_%s_combined_final.png", pngFolder.c_str(), _run.c_str()));
 
@@ -910,26 +1187,52 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       if (hCorrInputs[i]) hCorrInputs[i]->Write(Form("corr_input_%zu", i));
     }
 
-    // Write final L3Residual text in JEC format (eta range from the first input)
+    // Write final L3Residual text in JEC format.
+    // If an L2Residual file is provided, match its eta binning + pT validity ranges so it can be used consistently downstream.
     {
-      const double etaMinAll = balance3D_mc->GetYaxis()->GetBinLowEdge(1);
-      const double etaMaxAll = balance3D_mc->GetYaxis()->GetBinLowEdge(netabins + 1);
+      std::string l2HeaderTmp;
+      std::vector<JecRecord> l2recsTmp;
+      const bool haveL2 = (!l2ResidualFile.empty() && readSimpleJecFile(l2ResidualFile, l2HeaderTmp, l2recsTmp) && !l2recsTmp.empty());
+
       const std::string l3TxtOut = Form("%s/%s.txt", txtFolder.c_str(), outfilename.c_str());
       std::ofstream ftxt(l3TxtOut);
-      ftxt << "{ 1 JetEta 1 JetPt [0]+[1]*log10(0.01*x)+[2]/(x/10.) Correction L3Residual}\n";
-      ftxt << Form("  %6.3f %6.3f  5  %5.0f %5.0f  %10.6f %10.6f %10.6f\n",
-                   etaMinAll, etaMaxAll, ptminG, 500.,
-                   fref->GetParameter(0), fref->GetParameter(1), fref->GetParameter(2));
+      ftxt << "{ 1 JetEta 1 JetPt " << l3PtFitExpr() << " Correction L3Residual}\n";
+      if (haveL2) {
+        for (const auto& rec : l2recsTmp) {
+          ftxt << Form("  %6.3f %6.3f  4  %5.0f %5.0f  %10.6f %10.6f\n",
+                       rec.etaMin, rec.etaMax, rec.ptMin, rec.ptMax,
+                       fref->GetParameter(0), fref->GetParameter(1));
+        }
+      } else {
+        const double etaMinAll = balance3D_mc->GetYaxis()->GetBinLowEdge(1);
+        const double etaMaxAll = balance3D_mc->GetYaxis()->GetBinLowEdge(netabins + 1);
+        const double ptLo = hCorrInputs.front()->GetXaxis()->GetBinLowEdge(1);
+        const double ptHi = hCorrInputs.front()->GetXaxis()->GetBinLowEdge(hCorrInputs.front()->GetNbinsX() + 1);
+        ftxt << Form("  %6.3f %6.3f  4  %5.0f %5.0f  %10.6f %10.6f\n",
+                     etaMinAll, etaMaxAll, ptLo, ptHi,
+                     fref->GetParameter(0), fref->GetParameter(1));
+      }
       ftxt.close();
 
       gSystem->mkdir(jecOutDir.c_str(), kTRUE);
       const std::string outTag = doCombined ? "combined" : "photonjet";
       const std::string l3TxtJec = Form("%s/L3Residuals_%s_%s_AK4PF.txt", jecOutDir.c_str(), _run.c_str(), outTag.c_str());
       std::ofstream ftxt2(l3TxtJec);
-      ftxt2 << "{ 1 JetEta 1 JetPt [0]+[1]*log10(0.01*x)+[2]/(x/10.) Correction L3Residual}\n";
-      ftxt2 << Form("  %6.3f %6.3f  5  %5.0f %5.0f  %10.6f %10.6f %10.6f\n",
-                    etaMinAll, etaMaxAll, ptminG, 500.,
-                    fref->GetParameter(0), fref->GetParameter(1), fref->GetParameter(2));
+      ftxt2 << "{ 1 JetEta 1 JetPt " << l3PtFitExpr() << " Correction L3Residual}\n";
+      if (haveL2) {
+        // Use L2 eta structure but pT range is the fit range (ptminG, ptmaxG)
+        for (const auto& rec : l2recsTmp) {
+          ftxt2 << Form("  %6.3f %6.3f  4  %5.0f %5.0f  %10.6f %10.6f\n",
+                        rec.etaMin, rec.etaMax, ptminG, ptmaxG,
+                        fref->GetParameter(0), fref->GetParameter(1));
+        }
+      } else {
+        const double etaMinAll = balance3D_mc->GetYaxis()->GetBinLowEdge(1);
+        const double etaMaxAll = balance3D_mc->GetYaxis()->GetBinLowEdge(netabins + 1);
+        ftxt2 << Form("  %6.3f %6.3f  4  %5.0f %5.0f  %10.6f %10.6f\n",
+                      etaMinAll, etaMaxAll, ptminG, ptmaxG,
+                      fref->GetParameter(0), fref->GetParameter(1));
+      }
       ftxt2.close();
 
       cout << "\nWrote L3Residual JEC text: " << l3TxtJec << endl;
@@ -944,11 +1247,11 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     // graphs in mg were heap-allocated; ok to keep until process exit
   }
 
-    // Optional: build combined L2L3Residual by multiplying the current L2Residual file with the fitted L3Residual(pt)
-    if (writeL2L3) {
-      if (!frefFinal) {
-        cout << "WARNING: writeL2L3 requested but no final L3 pT fit is available; skipping L2L3 write" << endl;
-      } else {
+  // Optional: build combined L2L3Residual by multiplying the current L2Residual file with the fitted L3Residual(pt)
+  if (writeL2L3) {
+    if (!frefFinal) {
+      cout << "WARNING: writeL2L3 requested but no final L3 pT fit is available; skipping L2L3 write" << endl;
+    } else {
       std::string l2Header;
       std::vector<JecRecord> l2recs;
       if (!readSimpleJecFile(l2ResidualFile, l2Header, l2recs)) {
@@ -956,30 +1259,49 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       } else {
         const std::string l2l3Txt = Form("%s/L2L3Residuals_%s_photonjet_AK4PF.txt", jecOutDir.c_str(), _run.c_str());
         std::ofstream out(l2l3Txt);
-        out << "{ 1 JetEta 1 JetPt [0]+[1]*log10(0.01*x)+[2]/(x/10.) Correction L2L3Residual }\n";
+        // Preserve the L2 file structure (eta bins, pT validity range, and functional form).
+        // We refit the product (L2(pt)*L3(pt)) to the SAME functional form as the L2 file.
+        std::string l2l3Header = l2Header;
+        if (l2l3Header.find("L2Relative") != std::string::npos) {
+          size_t p = l2l3Header.find("L2Relative");
+          l2l3Header.replace(p, std::string("L2Relative").size(), "L2L3Residual");
+        }
+        out << l2l3Header << "\n";
 
+        // Use hardcoded L2 expression (matches the L2 file used in this repo)
+        const char* l2Expr = "1./([0]+[1]*log10(0.01*x)+[2]/(x/10.0))";
         // Fit combined shape per eta-bin using sampled points in the L2 pT validity range
         for (const auto& rec : l2recs) {
           const double ptLo = rec.ptMin;
           const double ptHi = rec.ptMax;
           const int nSamples = 30;
           std::vector<double> x(nSamples), y(nSamples);
+
+          // Evaluate L2 using the parameters from the file
+          TF1 fL2("fL2", l2Expr, ptLo, ptHi);
+          for (size_t ip = 0; ip < rec.par.size() && ip < 3; ++ip) fL2.SetParameter((int)ip, rec.par[ip]);
+
           for (int ip = 0; ip < nSamples; ++ip) {
             const double t = (ip + 0.5) / nSamples;
             const double pt = ptLo * pow(ptHi / ptLo, t); // log-uniform sampling
-            const double c2 = evalL2ResidualShape(pt, rec.par);
+            const double c2 = fL2.Eval(pt);
             const double c3 = frefFinal->Eval(pt);
             x[ip] = pt;
             y[ip] = c2 * c3;
           }
           TGraph g(nSamples, x.data(), y.data());
-          TF1 fComb("fComb", "[0]+[1]*log10(0.01*x)+[2]/(x/10.)", ptLo, ptHi);
-          fComb.SetParameters(1.0, 0.0, 0.0);
+          TF1 fComb("fComb", l2Expr, ptLo, ptHi);
+          for (size_t ip = 0; ip < rec.par.size() && ip < 3; ++ip) fComb.SetParameter((int)ip, rec.par[ip]);
           g.Fit(&fComb, "QNR");
 
-          out << Form("  %6.3f %6.3f  5  %5.0f %5.0f  %10.6f %10.6f %10.6f\n",
-                      rec.etaMin, rec.etaMax, ptLo, ptHi,
-                      fComb.GetParameter(0), fComb.GetParameter(1), fComb.GetParameter(2));
+          std::ostringstream oss;
+          oss.setf(std::ios::fixed);
+          oss << Form("  %6.3f %6.3f  %d  %5.0f %5.0f", rec.etaMin, rec.etaMax, rec.nPar, ptLo, ptHi);
+          for (int ip = 0; ip < rec.nPar - 2; ++ip) {
+            oss << Form("  %10.6f", fComb.GetParameter(ip));
+          }
+          oss << "\n";
+          out << oss.str();
         }
         out.close();
         cout << "Wrote combined L2L3Residual JEC text: " << l2l3Txt << endl;
@@ -1073,17 +1395,18 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     cout << "  Alpha cut: alpha < " << alphaCutVal << endl;
 
     // Ratio plot
-    TH1D* hFrame1 = new TH1D(Form("hFrame1_a%d", alphaBin), ";p_{T}^{#gamma} (GeV);R", 100, 20, 600);
-    hFrame1->SetMinimum(0.7);
-    hFrame1->SetMaximum(1.5);
+    TH1D* hFrame1 = makePtFrameFromHist(hRatio, Form("hFrame1_a%d", alphaBin), "#frac{R_{MC}}{R_{Data}}", 0.7, 1.5);
     TCanvas* c1 = new TCanvas(Form("c1_a%d", alphaBin), Form("c1_a%d", alphaBin), 800, 600);
     c1->SetLogx();
     c1->cd();
     hFrame1->Draw();
+    styleLogxAxis(hFrame1);
+    const double xMin1 = hFrame1->GetXaxis()->GetBinLowEdge(1);
+    const double xMax1 = hFrame1->GetXaxis()->GetBinLowEdge(hFrame1->GetNbinsX() + 1);
     TLine* line = new TLine();
     line->SetLineStyle(kDashed);
     line->SetLineColor(kGray+1);
-    line->DrawLine(20, 1, 600, 1);
+    line->DrawLine(xMin1, 1, xMax1, 1);
     hRatio->SetMarkerStyle(kFullCircle);
     hRatio->SetMarkerColor(kBlue);
     hRatio->SetLineColor(kBlue);
@@ -1102,26 +1425,34 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     // L3 is treated as eta-independent here.
     CMS_lumi(c1, 0, 0);
     c1->SaveAs(Form("%s/L3Res_%s_alpha%d_ratio.png", pngFolder.c_str(), _run.c_str(), alphaBin));
-    if (saveAlphaExtrap) {
-      c1->SaveAs(Form("%s/L3Res_%s_alpha%d_ratio.png", alphaFolder.c_str(), _run.c_str(), alphaBin));
-    }
+
 
     // Optional raw MC/Data responses (no fits, no ratio)
     if (plotRawResponses) {
       TH1D* hMcRaw = (TH1D*)inFile->Get(Form("balance_vsphotonpt_mc_alpha%d", alphaBin));
       TH1D* hDtRaw = (TH1D*)inFile->Get(Form("balance_vsphotonpt_data_alpha%d", alphaBin));
-      if (hMcRaw && hDtRaw) {
+      if (!hMcRaw || !hDtRaw) {
+        // Create a placeholder raw plot so users have a consistent output even when raw histos are missing
+        TCanvas* cRaw = new TCanvas(Form("cRaw_a%d_missing", alphaBin), Form("cRaw_a%d_missing", alphaBin), 800, 600);
+        TH1D* frameRaw = makePtFrameFromHist(hRatio, Form("hFrameRaw_a%d_missing", alphaBin), "#frac{R_{MC}}{R_{Data}}", 0.7, 1.5);
+        frameRaw->Draw();
+        styleLogxAxis(frameRaw);
+        TLatex t; t.SetNDC(); t.SetTextFont(42); t.SetTextSize(0.04); t.DrawLatex(0.18, 0.55, "Raw MC/Data responses not found in input");
+        CMS_lumi(cRaw, 0, 0);
+        cRaw->SaveAs(Form("%s/L3Res_%s_alpha%d_raw_missing.png", rawFolder.c_str(), _run.c_str(), alphaBin));
+        delete frameRaw; delete cRaw;
+      } else {
         TCanvas* cRaw = new TCanvas(Form("cRaw_a%d", alphaBin), Form("cRaw_a%d", alphaBin), 800, 600);
         cRaw->SetLogx();
-        TH1D* frameRaw = new TH1D(Form("hFrameRaw_a%d", alphaBin), ";p_{T}^{#gamma} (GeV);Balance", 100, 20, 600);
-        frameRaw->SetMinimum(0.7);
-        frameRaw->SetMaximum(1.5);
+        TH1D* frameRaw = makePtFrameFromHist(hMcRaw, Form("hFrameRaw_a%d", alphaBin), "#frac{R_{MC}}{R_{Data}}", 0.7, 1.5);
         frameRaw->Draw();
+        styleLogxAxis(frameRaw);
+        frameRaw->GetXaxis()->SetNoExponent(kTRUE);
         hMcRaw->SetMarkerStyle(kFullCircle);
         hMcRaw->SetMarkerColor(kBlue);
         hMcRaw->SetLineColor(kBlue);
         hMcRaw->Draw("PE1 SAME");
-        hDtRaw->SetMarkerStyle(kFullSquare);
+        hDtRaw->SetMarkerStyle(kFullCircle);
         hDtRaw->SetMarkerColor(kRed);
         hDtRaw->SetLineColor(kRed);
         hDtRaw->Draw("PE1 SAME");
@@ -1130,131 +1461,140 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         legRaw->SetFillStyle(0);
         legRaw->SetTextFont(42);
         legRaw->SetTextSize(0.035);
-        legRaw->AddEntry(hMcRaw, Form("MC (#alpha < %.2f)", alphaCutVal), "PLE");
-        legRaw->AddEntry(hDtRaw, Form("Data (#alpha < %.2f)", alphaCutVal), "PLE");
+        legRaw->AddEntry(hMcRaw, "MC", "PE");
+        legRaw->AddEntry(hDtRaw, "Data", "PE");
         legRaw->Draw();
         CMS_lumi(cRaw, 0, 0);
         cRaw->SaveAs(Form("%s/L3Res_%s_alpha%d_raw.png", rawFolder.c_str(), _run.c_str(), alphaBin));
-        delete frameRaw;
-        delete cRaw;
-      }
-    }
+        delete legRaw;
+        // Optional diagnostic: per-alpha pT fits (off by default)
+        if (plotPerAlphaPtFits) {
+          TH1D* hFrame2 = makePtFrameFromHist(hRatio, Form("hFrame2_a%d", alphaBin), "#frac{R_{MC}}{R_{Data}}", 0.7, 1.5);
+          TCanvas* c2 = new TCanvas(Form("c2_a%d", alphaBin), Form("c2_a%d", alphaBin), 800, 600);
+          c2->SetLogx();
+          c2->cd();
+          hFrame2->Draw();
+          styleLogxAxis(hFrame2);
+          const double xMin2 = hFrame2->GetXaxis()->GetBinLowEdge(1);
+          const double xMax2 = hFrame2->GetXaxis()->GetBinLowEdge(hFrame2->GetNbinsX() + 1);
 
-    // Fits
-    TH1D* hFrame2 = new TH1D(Form("hFrame2_a%d", alphaBin), ";p_{T}^{#gamma} (GeV);R", 100, 20, 600);
-    hFrame2->SetMinimum(0.7);
-    hFrame2->SetMaximum(1.5);
-    TCanvas* c2 = new TCanvas(Form("c2_a%d", alphaBin), Form("c2_a%d", alphaBin), 800, 600);
-    c2->SetLogx();
-    c2->cd();
-    hFrame2->Draw();
-    line->DrawLine(20, 1, 600, 1);
-    line->SetLineStyle(kDotted);
-    line->SetLineColor(kGray);
-    line->DrawLine(ptminG, 0.5, ptminG, 1.2);
-    line->DrawLine(ptmaxG, 0.5, ptmaxG, 1.2);
-    line->SetLineStyle(kDashed);
-    line->SetLineColor(kGray+1);
-    TH1D* hRatioFull = (TH1D*)hRatio->Clone(Form("hRatioFull_a%d", alphaBin));
-    hRatioFull->SetMarkerStyle(kOpenCircle);
-    hRatioFull->SetMarkerColor(kGray);
-    hRatioFull->SetLineColor(kGray);
-    hRatioFull->Draw("PE1 SAME");
-    TH1D* hRatioClean = drawCleaned(hRatio, "G", ptminG, ptmaxG, kFullCircle, kBlue);
-    hRatioClean->Draw("PE1 SAME");
-    TMultiGraph* mg = new TMultiGraph(Form("mg_a%d", alphaBin), "mg");
-    if (fitG && hRatioClean) {
-      TGraphErrors* gG = cleanGraph(new TGraphErrors(hRatioClean));
-      if (gG && gG->GetN() > 0) mg->Add(gG, "P");
-    }
-    double fitRangeMin = ptminG;
-    double fitRangeMax = ptmaxG;
-    TF1* f0 = new TF1(Form("f0_a%d", alphaBin), "[0]", fitRangeMin, fitRangeMax);
-    TF1* f1 = new TF1(Form("f1_a%d", alphaBin), "[0]+[1]*log10(0.01*x)", fitRangeMin, fitRangeMax);
-    TF1* f2 = new TF1(Form("f2_a%d", alphaBin), "[0]+[1]*log10(0.01*x)+[2]/(x/10.)", fitRangeMin, fitRangeMax);
-    TF1* f3 = new TF1(Form("f3_a%d", alphaBin), "[0]+[1]*log10(0.01*x)+[2]*pow(log10(0.01*x),2)", fitRangeMin, fitRangeMax);
-    TF1* f4 = new TF1(Form("f4_a%d", alphaBin), "[0]+[1]*log10(0.01*x)+[2]*pow(log10(0.01*x),2)+[3]/(x/10.)", fitRangeMin, fitRangeMax);
-    TF1* fref = new TF1(Form("fref_a%d", alphaBin), "[0]+[1]*log10(0.01*x)+[2]/(x/10.)", 15., 3500.);
-    f0->SetParameter(0, 1.0); mg->Fit(f0, "QRN");
-    f1->SetParameters(f0->GetParameter(0), -0.01); mg->Fit(f1, "QRN");
-    f2->SetParameters(f1->GetParameter(0), f1->GetParameter(1), 0.02); f2->SetParLimits(2, -0.5, 0.5); mg->Fit(f2, "QRN");
-    f3->SetParameters(f1->GetParameter(0), f1->GetParameter(1), 0.005); mg->Fit(f3, "QRN");
-    f4->SetParameters(f3->GetParameter(0), f3->GetParameter(1), f3->GetParameter(2), f2->GetParameter(2)); f4->SetParLimits(3, -0.5, 0.5); mg->Fit(f4, "QRN");
-    fref->SetParameters(f2->GetParameter(0), f2->GetParameter(1), f2->GetParameter(2)); fref->SetParLimits(2, -0.5, 0.5); mg->Fit(fref, "QRN");
-    f0->SetLineColor(kMagenta+2); f0->SetLineStyle(kDotted); f0->Draw("SAME");
-    f1->SetLineColor(kCyan+1); f1->SetLineStyle(kDashed); f1->Draw("SAME");
-    f2->SetLineColor(kGreen+2); f2->SetLineWidth(2); f2->Draw("SAME");
-    f3->SetLineColor(kOrange+2); f3->SetLineStyle(kDashDotted); f3->Draw("SAME");
-    fref->SetLineColor(kRed); fref->SetLineWidth(2); fref->Draw("SAME");
-    TLegend* leg2 = new TLegend(0.50, 0.65, 0.88, 0.88);
-    leg2->SetBorderSize(0);
-    leg2->SetFillStyle(0);
-    leg2->SetTextFont(42);
-    leg2->SetTextSize(0.030);
-    leg2->AddEntry(hRatioClean, "#gamma+jet (cleaned)", "PLE");
-    leg2->AddEntry(f0, "f_{0}: const", "L");
-    leg2->AddEntry(f1, "f_{1}: log(p_{T})", "L");
-    leg2->AddEntry(f2, "f_{2}: log(p_{T}) + 1/p_{T}", "L");
-    leg2->AddEntry(f3, "f_{3}: log^{2}(p_{T})", "L");
-    leg2->AddEntry(fref, Form("Ref: #chi^{2}/ndf = %.1f/%d", fref->GetChisquare(), fref->GetNDF()), "L");
-    leg2->Draw();
-    tex->DrawLatex(0.20, 0.85, Form("Fit range: %.0f-%.0f GeV", ptminG, ptmaxG));
-    tex->DrawLatex(0.20, 0.80, Form("#alpha < %.2f (bin %d)", alphaCutVal, alphaBin));
-    tex->DrawLatex(0.20, 0.75, Form("|#eta_{jet}| < %.1f", balance3D_mc->GetYaxis()->GetBinLowEdge(netabins + 1)));
-    CMS_lumi(c2, 0, 0);
-    c2->SaveAs(Form("%s/L3Res_%s_alpha%d_fits.png", pngFolder.c_str(), _run.c_str(), alphaBin));
+          line->DrawLine(xMin2, 1, xMax2, 1);
+          line->SetLineStyle(kDotted);
+          line->SetLineColor(kGray);
+          line->DrawLine(ptminG, 0.5, ptminG, 1.2);
+          line->DrawLine(ptmaxG, 0.5, ptmaxG, 1.2);
+          line->SetLineStyle(kDashed);
+          line->SetLineColor(kGray+1);
 
-    // Closure
-    if (doClosure) {
-      TH1D* hFrame3 = new TH1D(Form("hFrame3_a%d", alphaBin), ";p_{T}^{#gamma} (GeV);Corrected Response", 100, 20, 600);
-      hFrame3->SetMinimum(0.7);
-      hFrame3->SetMaximum(1.3);
-      TCanvas* c3 = new TCanvas(Form("c3_a%d", alphaBin), Form("c3_a%d", alphaBin), 800, 600);
-      c3->SetLogx();
-      c3->cd();
-      hFrame3->Draw();
-      line->SetLineStyle(kDashed);
-      line->SetLineColor(kGray+1);
-      line->DrawLine(20, 1, 600, 1);
-      TH1D* hCorrected = (TH1D*)hRatio->Clone(Form("hCorrected_a%d", alphaBin));
-      for (int i = 1; i <= hCorrected->GetNbinsX(); ++i) {
-        double pt = hCorrected->GetBinCenter(i);
-        double val = hCorrected->GetBinContent(i);
-        double err = hCorrected->GetBinError(i);
-        if (val > 0 && pt >= fitRangeMin && pt <= 500.) {
-          double corr = fref->Eval(pt);
-          hCorrected->SetBinContent(i, val / corr);
-          hCorrected->SetBinError(i, err / corr);
-        } else {
-          hCorrected->SetBinContent(i, 0);
-          hCorrected->SetBinError(i, 0);
+          TH1D* hRatioFull = (TH1D*)hRatio->Clone(Form("hRatioFull_a%d", alphaBin));
+          hRatioFull->SetMarkerStyle(kOpenCircle);
+          hRatioFull->SetMarkerColor(kGray);
+          hRatioFull->SetLineColor(kGray);
+          hRatioFull->Draw("PE1 SAME");
+
+          TH1D* hRatioClean = drawCleaned(hRatio, "G", ptminG, ptmaxG, kFullCircle, kBlue);
+          hRatioClean->Draw("PE1 SAME");
+
+          TMultiGraph* mg = new TMultiGraph(Form("mg_a%d", alphaBin), "mg");
+          if (fitG && hRatioClean) {
+            TGraphErrors* gG = cleanGraph(new TGraphErrors(hRatioClean));
+            if (gG && gG->GetN() > 0) mg->Add(gG, "P");
+          }
+          const double fitRangeMin = ptminG;
+          const double fitRangeMax = ptmaxG;
+          TF1* f0 = new TF1(Form("f0_a%d", alphaBin), "[0]", fitRangeMin, fitRangeMax);
+          TF1* f1 = new TF1(Form("f1_a%d", alphaBin), l3PtFitExpr(), fitRangeMin, fitRangeMax);
+          f0->SetParameter(0, 1.0);
+          mg->Fit(f0, "QRN");
+          f1->SetParameters(f0->GetParameter(0), -0.01);
+          mg->Fit(f1, "QRN");
+          f0->SetLineColor(kMagenta+2);
+          f0->SetLineStyle(kDotted);
+          f0->Draw("SAME");
+          f1->SetLineColor(kRed);
+          f1->SetLineWidth(2);
+          f1->Draw("SAME");
+
+          TLegend* leg2 = new TLegend(0.50, 0.65, 0.88, 0.88);
+          leg2->SetBorderSize(0);
+          leg2->SetFillStyle(0);
+          leg2->SetTextFont(42);
+          leg2->SetTextSize(0.030);
+          leg2->AddEntry(hRatioClean, "#gamma+jet (cleaned)", "PLE");
+          leg2->AddEntry(f0, Form("f_{0}: const (p0=%.4f)", f0->GetParameter(0)), "L");
+          leg2->AddEntry(f1, Form("f_{1}: p0=%.4f, p1=%.4f", f1->GetParameter(0), f1->GetParameter(1)), "L");
+          leg2->Draw();
+
+          tex->DrawLatex(0.20, 0.85, Form("Fit range: %.0f-%.0f GeV", ptminG, ptmaxG));
+          tex->DrawLatex(0.20, 0.80, Form("(#alpha < %.2f), bin %d", alphaCutVal, alphaBin));
+          tex->DrawLatex(0.20, 0.75, Form("|#eta_{jet}| < %.1f", balance3D_mc->GetYaxis()->GetBinLowEdge(netabins + 1)));
+          CMS_lumi(c2, 0, 0);
+          c2->SaveAs(Form("%s/L3Res_%s_alpha%d_fits.png", pngFolder.c_str(), _run.c_str(), alphaBin));
+
+          // Closure plot for this alpha bin (optional)
+          if (doClosure) {
+            TH1D* hFrame3 = makePtFrameFromHist(hRatio, Form("hFrame3_a%d", alphaBin), "Corrected balance", 0.7, 1.3);
+            TCanvas* c3 = new TCanvas(Form("c3_a%d", alphaBin), Form("c3_a%d", alphaBin), 800, 600);
+            c3->SetLogx();
+            c3->cd();
+            hFrame3->Draw();
+            styleLogxAxis(hFrame3);
+            const double xMin3 = hFrame3->GetXaxis()->GetBinLowEdge(1);
+            const double xMax3 = hFrame3->GetXaxis()->GetBinLowEdge(hFrame3->GetNbinsX() + 1);
+            line->SetLineStyle(kDashed);
+            line->SetLineColor(kGray+1);
+            line->DrawLine(xMin3, 1, xMax3, 1);
+
+            TH1D* hCorrected = (TH1D*)hRatio->Clone(Form("hCorrected_a%d", alphaBin));
+            for (int i = 1; i <= hCorrected->GetNbinsX(); ++i) {
+              const double pt = hCorrected->GetBinCenter(i);
+              const double val = hCorrected->GetBinContent(i);
+              const double err = hCorrected->GetBinError(i);
+              if (val > 0 && pt >= fitRangeMin && pt <= fitRangeMax) {
+                const double corr = f1->Eval(pt);
+                hCorrected->SetBinContent(i, val / corr);
+                hCorrected->SetBinError(i, err / corr);
+              }
+            }
+            hCorrected->SetMarkerStyle(kFullCircle);
+            hCorrected->SetMarkerColor(kBlue);
+            hCorrected->SetLineColor(kBlue);
+            hCorrected->Draw("PE1 SAME");
+            TLegend* leg3 = new TLegend(0.50, 0.75, 0.88, 0.88);
+            leg3->SetBorderSize(0);
+            leg3->SetFillStyle(0);
+            leg3->SetTextFont(42);
+            leg3->SetTextSize(0.030);
+            leg3->AddEntry(hCorrected, "Corrected", "PLE");
+            leg3->AddEntry(f1, "Fit applied", "L");
+            leg3->Draw();
+            tex->DrawLatex(0.20, 0.85, Form("(#alpha < %.2f), bin %d", alphaCutVal, alphaBin));
+            tex->DrawLatex(0.20, 0.80, Form("Fit range: %.0f-%.0f GeV", fitRangeMin, fitRangeMax));
+            CMS_lumi(c3, 0, 0);
+            c3->SaveAs(Form("%s/L3Res_%s_alpha%d_closure.png", pngFolder.c_str(), _run.c_str(), alphaBin));
+            delete leg3;
+            delete hCorrected;
+            delete hFrame3;
+            delete c3;
+          }
+
+          outfile->cd();
+          if (hRatioClean) hRatioClean->Write(Form("ratio_vspT_cleaned_alpha%d", alphaBin));
+          f0->Write();
+          f1->Write();
+
+          delete leg2;
+          delete f0;
+          delete f1;
+          delete mg;
+          delete hRatioFull;
+          delete hRatioClean;
+          delete hFrame2;
+          delete c2;
         }
       }
-      hCorrected->SetMarkerStyle(kFullSquare);
-      hCorrected->SetMarkerColor(kRed);
-      hCorrected->SetLineColor(kRed);
-      hCorrected->Draw("PE1 SAME");
-      TH1D* hUncorr = (TH1D*)hRatio->Clone(Form("hUncorr_a%d", alphaBin));
-      hUncorr->SetMarkerStyle(kOpenCircle);
-      hUncorr->SetMarkerColor(kBlue);
-      hUncorr->SetLineColor(kBlue);
-      hUncorr->Draw("PE1 SAME");
-      TLegend* leg3 = new TLegend(0.55, 0.70, 0.88, 0.88);
-      leg3->SetBorderSize(0);
-      leg3->SetFillStyle(0);
-      leg3->SetTextFont(42);
-      leg3->SetTextSize(0.035);
-      leg3->AddEntry(hUncorr, "Before L3Res", "PLE");
-      leg3->AddEntry(hCorrected, "After L3Res", "PLE");
-      leg3->Draw();
-      tex->DrawLatex(0.20, 0.20, "Closure: Apply derived L3Res");
-      tex->DrawLatex(0.20, 0.15, "Expect ratio #rightarrow 1.0");
-      CMS_lumi(c3, 0, 0);
-      c3->SaveAs(Form("%s/L3Res_%s_alpha%d_closure.png", pngFolder.c_str(), _run.c_str(), alphaBin));
-      outfile->cd();
-      hCorrected->Write(Form("ratio_corrected_alpha%d", alphaBin));
-      delete c3;
-    }
+    } // end if (plotRawResponses)
+
 
     // Eta-dependent maps (counts and l3resmap) are optional.
     // L3 is treated as eta-independent by default.
@@ -1279,6 +1619,10 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       // draw as color map (no overlaid text) and use log-x for pT readability
       gStyle->SetPaintTextFormat("0.0f");
       h2dCounts->SetMarkerSize(1.4);
+      // Improve log-x axis labeling for pT range on 2D maps
+      h2dCounts->GetXaxis()->SetMoreLogLabels(kTRUE);
+      h2dCounts->GetXaxis()->SetNdivisions(510);
+      h2dCounts->GetXaxis()->SetNoExponent(kTRUE);
       h2dCounts->Draw("TEXTCOLZ");
       CMS_lumi(cCounts, 0, 0);
       cCounts->SaveAs(Form("%s/L3Res_%s_alpha%d_counts_mc_pt%.0fto%.0f_eta%.3fto%.3f.png", pngFolder.c_str(), _run.c_str(), alphaBin, ptMinAll, ptMaxAll, etaMinAll, etaMaxAll));
@@ -1303,6 +1647,10 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       cCountsData->cd();
       gStyle->SetPaintTextFormat("0.0f");
       h2dCountsData->SetMarkerSize(1.4);
+      // Improve log-x axis labeling for pT range on 2D maps
+      h2dCountsData->GetXaxis()->SetMoreLogLabels(kTRUE);
+      h2dCountsData->GetXaxis()->SetNdivisions(510);
+      h2dCountsData->GetXaxis()->SetNoExponent(kTRUE);
       h2dCountsData->Draw("TEXTCOLZ");
       CMS_lumi(cCountsData, 0, 0);
       cCountsData->SaveAs(Form("%s/L3Res_%s_alpha%d_counts_data_pt%.0fto%.0f_eta%.3fto%.3f.png", pngFolder.c_str(), _run.c_str(), alphaBin, ptMinAll, ptMaxAll, etaMinAll, etaMaxAll));
@@ -1369,6 +1717,10 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       cL3Res->SetLogx();
       cL3Res->cd();
       gStyle->SetPaintTextFormat("0.3f");
+      // Improve log-x axis labeling for pT range on 2D maps
+      h2dL3Res->GetXaxis()->SetMoreLogLabels(kTRUE);
+      h2dL3Res->GetXaxis()->SetNdivisions(510);
+      h2dL3Res->GetXaxis()->SetNoExponent(kTRUE);
       h2dL3Res->SetMarkerSize(1.4);
       h2dL3Res->SetMinimum(0.7);
       h2dL3Res->SetMaximum(1.5);
@@ -1384,18 +1736,14 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
 
     outfile->cd();
     hRatio->Write(Form("ratio_vspT_alpha%d", alphaBin));
-    if (hRatioClean) hRatioClean->Write(Form("ratio_vspT_cleaned_alpha%d", alphaBin));
-    f0->Write(); f1->Write(); f2->Write(); f3->Write(); f4->Write(); fref->Write();
-
     delete c1;
-    delete c2;
   }
 
   outfile->Close();
   inFile->Close();
 
   cout << "\n============================================" << endl;
-  cout << "Output written to: " << outfolder << "/" << outfilename << ".root" << endl;
+  cout << "Output written to: " << outfolder << "/" << outfilename << "_fit.root" << endl;
   cout << "Plots saved in: " << pngFolder << "/" << endl;
   cout << "Final L3Residual text file: " << txtFolder << "/" << outfilename << ".txt" << endl;
   cout << "============================================" << endl;

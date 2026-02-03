@@ -14,7 +14,9 @@ This script reads the photon+jet analysis output directly and creates diagnostic
 **Usage:**
 ```cpp
 root -l -b -q 'plotresponse_L3.C("PHOTONHP_AK4_photonjet.root", "Data")'
-root -l -b -q 'plotresponse_L3.C("PHOTONMC_AK4_photonjet.root", "MC", "2024ppRef", "pp Reference", true)'
+root -l -b -q 'plotresponse_L3.C("PHOTONMC_AK4_photonjet.root", "MC", "2024ppRef", "pp 480.4 pb^{-1}", true)'
+
+# Default lumi label changed to "pp 480.4 pb^{-1}" to reflect dataset integrated luminosity.
 ```
 
 ```cpp
@@ -77,8 +79,10 @@ This script reads the derived photon+jet balance products (ratios vs pT for each
 **Usage:**
 ```cpp
 // Run from the repo top-level (recommended) so the default jecfiles paths work
-root -l -b -q 'L3Residual/dofits_L3.C("L3_derived.root", 60, 300, "L3Res_photonjet", false, "2024ppRef", "pp Reference", false, true)'
-
+root -l -b -q 'L3Residual/dofits_L3.C("L3_derived.root", 60, 300, "L3Res_photonjet", false, "2024ppRef", "pp 480.4 pb^{-1}", true, true)'
+# For balance distribution overlays (requires raw derived files with photonjet_balance_dist):
+# root -l -b -q 'L3Residual/dofits_L3.C("L3_derived.root", 60, 300, "L3Res_photonjet", false, "2024ppRef", "pp 480.4 pb^{-1}", true, true, 5, 0.0, 0.4, true, true, "mc_raw.root", "data_raw.root")'
+# If raw files not provided, the macro will fall back to generating per-pT balance overlays using the input 3D profiles (saved to raw/balance_dist_overlay/).
 // Multi-input combined fit (e.g. photon+jet + Z+jet derived products)
 // - First argument is a comma-separated list of derived ROOT files
 // - Optional: provide labels (inputLabelsCSV) and per-input pT ranges (inputPtRangesCSV)

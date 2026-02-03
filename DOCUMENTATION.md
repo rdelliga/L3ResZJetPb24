@@ -168,19 +168,23 @@ This section describes the full logic implemented across `deriveL3_from_photonje
   - For each pT bin (and optionally each eta bin) build the normalized ratio vs $\alpha$ histogram.
   - Fit a linear function in $\alpha$ over a configurable range (default $[0.0,0.4]$ or narrower) excluding the reference bin. The linear fit is used to extrapolate to $\alpha\rightarrow 0$.
   - Extract $k_{FSR}(p_T)$ as the fit intercept at $\alpha=0$ (this captures residual FSR/ISR modeling differences between MC and Data). Store $k_{FSR}(p_T)$ and its uncertainty.
+    - When enabled, `dofits_L3.C` also saves:
+      - per-$p_T$ PNGs showing the points and linear fit used to extract $k_{FSR}$ (`.../alpha_extrap/L3Res_<run>_kFSR_alphaFit_pt*.png`)
+      - a diagnostic plot of the constructed $\alpha\to 0$ correction histogram (`.../alpha_extrap/L3Res_<run>_corr_alpha0_fromkFSR.png`)
 
 4) Build pT-correction points (final per-input correction histogram):
   - If alpha-extrapolation was performed, form the alpha->0 corrected pT points by applying $k_{FSR}$ to the nominal pT histogram (nominal = ratio at reference alpha):
     $$ C(p_T) = R(p_T,\alpha_{ref}) \times k_{FSR}(p_T) $$
     (propagating relative errors from both factors)
+    - This corrected histogram is what is used for the final pT fit (unless an already-built `ratio_vspT_alpha0` / `corr_vspT` is provided, in which case `dofits_L3.C` will not apply $k_{FSR}$ again).
   - Alternatively, `deriveL3_from_photonjet.C` can produce `corr_vspT` or `ratio_vspT_alpha0` directly which `dofits_L3.C` will use.
 
 5) Combined pT fit (single script, `dofits_L3.C`):
   - The macro collects all pT-correction histograms from one or more derived ROOT files. For multi-input workflows (e.g., photon+jet + Z+jet), provide a comma-separated list of derived files as the first argument.
   - Optionally provide `inputPtRangesCSV` with comma-separated `lo-hi` ranges so each input contributes only inside its intended pT window.
-  - Build a `TMultiGraph` containing cleaned pT points (optional cleaning removes zero/empty points and outside-fit-range bins) and fit a single function of the form used in JEC text files:
-    $$ f(p_T) = [0] + [1]\cdot \log_{10}(0.01\,p_T) + [2]/(p_T/10.) $$
-    - Fit is performed in log-x canvas (ROOT `SetLogx()`) and using `TF1(..., "[0]+[1]*log10(0.01*x)+[2]/(x/10.)")` by default.
+   - Build a `TMultiGraph` containing cleaned pT points (optional cleaning removes zero/empty points and outside-fit-range bins) and fit a single function of the form used in the L3Residual JEC text file:
+     $$ f(p_T) = [0] + [1]\cdot \log_{10}(0.01\,p_T) $$
+     - The expression is centralized in `dofits_L3.C` (see `l3PtFitExpr()`) so it can be changed later without touching multiple blocks.
   - The fit parameters are written to a JEC-style text block and a copy is placed under `L3Residual/jecfiles/` with a tag that indicates `photonjet` (single-input) or `combined` (multi-input).
 
 6) Optional L2L3 combination (`writeL2L3=true`):
@@ -189,12 +193,15 @@ This section describes the full logic implemented across `deriveL3_from_photonje
 7) Outputs summary:
   - ROOT: `L3Residual/L3fits_<tag>/<tag>.root` containing graphs, fits and input histograms.
   - PNG/PDF: plots per-alpha, per-eta, combined pT fit in `L3Residual/L3fits_<tag>/pdf/` and raw shapes in `.../raw/`.
-  - Text: `L3Residual/L3fits_<tag>/textfiles/<tag>.txt` plus copies in `L3Residual/jecfiles/L3Residuals_<runLabel>_photonjet_AK4PF.txt` or `_combined_AK4PF.txt`.
+  - Text: `L3Residual/.../textfiles/<tag>.txt` plus copies in `L3Residual/jecfiles/L3Residuals_<runLabel>_photonjet_AK4PF.txt` or `_combined_AK4PF.txt`.
+
+Notes:
+- `deriveL3_from_photonjet.C` intentionally does **not** write a JEC text file. Text output is produced by `dofits_L3.C` so the final correction always matches the chosen pT fit function, kFSR treatment, and optional multi-input combination.
 
 ### Plotting and diagnostic options
 
 - `plotresponse_L3.C`: quick visualization macro that reads a photon+jet analysis output and produces kinematic and balance-distribution plots. Useful flags: `isMC`, `runLabel`, `lumiLabel`, and `useBalanceTH3` to use the `photonjet_balance_dist` if present.
-- `photonjet_balance_dist` (TH3D): new optional histogram (axes: photon_pT, alpha, balance) storing the full balance distribution per pT/alpha bin. When present `dofits_L3.C` can overlay normalized balance distributions (MC vs Data) using `plotBalanceDistOverlay=true` and the `mcRawFileForDist`/`dataRawFileForDist` arguments.
+- `photonjet_balance_dist` (TH3D): optional histogram (axes: photon_pT, alpha, balance) storing the full balance distribution per pT/alpha bin. When present `dofits_L3.C` can overlay normalized balance distributions (MC vs Data) using `plotBalanceDistOverlay=true` and the `mcRawFileForDist`/`dataRawFileForDist` arguments. If those raw files are not provided, `dofits_L3.C` **falls back** to using its internal 3D profiles (`balance3D_mc` / `balance3D_data`) to construct per-pT overlays and saves them in `L3Residual/<tag>/raw/balance_dist_overlay/` (PNG per pt bin). The per-α raw shapes are saved into `.../raw/` as `L3Res_<run>_alphaN_raw.png`.
 - `dofits_L3.C` flags of interest:
   - `plotRawResponses`: saves MC and Data balance vs pT raw plots in `.../raw/` for QC.
   - `saveAlphaExtrap`: enable alpha->0 extrapolation and kFSR extraction.

@@ -288,7 +288,7 @@ class histograms {
   //  static constexpr double ptforjec[] = {40, 55, 80, 120, 170, 1000};
   //  static constexpr double ptforjec[] = {15 , 25, 55, 80, 120, 170, 1000};   // Low pT as Nick
     // static constexpr double ptforjec[] = {15, 25, 80, 120, 1000};   // Low pT as Nick
-  static constexpr double ptforjec[] = {60, 70, 80, 90, 100, 120, 140, 160, 200, 300}; // Photon pT bins Bharad
+  static constexpr double ptforjec[] = {60, 65, 70, 75, 80, 85, 90, 100, 110, 120, 140, 160, 200, 250, 300, 400, 500, 700}; // Photon pT bins Bharad
   static constexpr unsigned int nptforjec = sizeof(ptforjec)/sizeof(ptforjec[0])-1;
 
   //  static constexpr double ptforJER[] = {15, 21, 28, 37, 49, 64, 84, 114, 153, 196, 245, 300, 362, 430, 507, 592, 686, 790, 905, 1032, 2238};

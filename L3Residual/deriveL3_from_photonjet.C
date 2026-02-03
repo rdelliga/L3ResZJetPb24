@@ -10,7 +10,20 @@
 // 3. All calculations for all alpha bins
 
 #include <iostream>
-#include <fstream>
+#include <map>
+#include <string>
+#include <vector>
+
+#include "TFile.h"
+#include "TMath.h"
+#include "TProfile3D.h"
+#include "TAxis.h"
+#include "TH1D.h"
+#include "TH2D.h"
+#include "TH3D.h"
+#include "TString.h"
+#include "TSystem.h"
+
 #include "../fillhistograms/histograms.h"
 
 void deriveL3_from_photonjet(
@@ -29,10 +42,20 @@ void deriveL3_from_photonjet(
     useabs = false;
   }
 
-  // Keep outputs under L3Residual/ by default
+  // Ensure the output directory exists. If no directory is provided,
+  // place outputs under L3Residual/ and create that directory. If a
+  // path is provided, create its parent directories as needed.
   if (!outfilename.Contains("/")) {
     gSystem->mkdir("L3Residual", kTRUE);
     outfilename = TString("L3Residual/") + outfilename;
+  } else {
+    // Create parent directory for the provided outfilename
+    std::string outfn = std::string(outfilename.Data());
+    size_t p = outfn.find_last_of('/');
+    if (p != std::string::npos) {
+      std::string outdir = outfn.substr(0, p);
+      gSystem->mkdir(outdir.c_str(), kTRUE);
+    }
   }
 
   // Open MC file
@@ -532,52 +555,9 @@ void deriveL3_from_photonjet(
     h_ratio->Write();
   }
 
-  ///////////////// Write L3 residual corrections in JEC text format
-
-  TString txtfilename = outfilename;
-  txtfilename.ReplaceAll(".root", ".txt");
-
-  ofstream outtext(txtfilename.Data());
-  outtext << "# L3 Residual Corrections from Photon+Jet Balancing" << endl;
-  outtext << "# Format: {eta_min eta_max} N pt_min pt_max correction ..." << endl;
-  outtext << "# Alpha cut: alpha < " << alphaCutValue << " (summing bins 1 to " << alphabin << ")" << endl;
-  outtext << "# MC file: " << mcFile << endl;
-  outtext << "# Data file: " << dataFile << endl;
-
-  // Note: nEtaBins and nPtBins already defined above
-  for (int etabin = 1; etabin <= nEtaBins; ++etabin) {
-    float eta_min = mc3d[etabins[i].c_str()]->GetYaxis()->GetBinLowEdge(etabin);
-    float eta_max = mc3d[etabins[i].c_str()]->GetYaxis()->GetBinLowEdge(etabin+1);
-
-    outtext << "{" << eta_min << " " << eta_max << "} " << (2 + nPtBins * 3) << " ";
-
-    // Get pT range for this eta bin
-    float pt_min_overall = mc3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(1);
-    float pt_max_overall = mc3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(nPtBins+1);
-    outtext << pt_min_overall << " " << pt_max_overall << " ";
-
-    for (int ptbin = 1; ptbin <= nPtBins; ++ptbin) {
-      float pt_min = mc3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin);
-      float pt_max = mc3d[etabins[i].c_str()]->GetXaxis()->GetBinLowEdge(ptbin+1);
-
-      // Get L3 residual correction from stored histogram
-      float correction = respETA[ptbin]->GetBinContent(etabin);
-
-      // Sanity check
-      if (correction < 0.5 || correction > 2.0 || TMath::IsNaN(correction)) {
-        cout << "WARNING: eta [" << eta_min << ", " << eta_max
-             << "], pT [" << pt_min << ", " << pt_max
-             << "], L3Res = " << correction << endl;
-        correction = 1.0;
-      }
-
-      outtext << pt_min << " " << pt_max << " " << correction << " ";
-    }
-    outtext << endl;
-  }
-
-  outtext.close();
-  cout << "\nL3 residual corrections written to: " << txtfilename << endl;
+  // NOTE: This macro does not write a JEC text file.
+  // The final text outputs are produced by `dofits_L3.C`, which contains the
+  // full logic for kFSR extraction, alpha->0 extrapolation, and combined pT fits.
 
   ///////////////// Create summary 2D maps (using cumulative alpha cut)
 

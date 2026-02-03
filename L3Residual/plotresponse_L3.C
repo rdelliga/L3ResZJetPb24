@@ -53,7 +53,7 @@ void plotresponse_L3(TString inputFile = "",
                      bool isMC = false,
                      TString mcFile = "",
                      TString runLabel = "2024ppRef",
-                     TString lumiLabel = "pp Reference") {
+                     TString lumiLabel = "pp 480.4 pb^{-1}") {
   
   if (inputFile.IsNull()) {
     cout << "ERROR: No input file specified!" << endl;
@@ -184,9 +184,9 @@ void plotresponse_L3(TString inputFile = "",
       TH1D* h1_norm = (TH1D*)h1->Clone(Form("h1_norm_%s", histName.c_str()));
       TH1D* hMC_norm = (TH1D*)hMC->Clone(Form("hMC_norm_%s", histName.c_str()));
 
-      const bool okData = NormalizeToUnityWidth(h1_norm);
-      const bool okMC = NormalizeToUnityWidth(hMC_norm);
-      if (!okData || !okMC) {
+      NormalizeToUnityWidth(h1_norm);
+      NormalizeToUnityWidth(hMC_norm);
+      if (h1_norm->Integral() <= 0 || hMC_norm->Integral() <= 0) {
         delete h1_norm;
         delete hMC_norm;
         continue;
@@ -335,36 +335,35 @@ void plotresponse_L3(TString inputFile = "",
           NormalizeToUnityWidth(h_bal_norm);
           NormalizeToUnityWidth(h_bal_mc_norm);
           const double maxYBal = TMath::Max(h_bal_norm->GetMaximum(), h_bal_mc_norm->GetMaximum());
-            h_bal_norm->SetMaximum(maxYBal * 1.3);
-            h_bal_norm->SetLineColor(kRed + 1);
-            h_bal_norm->SetMarkerColor(kRed + 1);
-            h_bal_norm->SetLineWidth(2);
-            h_bal_norm->GetXaxis()->SetTitle("p_{T}^{jet} / p_{T}^{#gamma}");
-            h_bal_norm->GetYaxis()->SetTitle("Norm. Events");
-            h_bal_norm->GetYaxis()->SetTitleOffset(1.45);
-            h_bal_norm->Draw("E");
+          h_bal_norm->SetMaximum(maxYBal * 1.3);
+          h_bal_norm->SetLineColor(kRed + 1);
+          h_bal_norm->SetMarkerColor(kRed + 1);
+          h_bal_norm->SetLineWidth(2);
+          h_bal_norm->GetXaxis()->SetTitle("p_{T}^{jet} / p_{T}^{#gamma}");
+          h_bal_norm->GetYaxis()->SetTitle("Norm. Events");
+          h_bal_norm->GetYaxis()->SetTitleOffset(1.45);
+          h_bal_norm->Draw("E");
 
-            h_bal_mc_norm->SetLineColor(kBlue + 1);
-            h_bal_mc_norm->SetMarkerColor(kBlue + 1);
-            h_bal_mc_norm->SetLineWidth(2);
-            h_bal_mc_norm->Draw("E SAME");
+          h_bal_mc_norm->SetLineColor(kBlue + 1);
+          h_bal_mc_norm->SetMarkerColor(kBlue + 1);
+          h_bal_mc_norm->SetLineWidth(2);
+          h_bal_mc_norm->Draw("E SAME");
 
-            DrawSelectionText(ptMin, ptMax, alphaCutMax, meanData, true, meanMC);
+          DrawSelectionText(ptMin, ptMax, alphaCutMax, meanData, true, meanMC);
 
-            TLegend* legBalComp = new TLegend(0.65, 0.74, 0.88, 0.88);
-            legBalComp->SetBorderSize(0);
-            legBalComp->SetFillStyle(0);
-            legBalComp->SetTextSize(0.035);
-            legBalComp->AddEntry(h_bal_norm, "Data", "lp");
-            legBalComp->AddEntry(h_bal_mc_norm, "MC", "lp");
-            legBalComp->Draw();
+          TLegend* legBalComp = new TLegend(0.65, 0.74, 0.88, 0.88);
+          legBalComp->SetBorderSize(0);
+          legBalComp->SetFillStyle(0);
+          legBalComp->SetTextSize(0.035);
+          legBalComp->AddEntry(h_bal_norm, "Data", "lp");
+          legBalComp->AddEntry(h_bal_mc_norm, "MC", "lp");
+          legBalComp->Draw();
 
-            CMS_lumi(c, 0, 0);
-            c->Print(Form("%s/balance_pt%.0f-%.0f_alphalt%.3f_%s_DataVsMC.png",
-                          outfolder.c_str(), ptMin, ptMax, alphaCutMax, tag.Data()));
+          CMS_lumi(c, 0, 0);
+          c->Print(Form("%s/balance_pt%.0f-%.0f_alphalt%.3f_%s_DataVsMC.png",
+                        outfolder.c_str(), ptMin, ptMax, alphaCutMax, tag.Data()));
 
-            delete legBalComp;
-          }
+          delete legBalComp;        
 
           delete h_bal_norm;
           delete h_bal_mc_norm;

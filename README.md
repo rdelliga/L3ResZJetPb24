@@ -63,7 +63,7 @@ root -l -b -q 'L3Residual/dofits_L3.C(
   "L3Res_combined",
   false,
   "2024ppRef",
-  "pp Reference",
+  "pp 480.4 pb^{-1}",
   true,
   false,
   5,
