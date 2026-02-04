@@ -11,9 +11,10 @@ string l2file = "jecfiles/Spring23_HI_V1_DATA_L2Residual_AK4PFCHS_vetomap_all.tx
 
 // JER
 string resolutionFile = "jecfiles/MCjerparams-vetoall.txt";
-string scaleFactorFile = "jecfiles/JERSF_fromRMS_chs_vetoall.txt";
+//string scaleFactorFile = "jecfiles/JERSF_fromRMS_chs_vetoall.txt";
+string scaleFactorFile = "jecfiles/Summer23Prompt23_RunCv4_JRV1m_MC_SF_AK4PFPuppi.txt";
 
-// Jet veto map - how to implement?
+// Jet veto map
 TString vetomapFile = "jecfiles/";
 
 

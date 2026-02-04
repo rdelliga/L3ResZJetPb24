@@ -28,6 +28,8 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   probe_eta = new TH1D("probe jet eta"," probe jet #eta; probe jet #eta;", 40, -5.2, 5.2);
   probe_phi = new TH1D("probe jet phi"," probe jet #phi; probe jet #phi;", 25, -3.1415926535, 3.1415926535);
 
+  alphas = new TH1D("alpha","alpha;alpha", 10, 0.0, 0.5);
+
   // Trigger checks
   HLTZB = new TH1D("HLTZB", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
   HLT40 = new TH1D("HLT40", "leading jet p_{T}; leading jet p_{T};", 100, 0, 1000);
@@ -138,7 +140,18 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   absasymmdist3D_a40 = new TH3D("absasymmdist3D_a40",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
   asymmdist3D_a45 = new TH3D("asymmdist3D_a45",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
   absasymmdist3D_a45 = new TH3D("absasymmdist3D_a45",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
-   
+
+  if (ismc) {
+    absasymmdist3D_gen_a10 = new TH3D("absasymmdist3D_gen_a10",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+    absasymmdist3D_gen_a15 = new TH3D("absasymmdist3D_gen_a15",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+    absasymmdist3D_gen_a20 = new TH3D("absasymmdist3D_gen_a20",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+    absasymmdist3D_gen_a25 = new TH3D("absasymmdist3D_gen_a25",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+    absasymmdist3D_gen_a30 = new TH3D("absasymmdist3D_gen_a30",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+    absasymmdist3D_gen_a35 = new TH3D("absasymmdist3D_gen_a35",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+    absasymmdist3D_gen_a40 = new TH3D("absasymmdist3D_gen_a40",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+    absasymmdist3D_gen_a45 = new TH3D("absasymmdist3D_gen_a45",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+  }
+  
 }
 void histograms::Write() {
   dir->cd();
