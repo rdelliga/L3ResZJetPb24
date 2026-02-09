@@ -4,24 +4,23 @@ At the moment direct balance method with tag-and-probing a dijet system is used.
 
 1. To fill histograms for L2residuals:
 
-- Code is in difectory L2Residual.
+- Code is in directory fillhistogram.
 
 -> call this code separarely for different datasets. you need cmsenv to be able to call functions to apply jec (and jer sf). shouldn't really matter which cmssw you use.
 -> in settings.h you can manually set which JEC files to use. The JEC (and JER SF) files are always read from the path set up in here.
 
--> First: root -l compile.C 
--> 
+First: root -l compile.C 
 
 Then, to run the analysis:
 
 1. analyse.cc fills histograms you need.
-Flags:
+Flags: <TODO>
 
-At the moment this is run with hadded ntuples per dat set (MC, HP0, HP1, HP2, ZB0, etc.)
+At the moment this is run with hadded ntuples per data set (MC, HP0, HP1, HP2, ZB0, etc.) - choice motivated by small amount of data in 2023ppref.
 
-You can do a test run with simply root -l analyse.cc
+You can do a test run with simply doing 'root -l analyse.cc'
 
--> to run locally: run.sh
+To run locally/interactively you can also use run.sh
 
 
 When you have the output from the former
@@ -41,24 +40,23 @@ To fill histograms for JER SF (the tag-and-probe conditions are slightly differe
 
 
 When you have the outputs from that, you can run MC-checks:
---- JER/MCJER.C -> pt resolution
---- JER/MCJPR.C -> eta/phi resolition (wip?)
---- JER/MCRESP.C -> this plots the MC response <pT(reco)/pT(gen)>
---- doTxtMCJER.C -> print txt files of resolution fit parameters
+
+- JER/MCJER.C -> pt resolution
+- JER/MCJPR.C -> eta/phi resolution
+- JER/MCRESP.C -> this plots the MC response <pT(reco)/pT(gen)>
+- doTxtMCJER.C -> print txt files of resolution fit parameters
+
 
 For SF there are a couple of scripts:
+
 1. These are alternatives:
---- JERSF_fits.C -> Extracts resoluiton by fitting gaussian to the dijet asymmetry distributions
---- JERSF_RMS.C -> Extracts resolution from trunct RMS of dijet asymmetry distributions
+- JERSF_fits.C -> Extracts resoluiton by fitting gaussian to the dijet asymmetry distributions
+- JERSF_RMS.C -> Extracts resolution from trunct RMS of dijet asymmetry distributions
 2. Do fits against alpha:
---- JERSF_fits_vsalpha.C -> this needs as an input the output from the previous step
+- JERSF_fits_vsalpha.C -> this needs as an input the output from the previous step
 3. Produce txt files
-... JERSF_printtxt.C
+- JERSF_printtxt.C
 
 To look at trigger turn-ons:
 (this is has been used to merge results from different datasets/triggers, for 2023 it has been zero bias and hard probes datasets)
-
-Plot things:
-
-
-
+triggerstudy/plottriggereff.C

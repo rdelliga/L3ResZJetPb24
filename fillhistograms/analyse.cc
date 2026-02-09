@@ -28,8 +28,6 @@ float rho = 0.;
 
 std::mt19937 _mersennetwister;
 std::uint32_t _seed = 4;
-//_seed = 4;
-   
 
 #if REDOJES == 1
 #include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
@@ -40,11 +38,10 @@ map<string, vector<histograms*> > _histos;
 bool debug = false;
 bool applyjetvetomap = true;
 
-//void analyse(string era = "RERECOMC", string outputfiletag = "AK4_nojetid", bool isMC = true, bool checkjetid = false, bool iszb = false, bool dol2res = false, bool dojer = false, bool fillforJER = false) {
-void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool isMC = false, bool checkjetid = false, bool iszb = false, bool dol2res = true, bool dojer = false, bool fillforJER = false) {
+void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool isMC = false, bool checkjetid = false, bool iszb = false, bool dol2res = true, bool dojer = false, bool fillforJER = false, float jtptlimitforalpha = 15) {
 
   bool usecalotrig = false;
-  bool checkvalidjet = false; // this is for checking valid jet range after applying l2. now for tightly limited range. TODO: do something smarter
+  bool checkvalidjet = false; // this is for checking valid jet range after applying l2. now for tightly limited range.
      
   //  string outputfilename = Form("/eos/user/l/lamartik/HIJEC_rereco_results_HI2023MCTruth/%s_%s.root",era.c_str(),outputfiletag.c_str());
   string outputfilename = Form("/eos/user/l/lamartik/HIJEC_rereco_results_HI2023MCTruth_chs_vetomap_all/%s_%s.root",era.c_str(),outputfiletag.c_str());
@@ -62,8 +59,8 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
   if (!isMC) jetPath = "ak0PFJetAnalyzer/t";
   
   cout << "Opening input file" << endl;
-  //  TFile *inFile = new TFile(inFileName.c_str(), "READ"); // TODO: safety checks about opening file successfully
-  TFile *inFile = new TFile(filenames[era.c_str()].c_str(), "READ"); // TODO: safety checks about opening file successfully
+  //  TFile *inFile = new TFile(inFileName.c_str(), "READ");
+  TFile *inFile = new TFile(filenames[era.c_str()].c_str(), "READ");
 
   auto evtTree = (TTree*)inFile->Get(evtPath.c_str());
   
@@ -226,7 +223,6 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
   // This is MCTruth
   vpar.push_back(JetCorrectorParameters(jecfile.c_str()));
   // L2 residual
-  cout << "test" << endl;
   if (!isMC and dol2res) vpar.push_back(JetCorrectorParameters(l2file.c_str()));
   if (dol2res) cout << "Applying L2 residual" << endl;
   corr = new FactorizedJetCorrector(vpar);
@@ -278,7 +274,7 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
      }
      jetTree->GetEntry(i);
 
-     // Filter out events without jets with pt > 10 GeV (should be raw pt)
+     // Filter out events without jets with pt > 10 GeV
      if (nref < 2) continue;
      if (jtpt[0] < jtptmin) {
        continue;
@@ -288,8 +284,8 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
      if (isMC)  eh->event_pthatwsgenweight->Fill(pthat,weight);
 
      // This is dijet with tag and probe
-     double tagpt, probept, tageta, probeeta, pt3, ptavgtp, alpha;
-     double asymmtp;
+     double tagpt, probept, tageta, probeeta, pt3, ptavgtp, alpha, asymmtp;
+     double tagpt_gen, probept_gen, tageta_gen, probeeta_gen, pt3_gen, ptavgtp_gen, alpha_gen, asymmtp_gen;
      double djrespasymm; 
 
      if (checkvalidjet) {   // This is based on validity of JEC. - obsolete?
@@ -372,9 +368,7 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
 	   }
 	   else {
 	     //	     cout << "We use stochastic method " <<  abs((jtpt[j]-jtpt_gen[j])) << endl;
-
 	     _mersennetwister = std::mt19937(_seed);
-
 	     //	     double sigma = std::sqrt(std::max(jer_sf*jer_sf - 1,0)); // technically should be max(sf*sf-1,0)
 	     std::normal_distribution<> d(0, jet_resolution);
 	     if (jer_sf*jer_sf > 1) jersfcorr += d(_mersennetwister)*std::sqrt(jer_sf*jer_sf-1);
@@ -434,17 +428,8 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
        cout << "Good uncorr:" << jtpt_uncorr[ind[0]] << " " << jtpt_uncorr[ind[1]] << " " << jtpt_uncorr[ind[2]] << " " << jtpt_uncorr[ind[3]] << " " << jtpt_uncorr[ind[4]] << " nref " << nref << endl;
        */
 
-       if (jtpt_uncorr[ind[0]] < jtptmin or jtpt_uncorr[ind[1]] < jtptmin) continue; // Didn't with dijets with good pt
+       if (jtpt_uncorr[ind[0]] < jtptmin or jtpt_uncorr[ind[1]] < jtptmin) continue; // Didn't find dijets with good pt
 
-       /*    if (abs(jteta[0]) > 1.3 and abs(jteta[1]) <= 1.3)  tagind = 1;
-       else if (abs(jteta[1]) > 1.3 and abs(jteta[0]) <= 1.3)  tagind = 0;
-       else if (abs(jteta[0]) <= 1.3 and abs(jteta[1]) <= 1.3)  {
-	 const auto rand = r.Rndm();
-	 if (rand < 0.5) tagind = 1;
-	 else tagind = 0;
-       }
-
-       if (jtpt[0] < 1 or jtpt[1] < 1) tagind = -1; */
        int probeind = 0;
        int tagind = -1;
 
@@ -476,26 +461,35 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
        tageta = jteta[tagind];
        probeeta = jteta[probeind];
 
+       tagpt_gen = jtpt_gen[tagind];
+       probept_gen = jtpt_gen[probeind];
+
+       tageta_gen = jteta_gen[tagind];
+       probeeta_gen = jteta_gen[probeind];
+
        float dphitp = DPhi(jtphi[tagind],jtphi[probeind]);
 
-	 ptavgtp = 0.5*(tagpt  + probept);
-	 asymmtp = probept - tagpt;
-	 
-	 if (ind[2] != -1) alpha = jtpt[ind[2]]/ptavgtp;
-	 else alpha = 0; // In case only two jets
-	 
-	 // cout << "TP:" << tagpt << " " << probept << " " << alpha << endl;
-	 //	 if (asymmtp/.2/ptavgtp > 0.9) cout << "probeeta " << probeeta << " tagpt " << tagpt << " ptavg " << ptavgtp << " nref " << nref << endl;
-	 // Fill in average pT, eta bin from probeeta
-	 
-	 for (auto &histrange : _histos) {    // DPhi?
+       ptavgtp = 0.5*(tagpt  + probept);
+       asymmtp = probept - tagpt;
+
+       ptavgtp_gen = 0.5*(tagpt_gen  + probept_gen);
+       asymmtp_gen = probept_gen - tagpt_gen;
+       
+       
+       if (ind[2] != -1) alpha = jtpt[ind[2]]/ptavgtp;
+       else alpha = 0; // In case only two jets
+
+       if (jtpt[ind[2]]) < jtptlimitforalpha) continue;
+     
+       for (auto &histrange : _histos) { 
 	   for (auto &h : histrange.second) {
 	     
 	     if (tageta >= h->etamin and tageta < h->etamax and probeeta >= h->etamin and probeeta < h->etamax and hiBin >= h->hibinmin and hiBin < h->hibinmax and dphitp > 2.7  and nref >= 2 and tagind > -1) {
-
+	       
 	       // This is the full eta range
 	       if ((h->etamin - h->etamax) < -10) {
-
+		 h->alphas->Fill(alpha,evtwt);
+		 
 		 h->probe_pt->Fill(probept,evtwt);
 		 h->probe_eta->Fill(probeeta,evtwt);
 		 h->tag_pt->Fill(tagpt,evtwt);
@@ -520,6 +514,7 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
 		 if (alpha < 0.1)   {
 		   if (tagincorrecteta) h->asymmdist3D_a10->Fill(ptavgtp, abs(probeeta), asymmtp/2./ptavgtp, evtwt);
 		   if (tagincorrecteta) h->absasymmdist3D_a10->Fill(ptavgtp, abs(probeeta), abs(asymmtp/2./ptavgtp), evtwt);
+		   if (tagincorrecteta) h->absasymmdist3D_gen_a10->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
 		   
 		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.1-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabseta->Fill(ptavgtp, abs(probeeta), 0.1-0.0001, asymmtp/2./ptavgtp, evtwt);
@@ -534,6 +529,7 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
 		 if (alpha < 0.15) {
 		   if (tagincorrecteta) h->asymmdist3D_a15->Fill(ptavgtp, abs(probeeta), asymmtp/2./ptavgtp, evtwt);
 		   if (tagincorrecteta) h->absasymmdist3D_a15->Fill(ptavgtp, abs(probeeta), abs(asymmtp/2./ptavgtp), evtwt);
+		   if (tagincorrecteta) h->absasymmdist3D_gen_a15->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
 
 		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.15-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabseta->Fill(ptavgtp, abs(probeeta), 0.15-0.0001, asymmtp/2./ptavgtp, evtwt);
@@ -545,6 +541,7 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
 		 if (alpha < 0.2)  {
 		   if (tagincorrecteta) h->asymmdist3D_a20->Fill(ptavgtp, abs(probeeta), asymmtp/2./ptavgtp, evtwt);
 		   if (tagincorrecteta) h->absasymmdist3D_a20->Fill(ptavgtp, abs(probeeta), abs(asymmtp/2./ptavgtp), evtwt);
+		   if (tagincorrecteta) h->absasymmdist3D_gen_a20->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
 
 		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.2-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabseta->Fill(ptavgtp, abs(probeeta), 0.2-0.0001, asymmtp/2./ptavgtp, evtwt);
@@ -559,6 +556,7 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
 		 if (alpha < 0.25) {
 		   if (tagincorrecteta) h->asymmdist3D_a25->Fill(ptavgtp, abs(probeeta), asymmtp/2./ptavgtp, evtwt);
 		   if (tagincorrecteta) h->absasymmdist3D_a25->Fill(ptavgtp, abs(probeeta), abs(asymmtp/2./ptavgtp), evtwt);
+		   if (tagincorrecteta) h->absasymmdist3D_gen_a25->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
 
 		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.25-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabseta->Fill(ptavgtp, abs(probeeta), 0.25-0.0001, asymmtp/2./ptavgtp, evtwt);
@@ -571,6 +569,7 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
 		 if (alpha < 0.3)  {
 		   if (tagincorrecteta) h->asymmdist3D_a30->Fill(ptavgtp, abs(probeeta), asymmtp/2./ptavgtp, evtwt);
 		   if (tagincorrecteta) h->absasymmdist3D_a30->Fill(ptavgtp, abs(probeeta), abs(asymmtp/2./ptavgtp), evtwt);
+		   if (tagincorrecteta) h->absasymmdist3D_gen_a30->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
 
 		   h->dijetbalance_a03->Fill(asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry2D_a03->Fill(ptavgtp, probeeta, asymmtp/2./ptavgtp, evtwt);
@@ -583,7 +582,6 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
 		   h->dijetasymmetry3Dabsetanarrow->Fill(ptavgtp, abs(probeeta), 0.3-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabsetawide->Fill(ptavgtp, abs(probeeta), 0.3-0.0001, asymmtp/2./ptavgtp, evtwt);
 
-
 		   h->jet_nef->Fill(probept,jtnef[probeind],evtwt);
 		   h->jet_cef->Fill(probept,jtcef[probeind],evtwt);
 		   h->jet_nhf->Fill(probept,jtnhf[probeind],evtwt);
@@ -595,6 +593,7 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
 		 if (alpha < 0.35) {
 		   if (tagincorrecteta) h->asymmdist3D_a35->Fill(ptavgtp, abs(probeeta), asymmtp/2./ptavgtp, evtwt);
 		   if (tagincorrecteta) h->absasymmdist3D_a35->Fill(ptavgtp, abs(probeeta), abs(asymmtp/2./ptavgtp), evtwt);
+		   if (tagincorrecteta) h->absasymmdist3D_gen_a35->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
 
 		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.35-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabseta->Fill(ptavgtp, abs(probeeta), 0.35-0.0001, asymmtp/2./ptavgtp, evtwt);
@@ -607,12 +606,13 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
 		 if (alpha < 0.4)   {
 		   if (tagincorrecteta) h->asymmdist3D_a40->Fill(ptavgtp, abs(probeeta), asymmtp/2./ptavgtp, evtwt);
 		   if (tagincorrecteta) h->absasymmdist3D_a40->Fill(ptavgtp, abs(probeeta), abs(asymmtp/2./ptavgtp), evtwt);
+		   if (tagincorrecteta) h->absasymmdist3D_gen_a40->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
 
 		   h->dijetasymmetry2D_a04->Fill(ptavgtp, probeeta, asymmtp/2./ptavgtp, evtwt);
-		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.4-0.0001, asymmtp/2./ptavgtp, evtwt); // These should match with bins?
+		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.4-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabseta->Fill(ptavgtp, abs(probeeta), 0.4-0.0001, asymmtp/2./ptavgtp, evtwt);
 
-		   h->dijetasymmetry3Dnarrow->Fill(ptavgtp, probeeta, 0.4-0.0001, asymmtp/2./ptavgtp, evtwt); // These should match with bins?
+		   h->dijetasymmetry3Dnarrow->Fill(ptavgtp, probeeta, 0.4-0.0001, asymmtp/2./ptavgtp, evtwt); 
 		   h->dijetasymmetry3Dabsetanarrow->Fill(ptavgtp, abs(probeeta), 0.4-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabsetawide->Fill(ptavgtp, abs(probeeta), 0.4-0.0001, asymmtp/2./ptavgtp, evtwt);
 		 }
@@ -620,6 +620,7 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
 		 if (alpha < 0.45) {
 		   if (tagincorrecteta) h->asymmdist3D_a45->Fill(ptavgtp, abs(probeeta), asymmtp/2./ptavgtp, evtwt);
 		   if (tagincorrecteta) h->absasymmdist3D_a45->Fill(ptavgtp, abs(probeeta), abs(asymmtp/2./ptavgtp), evtwt);
+		   if (tagincorrecteta) h->absasymmdist3D_gen_a45->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
 
 		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.45-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabseta->Fill(ptavgtp, abs(probeeta), 0.45-0.0001, asymmtp/2./ptavgtp, evtwt);
@@ -631,17 +632,17 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
 		 
 		 if (alpha < 0.5) {
 		   h->dijetasymmetry2D_a05->Fill(ptavgtp, probeeta, asymmtp/2./ptavgtp, evtwt);
-		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.5-0.0001, asymmtp/2./ptavgtp, evtwt); // These should match with bins?
+		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.5-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabseta->Fill(ptavgtp, abs(probeeta), 0.5-0.0001, asymmtp/2./ptavgtp, evtwt);
 
-		   h->dijetasymmetry3Dnarrow->Fill(ptavgtp, probeeta, 0.5-0.0001, asymmtp/2./ptavgtp, evtwt); // These should match with bins?
+		   h->dijetasymmetry3Dnarrow->Fill(ptavgtp, probeeta, 0.5-0.0001, asymmtp/2./ptavgtp, evtwt); 
 		   h->dijetasymmetry3Dabsetanarrow->Fill(ptavgtp, abs(probeeta), 0.5-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabsetawide->Fill(ptavgtp, abs(probeeta), 0.5-0.0001, asymmtp/2./ptavgtp, evtwt);
 
 		 }
 		 if (alpha < 0.6) {
 		   //		   h->dijetasymmetry2D_a06->Fill(ptavgtp, probeeta, asymmtp/2./ptavgtp, evtwt);
-		   //		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.6-0.0001, asymmtp/2./ptavgtp, evtwt); // These should match with bins?
+		   //		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.6-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabseta->Fill(ptavgtp, abs(probeeta), 0.6-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabsetawide->Fill(ptavgtp, abs(probeeta), 0.6-0.0001, asymmtp/2./ptavgtp, evtwt);
 		 }
@@ -667,7 +668,7 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
 
 	       
 	       if (j == 0 and passjetid[0]) {
-		 //		 cout << "PS: " << J40psnum << " " << J40psdenom << endl;
+
 		 // Trigger checks; leading jet pt
 		 if (HLT_ZB) h->HLTZB->Fill(jtpt[ind[0]],evtwt);
 
@@ -678,14 +679,6 @@ void analyse(string era = "RERECOHP", string outputfiletag = "AK4_nojetid", bool
 		 if (HLT_120) { h->HLT120->Fill(jtpt[ind[0]],evtwt);}
 
 	       }
-
-	       // These are actually obsolete after all the selections
-	       /*	       if (j == 0 and nref > 1 and dphitp > 2.7) { // Fill dijet system based on leading jet pT
-		 h->dijetasymmetry->Fill(abs(djetasymm),evtwt);
-		 h->dijetasymmetry_now->Fill(abs(djetasymm));
-		 h->dijetdeltaphi->Fill(dphi,evtwt);
-		 h->dijetdeltaeta->Fill(ddeta,evtwt);
-		 } */
 
 	       h->jet_pt->Fill(jtpt[j],evtwt);
 	       h->jet_pt_now->Fill(jtpt[j],1);

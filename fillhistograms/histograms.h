@@ -28,8 +28,7 @@ class histograms {
   TH1D* jet_pt_genweight;
   TH1D* jet_eta;
   TH1D* jet_phi;
-
-
+  
   TH1D* tag_pt;
   TH1D* tag_eta;
   TH1D* tag_phi;
@@ -38,6 +37,8 @@ class histograms {
   TH1D* probe_eta;
   TH1D* probe_phi;
 
+  TH1D* alphas;
+  
   // Trigger
   TH1D* HLTZB;
   TH1D* HLT40;
@@ -151,16 +152,20 @@ class histograms {
   TH3D* absasymmdist3D_a40;
   TH3D* asymmdist3D_a45;
   TH3D* absasymmdist3D_a45;
-  
-// PF composition?
-  
+
+  TH3D* absasymmdist3D_gen_a10;
+  TH3D* absasymmdist3D_gen_a15;
+  TH3D* absasymmdist3D_gen_a20;
+  TH3D* absasymmdist3D_gen_a25;
+  TH3D* absasymmdist3D_gen_a30;
+  TH3D* absasymmdist3D_gen_a35;
+  TH3D* absasymmdist3D_gen_a40;
+  TH3D* absasymmdist3D_gen_a45;
 
 // Weights etc
   TH2D* ptgenvsptreco;
   TH2D* ptrecovsweight;
   TH2D* ptgenvsweight;
-// Weight vs reco pT profile? scatter plot? reco pt vs weight and gen pt vs. weight?
-
 
   TDirectory *dir;
 
@@ -214,7 +219,9 @@ class histograms {
   //   static constexpr double ptforjec[] = {40, 60, 80, 100, 120, 140, 180, 220, 300, 500, 700, 5000};
   //  static constexpr double ptforjec[] = {40, 55, 80, 120, 170, 1000};
   //  static constexpr double ptforjec[] = {15 , 25, 55, 80, 120, 170, 1000};   // Low pT as Nick
-    static constexpr double ptforjec[] = {15, 25, 80, 120, 1000};   // Low pT as Nick
+  //     static constexpr double ptforjec[] = {15, 25, 80, 120, 1000};   // Low pT as Nick   - for eta,pT binned
+  
+  static constexpr double ptforjec[] = {15 , 25, 40, 60, 80, 120, 1000};      // More bins in ZB 
   static constexpr unsigned int nptforjec = sizeof(ptforjec)/sizeof(ptforjec[0])-1;
 
   //  static constexpr double ptforJER[] = {15, 21, 28, 37, 49, 64, 84, 114, 153, 196, 245, 300, 362, 430, 507, 592, 686, 790, 905, 1032, 2238};
