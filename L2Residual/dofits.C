@@ -85,7 +85,7 @@ void dofits(TString inzb, TString inHP, float fitmin = 0.15, float fitmax = 0.35
       //      cout << graphs[ptbin] << endl
 
       // histograms::alphavalues[]
-      ROOT::Fit::FillData(data, histos[ptbin]);   // TODO: can one fill tgraphs?
+      ROOT::Fit::FillData(data, histos[ptbin]);   
       // ROOT::Fit::FillData(data, graphs[ptbin]);   // TODO: Replace with TMultiGraph fitter
       multifit->Add(graphs[ptbin],"P");
       
@@ -164,7 +164,7 @@ void dofits(TString inzb, TString inHP, float fitmin = 0.15, float fitmax = 0.35
 
   // TF1 * f2 = new TF1("f2","pol1",0.0,3.0);
   TF1 * f2 = new TF1("f2","[0]+[1]*cosh(x)/(1+[2]*cosh(x))",0.0,3.0);
-  factors->Fit(f2);
+  //  factors->Fit(f2);
  
   if (doabseta)  factors->GetXaxis()->SetTitle(" |#eta| ");
   else  factors->GetXaxis()->SetTitle(" #eta "); 
@@ -173,6 +173,7 @@ void dofits(TString inzb, TString inHP, float fitmin = 0.15, float fitmax = 0.35
   c2->Print(Form("%s/kfactors.png",outfolder.c_str()));
   
   factors->Write();
+  factors->Write("kfactors");
 
 
   TCanvas *c3 = new TCanvas("c3","c3",800,600);
