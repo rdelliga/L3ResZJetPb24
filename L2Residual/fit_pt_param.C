@@ -5,12 +5,14 @@
 
 
 //int pts[] = {15, 25, 55, 80, 120, 170, 1000}; 
-const float pts[] = {25, 80, 120, 1000};
-int nptbins = 3;
-//string ptbins[] = {"25to55", "55to80", "80to120", "120to170", "170to1000"};
-string ptbins[] = {"25to80", "80to120", "120to1000"};
+//const float pts[] = {25, 80, 120, 1000};
+const float pts[] = { 25, 32, 41, 80, 92, 120, 1000};
 
-void fit_pt_param(TString inzb = "L2fits_AK4CHSjetveto_all/L2residuals_pbpbreco_rereco_zb_jetid.root", TString inHP =  "L2fits_AK4CHSjetveto_all/L2residuals_pbpbreco_rereco_hp_jetid.root", float fitmin = 25., float fitmax = 1000, string outfilename = "testing_pt_dep", bool doabseta = true) {
+int nptbins = 6;
+string ptbins[] = {"25to32", "32to41", "41to80", "80to92", "92to120", "120to1000"};
+//string ptbins[] = {"25to80", "80to120", "120to1000"};
+
+void fit_pt_param(TString inzb = "L2residuals_pbpbreco_rereco_zb_jetid.root", TString inHP =  "L2residuals_pbpbreco_rereco_hp_jetid.root", float fitmin = 25., float fitmax = 1000, string outfilename = "testing_pt_dep", bool doabseta = true) {
 
   // input file is from 3D derivation
   gStyle->SetOptStat(0);
@@ -23,7 +25,7 @@ void fit_pt_param(TString inzb = "L2fits_AK4CHSjetveto_all/L2residuals_pbpbreco_
   
  
   // This is for correcton factors - hiso against eta
-  auto factors = (TH1D*)inFile->Get("ratio_pt25to80_alpha0.3");
+  auto factors = (TH1D*)inFile->Get("ratio_pt80to92_alpha0.3");
   factors->Reset();
 
   int colours[] = {209, 226, 213, 51, 206, 209};
@@ -36,13 +38,16 @@ void fit_pt_param(TString inzb = "L2fits_AK4CHSjetveto_all/L2residuals_pbpbreco_
   map<int, TH1D*> histosvspt;
 
   // Hardcoded for 2023
-  // histos["15to25"] = (TH1D*)inFilezb->Get("ratio_pt25to55_alpha0.3"); 
-  histos["25to80"] = (TH1D*)inFilezb->Get("ratio_pt25to80_alpha0.3");
-  
-  // histos["55to80"] = (TH1D*)inFilezb->Get("ratio_pt55to80_alpha0.3");
+  /*  histos["25to80"] = (TH1D*)inFilezb->Get("ratio_pt25to80_alpha0.3");
   histos["80to120"] = (TH1D*)inFile->Get("ratio_pt80to120_alpha0.3"); 
+  histos["120to1000"] = (TH1D*)inFile->Get("ratio_pt120to1000_alpha0.3"); */
+
+  histos["25to32"] = (TH1D*)inFilezb->Get("ratio_pt25to32_alpha0.3");
+  histos["32to41"] = (TH1D*)inFilezb->Get("ratio_pt32to41_alpha0.3");
+  histos["41to80"] = (TH1D*)inFilezb->Get("ratio_pt41to80_alpha0.3");
+  histos["80to92"] = (TH1D*)inFile->Get("ratio_pt80to92_alpha0.3");
+  histos["92to120"] = (TH1D*)inFile->Get("ratio_pt92to120_alpha0.3"); 
   histos["120to1000"] = (TH1D*)inFile->Get("ratio_pt120to1000_alpha0.3");
-  //  histos["170to1000"] = (TH1D*)inFile->Get("ratio_pt170to1000_alpha0.3");
 
   auto txt = new TLatex();
   txt->SetTextSize(0.03);
@@ -62,7 +67,7 @@ void fit_pt_param(TString inzb = "L2fits_AK4CHSjetveto_all/L2residuals_pbpbreco_
     // etabins for
     for (int ptbin = 1; ptbin <= nptbins; ++ptbin) {
       if (ebin > 12 and ptbin > 2) continue; // 2023 adaptation, not enough stats in EC
-
+   
       histosvspt[ebin]->SetBinContent(ptbin,histos[ptbins[ptbin-1].c_str()]->GetBinContent(ebin));
       histosvspt[ebin]->SetBinError(ptbin,histos[ptbins[ptbin-1].c_str()]->GetBinError(ebin));
 
@@ -89,7 +94,7 @@ void fit_pt_param(TString inzb = "L2fits_AK4CHSjetveto_all/L2residuals_pbpbreco_
     leg2->AddEntry(f2, Form("p0 = %.3f #pm %.3f",f2->GetParameter(0), f2->GetParError(0)));
     leg2->Draw();
 
-    txt->DrawLatex(0.5,0.8,Form("%.3f < |#eta| < %.3f ",histos["25to80"]->GetBinLowEdge(ebin),histos["25to80"]->GetBinLowEdge(ebin+1)));
+    txt->DrawLatex(0.5,0.8,Form("%.3f < |#eta| < %.3f ",histos["120to1000"]->GetBinLowEdge(ebin),histos["120to1000"]->GetBinLowEdge(ebin+1)));
 
     f1->Write(Form("loglin_eta%d",ebin));
     f2->Write(Form("const_eta%d",ebin));
