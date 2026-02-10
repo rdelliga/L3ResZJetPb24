@@ -1,5 +1,7 @@
 // Do fits for pt-parametization of L2residuals
 // This is written for 2023PbPb studies, a lot of things have been unfortunately hardcoded
+// Nick's parametrization: 1./([p0]+[p1]*log10(0.01*x)+[p2]/(x/10.0))
+
 
 #include "../fillhistograms/histograms.h"
 
@@ -55,6 +57,8 @@ void fit_pt_param(TString inzb = "L2residuals_pbpbreco_rereco_zb_jetid.root", TS
 
   TF1 * f1 = new TF1("f1","[0] + [1]*log(x)",fitmin,fitmax);
   TF1 * f2 = new TF1("f2","pol0",fitmin,fitmax);
+  TF1 * f3 = new TF1("f3","1./([0]+[1]*log10(0.01*x)+[2]/(x/10.))",fitmin,fitmax); // Run3 parametrization
+  
   // Histograms vs. pT
   for (int ebin = 1; ebin < 15; ++ebin) {
     auto leg2 = new TLegend(0.15,0.17,0.35,0.32); //  x, y, x, y
@@ -89,6 +93,10 @@ void fit_pt_param(TString inzb = "L2residuals_pbpbreco_rereco_zb_jetid.root", TS
     histosvspt[ebin]->Fit("f2","R");
     f2->Draw("same");
 
+    f3->SetLineStyle(kDashed);
+    f3->SetLineColor(kBlue+1);
+    histosvspt[ebin]->Fit("f3","R");
+    f3->Draw("same");
 
     leg2->AddEntry(f1,Form("a + b*log(p_{T}), a = %.3f #pm %.3f, b = %.3f #pm %.3f",f1->GetParameter(0),f1->GetParError(0),f1->GetParameter(1),f1->GetParError(1)));
     leg2->AddEntry(f2, Form("p0 = %.3f #pm %.3f",f2->GetParameter(0), f2->GetParError(0)));
