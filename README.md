@@ -39,7 +39,7 @@ root -l -b -q 'analyse_PhotonJet.cc("/path/to/filelist.txt", "output_tag", false
 ```bash
 cd /eos/home-b/bharikri/lxplus_private/EGamma/residualanalysis/L3Residual
 root -l -b -q 'plotresponse_L3.C("/path/to/PHOTONHP_output_tag.root", "Data")'
-root -l -b -q 'plotresponse_L3.C("/path/to/PHOTONMC_output_tag.root", "MC", "2024ppRef", "pp Reference", true)'
+root -l -b -q 'plotresponse_L3.C("/path/to/PHOTONMC_output_tag.root", "MC", "2024ppRef", "pp 480.4 pb^{-1}", true)'
 ```
 
 3) Derive L3 “derived products” (recommended for pT-only barrel: wide-|eta| bin):

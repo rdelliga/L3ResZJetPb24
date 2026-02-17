@@ -27,7 +27,7 @@ root -l -b -q 'plotresponse_L3.C("/eos/cms/store/group/phys_heavyions/bharikri/J
 - `inputFile`: Path to analyse_PhotonJet.cc output ROOT file
 - `tag`: Label for output (e.g., "Data", "MC") 
 - `runLabel`: Run label for CMS lumi text (default: "2024ppRef")
-- `lumiLabel`: Luminosity label (default: "pp Reference")
+- `lumiLabel`: Luminosity label (default: "pp 480.4 pb^{-1}")
 - `isMC`: Is this MC sample (default: false)
 
 **Output:** Creates `L3plots_{tag}/` directory with:
@@ -73,7 +73,7 @@ root -l -b -q 'deriveL3_from_photonjet.C("PHOTONMC_output_tag.root", "PHOTONHP_o
 This script reads the derived photon+jet balance products (ratios vs pT for each alpha cut, plus the underlying 3D profiles) and:
 
 - Fits the **normalized ratio vs alpha** to extract `k_FSR` and extrapolate to $\alpha \to 0$.
-- Builds a **pT-only** correction shape and fits it vs pT to write an L3Residual JEC text.
+- Builds a **pT-only** correction shape and fits it vs pT to write an L3Residual JEC text. The default L3 pT fit expression is centralized in the macro (`l3PtFitExpr()`), and defaults to `[0]+[1]*log10(0.01*x)`.
 - The application of `k_FSR` to the pT-shape fit is optional (user flag).
 
 **Usage:**
@@ -82,7 +82,7 @@ This script reads the derived photon+jet balance products (ratios vs pT for each
 root -l -b -q 'L3Residual/dofits_L3.C("L3_derived.root", 60, 300, "L3Res_photonjet", false, "2024ppRef", "pp 480.4 pb^{-1}", true, true)'
 # For balance distribution overlays (requires raw derived files with photonjet_balance_dist):
 # root -l -b -q 'L3Residual/dofits_L3.C("L3_derived.root", 60, 300, "L3Res_photonjet", false, "2024ppRef", "pp 480.4 pb^{-1}", true, true, 5, 0.0, 0.4, true, true, "mc_raw.root", "data_raw.root")'
-# If raw files not provided, the macro will fall back to generating per-pT balance overlays using the input 3D profiles (saved to raw/balance_dist_overlay/).
+# Per-pT balance overlays are produced when raw MC/data files are provided (saved to `raw/balance_dist_overlay/`).
 // Multi-input combined fit (e.g. photon+jet + Z+jet derived products)
 // - First argument is a comma-separated list of derived ROOT files
 // - Optional: provide labels (inputLabelsCSV) and per-input pT ranges (inputPtRangesCSV)

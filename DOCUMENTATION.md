@@ -186,7 +186,7 @@ This section describes the full logic implemented across `deriveL3_from_photonje
      $$ f(p_T) = [0] + [1]\cdot \log_{10}(0.01\,p_T) $$
      - The expression is centralized in `dofits_L3.C` (see `l3PtFitExpr()`) so it can be changed later without touching multiple blocks.
   - The fit parameters are written to a JEC-style text block and a copy is placed under `L3Residual/jecfiles/` with a tag that indicates `photonjet` (single-input) or `combined` (multi-input).
-
+   - The combined pT-fit canvas is drawn in `log-x` and uses a tight y-range centered on unity by default (the macro sets the frame y-range to `[0.97, 1.05]` and reapplies axis styling after the final fit so titles/labels remain visible).
 6) Optional L2L3 combination (`writeL2L3=true`):
   - If requested the macro reads an L2Residual text file, samples the L2 shape over each L2 pt range, multiplies with the fitted L3 shape $f(p_T)$, and fits the product to produce a combined L2L3 correction piece for each eta bin.
 

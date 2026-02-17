@@ -43,7 +43,7 @@ bool fitD = false;
 bool doClosure = false;
 
 TH1D* drawCleaned(TH1D* h, string data, double ptmin, double ptmax,
-                  int marker, int color) {
+                  int marker, int color, bool applyWindowCut = true) {
   if (!h) return nullptr;
   TH1D* hc = (TH1D*)h->Clone(Form("hc_%s_%s", h->GetName(), _run.c_str()));
   for (int i = 1; i <= hc->GetNbinsX(); ++i) {
@@ -52,14 +52,28 @@ TH1D* drawCleaned(TH1D* h, string data, double ptmin, double ptmax,
     bool keep = false;
     if (data == "G" && ptbinmin >= ptmin && ptbinmax <= ptmax) keep = true;
     if (data == "D" && ptbinmin >= ptmin && ptbinmax <= ptmax) keep = true;
-    if (h->GetBinContent(i) > 1.5 || h->GetBinContent(i) < 0.5) keep = false;
-    if (h->GetBinError(i) <= 0 || h->GetBinContent(i) <= 0) keep = false;
+    if (applyWindowCut && (h->GetBinContent(i) > 1.5 || h->GetBinContent(i) < 0.5)) keep = false;
+
+    const double val = h->GetBinContent(i);
+    double err = h->GetBinError(i);
+    const double errmin = 0.002; // small floor error used for display and fit stability
+
+    // If bin content is zero or negative, always drop
+    if (val <= 0) keep = false;
+
+    // If bin error is zero or negative:
+    // - for fit/cleaned mode (applyWindowCut==true) drop the bin (insufficient info)
+    // - for display-only mode (applyWindowCut==false) keep the bin but assign a small error
+    if (err <= 0) {
+      if (applyWindowCut) keep = false;
+      else err = errmin;
+    }
+
     if (!keep) {
       hc->SetBinContent(i, 0.);
       hc->SetBinError(i, 0.);
     } else {
-      double errmin = 0.002;
-      hc->SetBinError(i, sqrt(pow(h->GetBinError(i), 2) + pow(errmin, 2)));
+      hc->SetBinError(i, sqrt(pow(err, 2) + pow(errmin, 2)));
     }
   }
   hc->SetMarkerStyle(marker);
@@ -1053,30 +1067,17 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
   {
     TCanvas* cFinal = new TCanvas("cFinal_combined", "L3Residual combined pT fit", 900, 700);
     cFinal->SetLogx();
+    // Set margins BEFORE drawing the frame, otherwise axis titles/labels can get clipped
+    cFinal->SetLeftMargin(0.14);
+    cFinal->SetBottomMargin(0.12);
+    cFinal->SetRightMargin(0.05);
+    cFinal->SetTopMargin(0.06);
     cFinal->cd();
 
-    TH1D* hFrame = makePtFrameFromHist(hCorrInputs.front(), "hFrame_combined", "#frac{R_{MC}}{R_{Data}}", 0.97, 1.05);
-    hFrame->SetMinimum(0.97);
-    hFrame->SetMaximum(1.05);
-    hFrame->Draw();
-    styleLogxAxis(hFrame);
-    cFinal->SetLeftMargin(0.14);
-    // Ensure axis titles/ticks are readable
-    hFrame->GetXaxis()->SetTitleSize(0.038);
-    hFrame->GetXaxis()->SetLabelSize(0.032);
-    hFrame->GetYaxis()->SetTitleSize(0.038);
-    hFrame->GetYaxis()->SetLabelSize(0.032);
-    hFrame->GetYaxis()->SetTitleOffset(1.7);
-
-    const double xMin = hFrame->GetXaxis()->GetBinLowEdge(1);
-    const double xMax = hFrame->GetXaxis()->GetBinLowEdge(hFrame->GetNbinsX() + 1);
-    const double yMin = hFrame->GetMinimum();
-    const double yMax = hFrame->GetMaximum();
-
-    TLine* line = new TLine(xMin, 1, xMax, 1);
-    line->SetLineStyle(kDashed);
-    line->SetLineColor(kGray+1);
-    line->Draw("SAME");
+    const double xMin = hCorrInputs.front()->GetXaxis()->GetBinLowEdge(1);
+    const double xMax = hCorrInputs.front()->GetXaxis()->GetBinLowEdge(hCorrInputs.front()->GetNbinsX() + 1);
+    const double yMin = 0.7;
+    const double yMax = 1.5;
 
     TMultiGraph* mg = new TMultiGraph("mg_combined_pt", "mg_combined_pt");
     TLegend* leg = new TLegend(0.50, 0.68, 0.88, 0.88);
@@ -1092,7 +1093,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
 
     std::vector<TH1D*> cleaned;
     std::vector<TGraphErrors*> graphs;
-    std::vector<TLine*> rangeLines;
+    std::vector<TGraphErrors*> fitGraphs;
     for (size_t i = 0; i < hCorrInputs.size(); ++i) {
       TH1D* h = hCorrInputs[i];
       if (!h) continue;
@@ -1114,59 +1115,115 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         }
       }
 
-      // Draw the underlying points lightly (all bins) before drawing fit-range points
-      h->SetMarkerStyle(kOpenCircle);
-      h->SetMarkerColor(kGray+1);
-      h->SetLineColor(kGray+1);
-      h->Draw("PE1 SAME");
-
-      // Show per-source fit range on the plot (use labelInputs in legend)
-      if ((ptminThis > xMin) || (ptmaxThis < xMax)) {
-        TLine* lmin = new TLine(ptminThis, yMin, ptminThis, yMax);
-        lmin->SetLineColor(col);
-        lmin->SetLineStyle(kDotted);
-        lmin->Draw("SAME");
-        rangeLines.push_back(lmin);
-        TLine* lmax = new TLine(ptmaxThis, yMin, ptmaxThis, yMax);
-        lmax->SetLineColor(col);
-        lmax->SetLineStyle(kDotted);
-        lmax->Draw("SAME");
-        rangeLines.push_back(lmax);
+      // Plot the full distribution for display (no window cut so display bins are preserved)
+      TH1D* hAll = drawCleaned(h, "G", xMin, xMax, mkr, col, false);
+      if (hAll) cleaned.push_back(hAll);
+      TGraphErrors* gAll = (hAll ? cleanGraph(new TGraphErrors(hAll)) : nullptr);
+      if (gAll && gAll->GetN() > 0) {
+        gAll->SetMarkerStyle(mkr);
+        gAll->SetMarkerColor(col);
+        gAll->SetLineColor(col);
+        gAll->SetMarkerSize(1.05);
+        graphs.push_back(gAll);
+        mg->Add(gAll, "P");
       }
 
-      TH1D* hClean = drawCleaned(h, "G", ptminThis, ptmaxThis, mkr, col);
-      if (!hClean) continue;
-      cleaned.push_back(hClean);
+      // Also prepare the in-fit-range graph used for fitting (do not add to mg)
+      TH1D* hIn = drawCleaned(h, "G", ptminThis, ptmaxThis, mkr, col, true);
+      TGraphErrors* gIn = (hIn ? cleanGraph(new TGraphErrors(hIn)) : nullptr);
+      if (gIn && gIn->GetN() > 0) {
+        gIn->SetMarkerStyle(mkr);
+        gIn->SetMarkerColor(col);
+        gIn->SetLineColor(col);
+        gIn->SetMarkerSize(1.05);
+        fitGraphs.push_back(gIn);
+      }
 
-      TGraphErrors* g = cleanGraph(new TGraphErrors(hClean));
-      if (g && g->GetN() > 0) {
-        g->SetMarkerStyle(mkr);
-        g->SetMarkerColor(col);
-        g->SetLineColor(col);
-        graphs.push_back(g);
-        mg->Add(g, "P");
-        if (ptminThis != ptminG || ptmaxThis != ptmaxG) {
-          leg->AddEntry(g, Form("%s (%.0f-%.0f)", labelInputs[i].Data(), ptminThis, ptmaxThis), "P");
-        } else {
-          leg->AddEntry(g, labelInputs[i], "P");
-        }
+      // Report counts for diagnostics
+      {
+        const int nAll = (gAll ? gAll->GetN() : 0);
+        const int nIn = (gIn ? gIn->GetN() : 0);
+        cout << Form("INFO: input '%s' -> plotted points = %d, in-range points = %d\n", labelInputs[i].Data(), nAll, nIn);
+      }
+
+      // Legend: include fit range text in the label (visual only)
+      if (gAll && gAll->GetN() > 0) {
+        leg->AddEntry(gAll, Form("%s (%.0f-%.0f)", labelInputs[i].Data(), ptminThis, ptmaxThis), "P");
       }
 
     }
 
-    // Draw the colored, fit-range points on top of the gray full-range points.
+    // Draw axes from the multigraph so titles and log-x behave like other plots
+    mg->SetTitle(";p_{T}^{#gamma} (GeV);#frac{R_{MC}}{R_{Data}}");
+    mg->Draw("AP");
+    mg->GetXaxis()->SetLimits(xMin, xMax);
+    mg->SetMinimum(yMin);
+    mg->SetMaximum(yMax);
+    if (mg->GetHistogram()) {
+      mg->GetHistogram()->SetMinimum(yMin);
+      mg->GetHistogram()->SetMaximum(yMax);
+      styleLogxAxis(mg->GetHistogram());
+    }
+    mg->GetXaxis()->SetTitleSize(0.038);
+    mg->GetXaxis()->SetLabelSize(0.032);
+    mg->GetYaxis()->SetTitleSize(0.038);
+    mg->GetYaxis()->SetLabelSize(0.032);
+    mg->GetYaxis()->SetTitleOffset(1.7);
+    mg->GetYaxis()->SetRangeUser(yMin, yMax);
+
+    // Draw full distributions (colored points) via mg
+    mg->Draw("AP");
     mg->Draw("P SAME");
-    // Force the frame axes to be redrawn so title/labels are always visible
-    hFrame->Draw("AXIS SAME");
 
+    // Horizontal reference line at 1
+    TLine* line = new TLine(xMin, 1, xMax, 1);
+    line->SetLineStyle(kDashed);
+    line->SetLineColor(kGray+1);
+    line->Draw("SAME");
+
+    gPad->RedrawAxis();
+
+    // Build a concatenated graph containing ONLY the in-fit-range points and fit that
     TF1* fref = makeL3PtFitFunc("fref_combined", 15., 3500.);
-    mg->Fit(fref, "QRN");
-    frefFinal = fref;
-    fref->SetLineColor(kRed+1);
-    fref->SetLineWidth(2);
-    fref->Draw("SAME");
+    TGraphErrors* gFitTotal = new TGraphErrors();
+    int nTot = 0;
+    for (auto* g : fitGraphs) {
+      if (!g) continue;
+      for (int ip = 0; ip < g->GetN(); ++ip) {
+        const double x = g->GetX()[ip];
+        const double y = g->GetY()[ip];
+        const double ex = (g->GetEX() ? g->GetEX()[ip] : 0.0);
+        const double ey = (g->GetEY() ? g->GetEY()[ip] : 0.0);
+        gFitTotal->SetPoint(nTot, x, y);
+        gFitTotal->SetPointError(nTot, ex, ey);
+        ++nTot;
+      }
+    }
+    if (gFitTotal->GetN() >= 2) {
+      gFitTotal->Fit(fref, "QRN");
+      frefFinal = fref;
+      fref->SetLineColor(kRed+1);
+      fref->SetLineWidth(2);
+      fref->Draw("SAME");
+    } else {
+      cout << "WARNING: Not enough in-range points to perform combined pT fit (N=" << gFitTotal->GetN() << ")" << endl;
+      delete gFitTotal;
+    }
 
-    leg->AddEntry(fref, Form("Fit: #chi^{2}/ndf = %.1f/%d", fref->GetChisquare(), fref->GetNDF()), "L");
+    // Re-apply y-range and axis styling after the fit (fit can trigger pad autoscaling)
+    mg->SetMinimum(yMin);
+    mg->SetMaximum(yMax);
+    mg->GetYaxis()->SetRangeUser(yMin, yMax);
+    if (mg->GetHistogram()) {
+      mg->GetHistogram()->SetMinimum(yMin);
+      mg->GetHistogram()->SetMaximum(yMax);
+      styleLogxAxis(mg->GetHistogram());
+    }
+    // Force canvas update and redraw axes/ticks so labels appear reliably
+    cFinal->Modified();
+    cFinal->Update();
+    gPad->RedrawAxis();
+
     leg->Draw();
 
     TLatex* tex = new TLatex();
@@ -1177,6 +1234,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     tex->DrawLatex(0.18, 0.80, Form("Inputs: %zu", hCorrInputs.size()));
     tex->DrawLatex(0.18, 0.75, Form("p0=%.5f, p1=%.5f", fref->GetParameter(0), fref->GetParameter(1)));
     tex->DrawLatex(0.18, 0.70, Form("Fit: %s", l3PtFitExpr()));
+    tex->DrawLatex(0.18, 0.65, Form("#chi^{2}/ndf = %.1f/%d", fref->GetChisquare(), fref->GetNDF()));
     CMS_lumi(cFinal, 0, 0);
     cFinal->SaveAs(Form("%s/L3Res_%s_combined_final.png", pngFolder.c_str(), _run.c_str()));
 
@@ -1242,7 +1300,6 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     delete tex;
     delete leg;
     delete line;
-    delete hFrame;
     delete cFinal;
     // graphs in mg were heap-allocated; ok to keep until process exit
   }
@@ -1464,6 +1521,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         legRaw->AddEntry(hMcRaw, "MC", "PE");
         legRaw->AddEntry(hDtRaw, "Data", "PE");
         legRaw->Draw();
+        TLatex tRaw; tRaw.SetNDC(); tRaw.SetTextFont(42); tRaw.SetTextSize(0.035); tRaw.DrawLatex(0.18, 0.85, Form("#alpha < %.2f", alphaCutVal));
         CMS_lumi(cRaw, 0, 0);
         cRaw->SaveAs(Form("%s/L3Res_%s_alpha%d_raw.png", rawFolder.c_str(), _run.c_str(), alphaBin));
         delete legRaw;
