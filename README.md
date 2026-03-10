@@ -2,6 +2,8 @@
 
 Run instructions for producing JEC residual corrections (L2, L3) and JER scale factors.
 
+The inputs for these macros are HiForest ntuples are 2023 ppRef and 2024 ppRef HiForest ntuples.
+
 For architecture, data products, histogram contracts, and implementation details, see DOCUMENTATION.md.
 
 ## Environment
