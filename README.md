@@ -24,7 +24,9 @@ cd /eos/home-b/bharikri/lxplus_private/EGamma/residualanalysis/fillhistograms
 root -l -b -q compile.C
 ```
 
-## L3 (photon+jet) – end-to-end
+## L3 (photon+jet) end-to-end
+
+The photon+jet histogram production code lives in `fillhistograms/`.
 
 1) Produce photon+jet histograms (MC and Data):
 ```bash
@@ -42,7 +44,7 @@ root -l -b -q 'plotresponse_L3.C("/path/to/PHOTONHP_output_tag.root", "Data")'
 root -l -b -q 'plotresponse_L3.C("/path/to/PHOTONMC_output_tag.root", "MC", "2024ppRef", "pp 480.4 pb^{-1}", true)'
 ```
 
-3) Derive L3 “derived products” (recommended for pT-only barrel: wide-|eta| bin):
+3) Derive L3 derived products (recommended for pT-only barrel: wide-|eta| bin):
 ```bash
 cd /eos/home-b/bharikri/lxplus_private/EGamma/residualanalysis
 root -l -b -q 'L3Residual/deriveL3_from_photonjet.C("PHOTONMC_output_tag.root", "PHOTONHP_output_tag.root", "L3Residual/L3_derived_photonjet.root", true, 5, false, true)'
@@ -91,12 +93,39 @@ Outputs are written under `L3Residual/` (plots + root outputs) and `L3Residual/j
 
 ## L2 (dijet)
 
-Run the L2 workflow from the L2Residual directory:
+Run the L2 workflow from the `L2Residual/` directory:
 ```bash
 cd /eos/home-b/bharikri/lxplus_private/EGamma/residualanalysis/L2Residual
-# (see L2Residual/README.md for the exact chain)
+root -l -b -q 'deriveL2_from3D.C("/path/to/input.root")'
+root -l -b -q 'dofits.C()'
+root -l -b -q 'plotresponses.C()'
+root -l -b -q 'doTxt.C()'
 ```
+
+Typical chain:
+- `deriveL2_from3D.C`: build the L2 residual inputs from the histogram outputs
+- `dofits.C`: fit the response ratios vs alpha
+- `plotresponses.C`: diagnostic response plots
+- `doTxt.C`: write txt outputs
+
+## JER and JER scale factors
+
+To fill histograms for JER scale factors, use the dedicated JER/tag-and-probe configuration in the analysis step and apply the L2 residual JEC before deriving the SFs.
+
+MC validation macros:
+- `JER/MCJER.C`: pT resolution
+- `JER/MCJPR.C`: eta/phi resolution
+- `JER/MCRESP.C`: MC response `<pT(reco)/pT(gen)>`
+- `textFiles/doTxtMCJER.C`: print txt files of resolution fit parameters
+
+Scale factor workflow:
+- `JER/JERSF_fits.C`: extract resolution from Gaussian fits to dijet asymmetry distributions
+- `JER/JERSF_RMS.C`: extract resolution from truncated RMS of dijet asymmetry distributions
+- `JER/JERSF_fits_vsalpha.C`: fit the extracted resolutions vs alpha
+- `JER/JERSF_printtxt.C`: write txt outputs
+
+Trigger turn-on studies are under `triggerstudy/plottriggereff.C`.
 
 ## Batch processing
 
-See batch/README.md for HTCondor submission and input conventions.
+See `batch/README.md` for HTCondor submission, merging, and input conventions.
