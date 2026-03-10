@@ -1,12 +1,29 @@
 // Do fits for pt-parametization of L2residuals
 
 #include "../fillhistograms/histograms.h"
+#include <algorithm>
+#include <cmath>
+#include <sstream>
+#include <vector>
 
-// 2023 bins
-const float pts[] = { 30, 40, 80, 92, 120, 1000};
+namespace {
+std::string edgeLabel(double x) {
+  double xi = std::round(x);
+  if (std::fabs(x - xi) < 1e-6) return std::to_string(static_cast<int>(xi));
+  std::ostringstream ss;
+  ss << x;
+  return ss.str();
+}
 
-int nptbins = 5;
-string ptbins[] = {"30to40", "40to80", "80to92", "92to120", "120to1000"};
+std::string ptBinLabel(int ptbin) {
+  return edgeLabel(histograms::ptforjec[ptbin - 1]) + "to" + edgeLabel(histograms::ptforjec[ptbin]);
+}
+
+TH1D* getH1(TFile* f, const std::string& name) {
+  if (!f) return nullptr;
+  return dynamic_cast<TH1D*>(f->Get(name.c_str()));
+}
+}
 
 void fit_pt_param(TString inzb = "L2residuals_pbpbreco_rereco_zb_jetid.root", TString inHP =  "L2residuals_pbpbreco_rereco_hp_jetid.root", float fitmin = 25., float fitmax = 1000, string outfilename = "testing_pt_dep", string outfolder = "ptfits", bool doabseta = true) {
 
@@ -20,8 +37,31 @@ void fit_pt_param(TString inzb = "L2residuals_pbpbreco_rereco_zb_jetid.root", TS
   TFile *outfile = new TFile(Form("%s/%s.root",outfolder.c_str(),outfilename.c_str()),"RECREATE");
   
  
-  // This is for correcton factors - hiso against eta
-  auto factors = (TH1D*)inFile->Get(Form("ratio_pt%s_alpha0.3",ptbins[0].c_str()));
+  std::vector<int> availablePtBins;
+  for (int ptbin = 1; ptbin <= histograms::nptforjec; ++ptbin) {
+    const std::string lbl = ptBinLabel(ptbin);
+    const std::string ratioName = "ratio_pt" + lbl + "_alpha0.3";
+    if (getH1(inFilezb, ratioName) || getH1(inFile, ratioName)) availablePtBins.push_back(ptbin);
+  }
+
+  if (availablePtBins.empty()) {
+    std::cerr << "No ratio_pt* histograms found in inputs." << std::endl;
+    return;
+  }
+
+  TH1D* factors = nullptr;
+  for (int ptbin : availablePtBins) {
+    const std::string lbl = ptBinLabel(ptbin);
+    const std::string ratioName = "ratio_pt" + lbl + "_alpha0.3";
+    factors = getH1(inFile, ratioName);
+    if (!factors) factors = getH1(inFilezb, ratioName);
+    if (factors) break;
+  }
+
+  if (!factors) {
+    std::cerr << "Could not initialize factors histogram from ratio_pt* inputs." << std::endl;
+    return;
+  }
   factors->Reset();
 
   int colours[] = {209, 226, 213, 51, 206, 209};
@@ -31,11 +71,43 @@ void fit_pt_param(TString inzb = "L2residuals_pbpbreco_rereco_zb_jetid.root", TS
 
   // Fro mresponses
   map<string, TH1D*> histos;
+  std::vector<std::string> ptbins;
   map<int, TH1D*> histosvspt;
 
-  // Picking up histograms for different pT bins from ZB/HP
-  for (int i = 0; i < 2; ++i)   histos[ptbins[i]] = (TH1D*)inFilezb->Get(Form("ratio_pt%s_alpha0.3",ptbins[i].c_str()));
-  for (int i = 2; i < nptbins; ++i)   histos[ptbins[i]] = (TH1D*)inFile->Get(Form("ratio_pt%s_alpha0.3",ptbins[i].c_str()));
+  // Pick up histograms for different pT bins from ZB/HP with legacy low/high preference
+  for (int ptbin : availablePtBins) {
+    const std::string lbl = ptBinLabel(ptbin);
+    const std::string ratioName = "ratio_pt" + lbl + "_alpha0.3";
+    const double highEdge = histograms::ptforjec[ptbin];
+    const bool preferZB = (highEdge <= 80.0);
+
+    TH1D* h = nullptr;
+    if (preferZB) h = getH1(inFilezb, ratioName);
+    if (!h) h = getH1(inFile, ratioName);
+    if (!h && !preferZB) h = getH1(inFilezb, ratioName);
+    if (!h) continue;
+
+    histos[lbl] = h;
+    ptbins.push_back(lbl);
+  }
+
+  if (ptbins.empty()) {
+    std::cerr << "No usable ratio_pt* histograms available for pt-param fits." << std::endl;
+    return;
+  }
+
+  std::vector<double> ptEdges;
+  ptEdges.reserve(ptbins.size() + 1);
+  bool first = true;
+  for (int ptbin : availablePtBins) {
+    const std::string lbl = ptBinLabel(ptbin);
+    if (!histos.count(lbl)) continue;
+    if (first) {
+      ptEdges.push_back(histograms::ptforjec[ptbin - 1]);
+      first = false;
+    }
+    ptEdges.push_back(histograms::ptforjec[ptbin]);
+  }
 
   auto txt = new TLatex();
   txt->SetTextSize(0.03);
@@ -46,18 +118,18 @@ void fit_pt_param(TString inzb = "L2residuals_pbpbreco_rereco_zb_jetid.root", TS
   TF1 * f3 = new TF1("f3","1./([0]+[1]*log10(0.01*x)+[2]/(x/10.))",fitmin,fitmax); // Run3 parametrization
   
   // Histograms vs. pT
-  for (int ebin = 1; ebin < 12; ++ebin) {   // 12 corresponds to 2.5
+  for (int ebin = 1; ebin < 12; ++ebin) {   // Keep barrel-focused default range
     auto leg2 = new TLegend(0.12,0.10,0.35,0.36); //  x, y, x, y
     leg2->SetTextSize(0.03);
     leg2->SetBorderSize(0);
     leg2->SetFillStyle(0);
     
-    histosvspt[ebin] = new TH1D(Form("ebin_%d",ebin),"",nptbins,&pts[0]); 
+    histosvspt[ebin] = new TH1D(Form("ebin_%d",ebin),"",ptEdges.size() - 1,&ptEdges[0]); 
 
     // etabins for
-    for (int ptbin = 1; ptbin <= nptbins; ++ptbin) {
-      histosvspt[ebin]->SetBinContent(ptbin,histos[ptbins[ptbin-1].c_str()]->GetBinContent(ebin));
-      histosvspt[ebin]->SetBinError(ptbin,histos[ptbins[ptbin-1].c_str()]->GetBinError(ebin));
+    for (int ptbin = 1; ptbin <= static_cast<int>(ptbins.size()); ++ptbin) {
+      histosvspt[ebin]->SetBinContent(ptbin,histos[ptbins[ptbin-1]]->GetBinContent(ebin));
+      histosvspt[ebin]->SetBinError(ptbin,histos[ptbins[ptbin-1]]->GetBinError(ebin));
     }
 
     histosvspt[ebin]->SetMaximum(1.1);

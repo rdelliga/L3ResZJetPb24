@@ -1,19 +1,27 @@
 #include "../fillhistograms/histograms.h"
+#include <algorithm>
+#include <cmath>
+#include <sstream>
+#include <vector>
 
+namespace {
+std::string edgeLabel(double x) {
+  double xi = std::round(x);
+  if (std::fabs(x - xi) < 1e-6) return std::to_string(static_cast<int>(xi));
+  std::ostringstream ss;
+  ss << x;
+  return ss.str();
+}
 
-int pts[] = {15, 30, 40, 80, 92, 120, 1000};
-//int pts[] = {15, 30, 80, 120, 1000};
+std::string ptBinLabel(int ptbin) {
+  return edgeLabel(histograms::ptforjec[ptbin - 1]) + "to" + edgeLabel(histograms::ptforjec[ptbin]);
+}
 
-
-string ptbins[] = {"30to40", "40to80", "80to92", "92to120", "120to1000"};
-int maxzbbin = 3;
-int nptbins = 6; 
-
-
-//string ptbins[] = {"30to80", "80to120", "120to1000"}; 
-
-//int maxzbbin = 2;
-//int nptbins = 4; 
+TH1D* getH1(TFile* f, const std::string& name) {
+  if (!f) return nullptr;
+  return dynamic_cast<TH1D*>(f->Get(name.c_str()));
+}
+}
 
 void dofits(TString inzb, TString inHP, float fitmin = 0.15, float fitmax = 0.35, string outfilename = "kfactor_rerunall_combined_allpts", string outfolder = "L2fits", bool doabseta = true) {
   // input file is from 3D derivation
@@ -32,18 +40,43 @@ void dofits(TString inzb, TString inHP, float fitmin = 0.15, float fitmax = 0.35
 
    //  mg->Add(g2,"L");
  
-  // This is for correcton factors - hiso against eta
-  auto factors = (TH1D*)inFile->Get(Form("ratio_pt%s_alpha0.3",ptbins[1].c_str()));
+  const int nPtBins = histograms::nptforjec;
+  const int etaMax = histograms::nwabsetas;
+
+  std::vector<int> availablePtBins;
+  for (int ptbin = 1; ptbin <= nPtBins; ++ptbin) {
+    const std::string lbl = ptBinLabel(ptbin);
+    const std::string ratioName = "ratio_pt" + lbl + "_alpha0.3";
+    if (getH1(inFilezb, ratioName) || getH1(inFile, ratioName)) availablePtBins.push_back(ptbin);
+  }
+
+  if (availablePtBins.empty()) {
+    std::cerr << "No ratio_pt* histograms found in inputs." << std::endl;
+    return;
+  }
+
+  TH1D* factors = nullptr;
+  for (int ptbin : availablePtBins) {
+    const std::string lbl = ptBinLabel(ptbin);
+    const std::string ratioName = "ratio_pt" + lbl + "_alpha0.3";
+    factors = getH1(inFile, ratioName);
+    if (!factors) factors = getH1(inFilezb, ratioName);
+    if (factors) break;
+  }
+
+  if (!factors) {
+    std::cerr << "Could not initialize factors histogram from ratio_pt* inputs." << std::endl;
+    return;
+  }
   factors->Reset();
 
   // TODO: change this so that histogram contents are copied into TGraphs and the reference alpha is excluded
   // TODO: remove reference alpha from the fit
   int colours[] = {209, 226, 213, 51, 206, 209};
-  //  for (int etabin = 1; etabin < 37; ++etabin) {
-  for (int etabin = 1; etabin < 15; ++etabin) { 
+  for (int etabin = 1; etabin <= etaMax; ++etabin) { 
 
      ROOT::Fit::BinData data(opt,range); 
-     map<int, TH1D*> histos, ratios;
+    map<int, TH1D*> histos;
      map<int, TGraphErrors*> graphs;
      auto multifit = new TMultiGraph();
 
@@ -66,19 +99,33 @@ void dofits(TString inzb, TString inHP, float fitmin = 0.15, float fitmax = 0.35
      for ( int ptbin = 3; ptbin <=4; ++ptbin)  ratios[ptbin] = (TH1D*)inFile->Get(Form("Respvsa_%d_%d",ptbin,etabin));
     */
 
-     for ( int ptbin = 1; ptbin <=maxzbbin; ++ptbin)  histos[ptbin] = (TH1D*)inFilezb->Get(Form("Respvsa_norm_%d_%d",ptbin,etabin)); 
-     for ( int ptbin = maxzbbin+1; ptbin <=nptbins; ++ptbin)  histos[ptbin] = (TH1D*)inFile->Get(Form("Respvsa_norm_%d_%d",ptbin,etabin)); 
+     for (int ptbin : availablePtBins) {
+       const double highEdge = histograms::ptforjec[ptbin];
+       const bool preferZB = (highEdge <= 80.0); // Preserve legacy low-pT from ZB preference
+       TH1D* h = nullptr;
 
+       if (preferZB) h = getH1(inFilezb, Form("Respvsa_norm_%d_%d", ptbin, etabin));
+       if (!h) h = getH1(inFile, Form("Respvsa_norm_%d_%d", ptbin, etabin));
+       if (!h && !preferZB) h = getH1(inFilezb, Form("Respvsa_norm_%d_%d", ptbin, etabin));
 
-     for ( int ptbin = 1; ptbin <=maxzbbin; ++ptbin)  ratios[ptbin] = (TH1D*)inFilezb->Get(Form("Respvsa_%d_%d",ptbin,etabin)); 
-     for ( int ptbin = maxzbbin+1; ptbin <=nptbins; ++ptbin)  ratios[ptbin] = (TH1D*)inFile->Get(Form("Respvsa_%d_%d",ptbin,etabin));
+       if (h) histos[ptbin] = h;
+     }
+
+     if (histos.empty()) {
+       delete c1;
+       delete multifit;
+       continue;
+     }
    
      
-     histos[1]->SetMaximum(1.15);
-     histos[1]->SetMinimum(0.85);
-     histos[1]->Draw("AXIS");
+     auto first = histos.begin()->second;
+     first->SetMaximum(1.15);
+     first->SetMinimum(0.85);
+     first->Draw("AXIS");
        
-     for (int ptbin = 2; ptbin <= nptbins; ++ptbin) {
+     for (int ptbin : availablePtBins) {
+       if (!histos.count(ptbin)) continue;
+       if (ptbin == availablePtBins.front()) continue;
        //       if (etabin >= 14 and ptbin == 6) break;
        //       if (etabin >= 17 and ptbin == 5) break;
        //  if (etabin > 8 and ptbin == 6) break;
@@ -118,7 +165,7 @@ void dofits(TString inzb, TString inHP, float fitmin = 0.15, float fitmax = 0.35
       graphs[ptbin]->SetMarkerColor(colours[ptbin-1]);
       graphs[ptbin]->Draw("sameP");
 
-      leg->AddEntry(histos[ptbin], Form("%d < p_{T} < %d",pts[ptbin-1],pts[ptbin])); // TODO: correct bin edges
+      leg->AddEntry(histos[ptbin], Form("%s", ptBinLabel(ptbin).c_str()));
       // TODO: colours
     } 
 
@@ -204,11 +251,22 @@ void dofits(TString inzb, TString inHP, float fitmin = 0.15, float fitmax = 0.35
   histos["80to120"] = (TH1D*)inFile->Get("ratio_pt80to120_alpha0.3"); 
   histos["120to1000"] = (TH1D*)inFile->Get("ratio_pt120to1000_alpha0.3"); */
 
-   histos["30to40"] = (TH1D*)inFilezb->Get("ratio_pt30to40_alpha0.3");
-  histos["40to80"] = (TH1D*)inFilezb->Get("ratio_pt40to80_alpha0.3");
-  histos["80to92"] = (TH1D*)inFile->Get("ratio_pt80to92_alpha0.3");
-  histos["92to120"] = (TH1D*)inFile->Get("ratio_pt92to120_alpha0.3"); 
-  histos["120to1000"] = (TH1D*)inFile->Get("ratio_pt120to1000_alpha0.3");
+  std::vector<std::string> ptbins;
+  for (int ptbin : availablePtBins) {
+    const std::string lbl = ptBinLabel(ptbin);
+    const std::string ratioName = "ratio_pt" + lbl + "_alpha0.3";
+    const double highEdge = histograms::ptforjec[ptbin];
+    const bool preferZB = (highEdge <= 80.0);
+
+    TH1D* h = nullptr;
+    if (preferZB) h = getH1(inFilezb, ratioName);
+    if (!h) h = getH1(inFile, ratioName);
+    if (!h && !preferZB) h = getH1(inFilezb, ratioName);
+
+    if (!h) continue;
+    histos[lbl] = h;
+    ptbins.push_back(lbl);
+  }
 
 
   int col = 0;
@@ -233,7 +291,7 @@ void dofits(TString inzb, TString inHP, float fitmin = 0.15, float fitmax = 0.35
 
      histos[bin.c_str()]->Draw("same");
      histos[bin.c_str()]->Write(Form("corrections_%s",bin.c_str()));
-     leg2->AddEntry(histos[bin.c_str()], Form("%d < p_{T} < %d",pts[col+1],pts[col+2])); 
+    leg2->AddEntry(histos[bin.c_str()], Form("%s", bin.c_str())); 
 
      col++;
   }

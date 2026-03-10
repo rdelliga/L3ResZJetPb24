@@ -1,4 +1,13 @@
 
+#include "../fillhistograms/histograms.h"
+#include <cmath>
+
+namespace {
+int edgeToInt(double x) {
+  return static_cast<int>(std::lround(x));
+}
+}
+
 void plotresponses( string input = "L2residuals_pbpbreco_rereco_zb_jetid.root", string plottag = "ZB", bool closure = false) {
 
   float h1 = -1.0, h2 = 0.0, eta1 = -5.2, eta2 = 5.2;
@@ -15,16 +24,16 @@ void plotresponses( string input = "L2residuals_pbpbreco_rereco_zb_jetid.root", 
   TFile *file = new TFile(input.c_str(),"READ");
 
   float alpha = 0.3;
-  int pts[] = {15, 30, 40, 80, 92, 120, 1000};
-  //int pts[] = {15, 30, 80, 120, 1000};
 
-  for (int i = 0; i < 6; ++i) {
-    int pt1 = pts[i];
-    int pt2= pts[i+1];
+  for (int i = 0; i < static_cast<int>(histograms::nptforjec); ++i) {
+    int pt1 = edgeToInt(histograms::ptforjec[i]);
+    int pt2 = edgeToInt(histograms::ptforjec[i + 1]);
     string namelabel = Form("pbpb_%dto%dalpha%.1f_%s",pt1,pt2,alpha,plottag.c_str());
     
     auto mc = (TH1D*)file->Get(Form("mc_pt%dto%d_alpha%.1f",pt1,pt2,alpha));
     auto data = (TH1D*)file->Get(Form("dt_pt%dto%d_alpha%.1f",pt1,pt2,alpha));
+
+    if (!mc || !data) continue;
 
     if (closure) {
      mc->GetXaxis()->SetRangeUser(0,2.5);
@@ -60,7 +69,9 @@ void plotresponses( string input = "L2residuals_pbpbreco_rereco_zb_jetid.root", 
     auto line = new TLine();
     line->DrawLine(0,1.02,2.5,1.02);
 
-    auto box = new TBox((etalimit[i]/5.19), 0.09, 0.9, 0.93);
+    float shadeEdge = 3.0;
+    if (i < static_cast<int>(sizeof(etalimit)/sizeof(etalimit[0]))) shadeEdge = etalimit[i];
+    auto box = new TBox((shadeEdge/5.19), 0.09, 0.9, 0.93);
     box->SetLineColor(kRed);
     box->SetFillColorAlpha(kBlack, 0.2);
     if (drawbox) box->Draw("same");
