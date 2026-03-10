@@ -206,10 +206,9 @@ void symm_uncertainty(TH1D* kfacts, TH1D* kfactsUp, TH1D* kfactsDown, TFile* inF
      
      if (kfacts->GetXaxis()->GetBinLowEdge(etabin) < maxeta) {
 	 
-       if (debug)  cout << -loweta << " " << -higheta << " " << npts*3;
-	 
-       if (higheta!=0) txtfile << -loweta << " " << -higheta << " " << npts*3;
-       else txtfile << -loweta << " " << higheta << " " << npts*3;
+       if (debug)  cout << loweta << " " << higheta << " " << npts*3;
+
+       else txtfile << loweta << " " << higheta << " " << npts*3;
        
        for (int i = 0; i < npts; i++) {
 	 float nom, up, down;
