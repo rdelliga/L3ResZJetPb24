@@ -48,5 +48,5 @@ map<string,string> filenames = {
 		   //		   {"RERECOMC", "/eos/user/l/lamartik/HIJECRERECO/MC2023-pbpbreco.root"}
 		   {"RERECOMC", "/eos/user/l/lamartik/Run3_MC_pbpbrereco_202509/MC_pbpbreco_allppGT.root"} ,
 		   {"PHOTONHP", "/eos/cms/store/group/phys_heavyions/bharikri/Forest/JetCalibrations/2024ppRef_HP0_part_from_Nick/HP0_PP2024_1.root"},
-		   {"PHOTONMC", "/eos/cms/store/group/phys_heavyions/bharikri/Forest/JetCalibrations/2024ppRef_MC_dijet_part_from_Nick/DIJET_PP2024_p0.root"}  
+		   {"PHOTONMC", "/eos/cms/store/group/phys_heavyions/bharikri/Forest/GammaJetSubstructure/2024_PP_MC/2026_01_18_Pythia8_2024_ppRef_QCDPhoton/QCD-Photon_pThat-15to9999_TuneCP5_5p36TeV_pythia8/crab_2026_01_18_Pythia8_2024_ppRef_QCDPhoton15/260118_082947/0000/HiForestMiniAOD_1.root"}
                  };

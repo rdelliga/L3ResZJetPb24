@@ -126,6 +126,12 @@ void analyse(string input = "RERECOHP", string outputfiletag = "AK4_nojetid", bo
   auto triggerTree = chains->triggerChain;
   auto skimTree = chains->skimChain;
   auto jetTree = chains->jetChain;
+
+  const bool hasTriggerTree = (triggerTree && triggerTree->GetNtrees() > 0);
+  if (!isMC && !hasTriggerTree) {
+    cerr << "ERROR: Data input is missing hltanalysis/HltTree" << endl;
+    return;
+  }
   
   // Cuts and weights from event tree
   Int_t       hiBin = -1;
@@ -149,31 +155,52 @@ void analyse(string input = "RERECOHP", string outputfiletag = "AK4_nojetid", bo
   if (!isMC) skimTree->SetBranchAddress("pprimaryVertexFilter", &pprimaryVertexFilter);
   
   Int_t trigger = 0;
+  bool useTriggerSelection = false;
 
   // Triggger paths in the files
-  Int_t HLT_ZB, HLT_40, HLT_60, HLT_80, HLT_100, HLT_120;
+  Int_t HLT_ZB = 0, HLT_40 = 0, HLT_60 = 0, HLT_80 = 0, HLT_100 = 0, HLT_120 = 0;
  
   //  if (isMC) triggerTree->SetBranchAddress("HLT_PPRefZeroBias_v1",&HLT_ZB);
   
-  if (!usecalotrig and !isMC) {  cout << "Use PF triggers" << endl;
+  if (!usecalotrig and !isMC) {
+    bool hasPFTriggers =
+      triggerTree->GetBranch("HLT_AK4PFJet40_v1") &&
+      triggerTree->GetBranch("HLT_AK4PFJet60_v1") &&
+      triggerTree->GetBranch("HLT_AK4PFJet100_v1") &&
+      triggerTree->GetBranch("HLT_AK4PFJet120_v1");
+
+    if (hasPFTriggers) {
+      cout << "Use PF triggers" << endl;
+      useTriggerSelection = true;
   
-    triggerTree->SetBranchAddress("HLT_AK4PFJet40_v1",&HLT_40);
-    triggerTree->SetBranchAddress("HLT_AK4PFJet60_v1",&HLT_60); 
-    triggerTree->SetBranchAddress("HLT_AK4PFJet80_v1",&HLT_80); 
-    triggerTree->SetBranchAddress("HLT_AK4PFJet100_v1",&HLT_100);
-    triggerTree->SetBranchAddress("HLT_AK4PFJet120_v1",&HLT_120);
-    
-    triggerTree->SetBranchStatus("*",0);
-    
-    triggerTree->SetBranchStatus("HLT_PPRefZeroBias_v1",1);
-    triggerTree->SetBranchStatus("HLT_AK4PFJet40_v1",1);
-    triggerTree->SetBranchStatus("HLT_AK4PFJet60_v1",1);
-    // triggerTree->SetBranchStatus("HLT_AK4PFJet80_v1",1);
-    triggerTree->SetBranchStatus("HLT_AK4PFJet100_v1",1);
-    triggerTree->SetBranchStatus("HLT_AK4PFJet120_v1",1);
+      triggerTree->SetBranchAddress("HLT_AK4PFJet40_v1",&HLT_40);
+      triggerTree->SetBranchAddress("HLT_AK4PFJet60_v1",&HLT_60);
+      if (triggerTree->GetBranch("HLT_AK4PFJet80_v1")) triggerTree->SetBranchAddress("HLT_AK4PFJet80_v1",&HLT_80);
+      triggerTree->SetBranchAddress("HLT_AK4PFJet100_v1",&HLT_100);
+      triggerTree->SetBranchAddress("HLT_AK4PFJet120_v1",&HLT_120);
+
+      triggerTree->SetBranchStatus("*",0);
+      if (triggerTree->GetBranch("HLT_PPRefZeroBias_v1")) triggerTree->SetBranchStatus("HLT_PPRefZeroBias_v1",1);
+      triggerTree->SetBranchStatus("HLT_AK4PFJet40_v1",1);
+      triggerTree->SetBranchStatus("HLT_AK4PFJet60_v1",1);
+      if (triggerTree->GetBranch("HLT_AK4PFJet80_v1")) triggerTree->SetBranchStatus("HLT_AK4PFJet80_v1",1);
+      triggerTree->SetBranchStatus("HLT_AK4PFJet100_v1",1);
+      triggerTree->SetBranchStatus("HLT_AK4PFJet120_v1",1);
+    } else {
+      cout << "WARNING: Expected PF trigger branches not found; disabling trigger selection for this input." << endl;
+    }
     
   }
-  if (usecalotrig and !isMC) {    cout << "Use Calo triggers" << endl;
+  if (usecalotrig and !isMC) {
+    bool hasCaloTriggers =
+      triggerTree->GetBranch("HLT_AK4CaloJet40_v1") &&
+      triggerTree->GetBranch("HLT_AK4CaloJet60_v1") &&
+      triggerTree->GetBranch("HLT_AK4CaloJet100_v1") &&
+      triggerTree->GetBranch("HLT_AK4CaloJet120_v1");
+
+    if (hasCaloTriggers) {
+      cout << "Use Calo triggers" << endl;
+      useTriggerSelection = true;
     
     triggerTree->SetBranchAddress("HLT_AK4CaloJet40_v1",&HLT_40);
     triggerTree->SetBranchAddress("HLT_AK4CaloJet60_v1",&HLT_60); 
@@ -183,12 +210,15 @@ void analyse(string input = "RERECOHP", string outputfiletag = "AK4_nojetid", bo
     
     triggerTree->SetBranchStatus("*",0);
     
-    triggerTree->SetBranchStatus("HLT_PPRefZeroBias_v1",1);
+    if (triggerTree->GetBranch("HLT_PPRefZeroBias_v1")) triggerTree->SetBranchStatus("HLT_PPRefZeroBias_v1",1);
     triggerTree->SetBranchStatus("HLT_AK4CaloJet40_v1",1);
     triggerTree->SetBranchStatus("HLT_AK4CaloJet60_v1",1);
     //triggerTree->SetBranchStatus("HLT_AK4CaloJet80_v1",1);
     triggerTree->SetBranchStatus("HLT_AK4CaloJet100_v1",1);
     triggerTree->SetBranchStatus("HLT_AK4CaloJet120_v1",1);
+    } else {
+      cout << "WARNING: Expected Calo trigger branches not found; disabling trigger selection for this input." << endl;
+    }
     
   }
 
@@ -309,16 +339,16 @@ void analyse(string input = "RERECOHP", string outputfiletag = "AK4_nojetid", bo
 
    cout << "Processing " << nentries << " events" << endl;
    for (Long64_t i = 0; i < nentries; ++i) {
-     evtTree->GetEntry(i);
-     triggerTree->GetEntry(i);
+    evtTree->GetEntry(i);
+    if (!isMC) triggerTree->GetEntry(i);
 
      //trigger = HLT_ZB or HLT_40 or HLT_60;
 
-     if (!isMC) {
+     trigger = true;
+     if (!isMC && useTriggerSelection) {
        if (iszb) trigger = HLT_ZB;
        else trigger = HLT_60;
      }
-     if (isMC) trigger = true; // TEMPORARY FIX
 
      if (!trigger) continue;
      
@@ -517,31 +547,37 @@ void analyse(string input = "RERECOHP", string outputfiletag = "AK4_nojetid", bo
         }
        }
 
+       if (tagind < 0 || probeind < 0) continue;
+
        tagpt = jtpt[tagind];
        probept = jtpt[probeind];
 
        tageta = jteta[tagind];
        probeeta = jteta[probeind];
 
-       tagpt_gen = jtpt_gen[tagind];
-       probept_gen = jtpt_gen[probeind];
+       if (isMC) {
+         tagpt_gen = jtpt_gen[tagind];
+         probept_gen = jtpt_gen[probeind];
 
-       tageta_gen = jteta_gen[tagind];
-       probeeta_gen = jteta_gen[probeind];
+         tageta_gen = jteta_gen[tagind];
+         probeeta_gen = jteta_gen[probeind];
+       }
 
        float dphitp = DPhi(jtphi[tagind],jtphi[probeind]);
 
        ptavgtp = 0.5*(tagpt  + probept);
        asymmtp = probept - tagpt;
 
-       ptavgtp_gen = 0.5*(tagpt_gen  + probept_gen);
-       asymmtp_gen = probept_gen - tagpt_gen;
+       if (isMC) {
+         ptavgtp_gen = 0.5*(tagpt_gen  + probept_gen);
+         asymmtp_gen = probept_gen - tagpt_gen;
+       }
        
        
        if (ind[2] != -1) alpha = jtpt[ind[2]]/ptavgtp;
        else alpha = 0; // In case only two jets
 
-       if (jtpt[ind[2]]) < jtptlimitforalpha) continue;
+      if (ind[2] != -1 && jtpt[ind[2]] < jtptlimitforalpha) continue;
      
        for (auto &histrange : _histos) { 
 	   for (auto &h : histrange.second) {
@@ -576,7 +612,7 @@ void analyse(string input = "RERECOHP", string outputfiletag = "AK4_nojetid", bo
 		 if (alpha < 0.1)   {
 		   if (tagincorrecteta) h->asymmdist3D_a10->Fill(ptavgtp, abs(probeeta), asymmtp/2./ptavgtp, evtwt);
 		   if (tagincorrecteta) h->absasymmdist3D_a10->Fill(ptavgtp, abs(probeeta), abs(asymmtp/2./ptavgtp), evtwt);
-		   if (tagincorrecteta) h->absasymmdist3D_gen_a10->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
+       if (isMC && tagincorrecteta && h->absasymmdist3D_gen_a10) h->absasymmdist3D_gen_a10->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
 		   
 		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.1-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabseta->Fill(ptavgtp, abs(probeeta), 0.1-0.0001, asymmtp/2./ptavgtp, evtwt);
@@ -591,7 +627,7 @@ void analyse(string input = "RERECOHP", string outputfiletag = "AK4_nojetid", bo
 		 if (alpha < 0.15) {
 		   if (tagincorrecteta) h->asymmdist3D_a15->Fill(ptavgtp, abs(probeeta), asymmtp/2./ptavgtp, evtwt);
 		   if (tagincorrecteta) h->absasymmdist3D_a15->Fill(ptavgtp, abs(probeeta), abs(asymmtp/2./ptavgtp), evtwt);
-		   if (tagincorrecteta) h->absasymmdist3D_gen_a15->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
+       if (isMC && tagincorrecteta && h->absasymmdist3D_gen_a15) h->absasymmdist3D_gen_a15->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
 
 		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.15-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabseta->Fill(ptavgtp, abs(probeeta), 0.15-0.0001, asymmtp/2./ptavgtp, evtwt);
@@ -603,7 +639,7 @@ void analyse(string input = "RERECOHP", string outputfiletag = "AK4_nojetid", bo
 		 if (alpha < 0.2)  {
 		   if (tagincorrecteta) h->asymmdist3D_a20->Fill(ptavgtp, abs(probeeta), asymmtp/2./ptavgtp, evtwt);
 		   if (tagincorrecteta) h->absasymmdist3D_a20->Fill(ptavgtp, abs(probeeta), abs(asymmtp/2./ptavgtp), evtwt);
-		   if (tagincorrecteta) h->absasymmdist3D_gen_a20->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
+       if (isMC && tagincorrecteta && h->absasymmdist3D_gen_a20) h->absasymmdist3D_gen_a20->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
 
 		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.2-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabseta->Fill(ptavgtp, abs(probeeta), 0.2-0.0001, asymmtp/2./ptavgtp, evtwt);
@@ -618,7 +654,7 @@ void analyse(string input = "RERECOHP", string outputfiletag = "AK4_nojetid", bo
 		 if (alpha < 0.25) {
 		   if (tagincorrecteta) h->asymmdist3D_a25->Fill(ptavgtp, abs(probeeta), asymmtp/2./ptavgtp, evtwt);
 		   if (tagincorrecteta) h->absasymmdist3D_a25->Fill(ptavgtp, abs(probeeta), abs(asymmtp/2./ptavgtp), evtwt);
-		   if (tagincorrecteta) h->absasymmdist3D_gen_a25->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
+       if (isMC && tagincorrecteta && h->absasymmdist3D_gen_a25) h->absasymmdist3D_gen_a25->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
 
 		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.25-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabseta->Fill(ptavgtp, abs(probeeta), 0.25-0.0001, asymmtp/2./ptavgtp, evtwt);
@@ -631,7 +667,7 @@ void analyse(string input = "RERECOHP", string outputfiletag = "AK4_nojetid", bo
 		 if (alpha < 0.3)  {
 		   if (tagincorrecteta) h->asymmdist3D_a30->Fill(ptavgtp, abs(probeeta), asymmtp/2./ptavgtp, evtwt);
 		   if (tagincorrecteta) h->absasymmdist3D_a30->Fill(ptavgtp, abs(probeeta), abs(asymmtp/2./ptavgtp), evtwt);
-		   if (tagincorrecteta) h->absasymmdist3D_gen_a30->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
+       if (isMC && tagincorrecteta && h->absasymmdist3D_gen_a30) h->absasymmdist3D_gen_a30->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
 
 		   h->dijetbalance_a03->Fill(asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry2D_a03->Fill(ptavgtp, probeeta, asymmtp/2./ptavgtp, evtwt);
@@ -655,7 +691,7 @@ void analyse(string input = "RERECOHP", string outputfiletag = "AK4_nojetid", bo
 		 if (alpha < 0.35) {
 		   if (tagincorrecteta) h->asymmdist3D_a35->Fill(ptavgtp, abs(probeeta), asymmtp/2./ptavgtp, evtwt);
 		   if (tagincorrecteta) h->absasymmdist3D_a35->Fill(ptavgtp, abs(probeeta), abs(asymmtp/2./ptavgtp), evtwt);
-		   if (tagincorrecteta) h->absasymmdist3D_gen_a35->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
+       if (isMC && tagincorrecteta && h->absasymmdist3D_gen_a35) h->absasymmdist3D_gen_a35->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
 
 		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.35-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabseta->Fill(ptavgtp, abs(probeeta), 0.35-0.0001, asymmtp/2./ptavgtp, evtwt);
@@ -668,7 +704,7 @@ void analyse(string input = "RERECOHP", string outputfiletag = "AK4_nojetid", bo
 		 if (alpha < 0.4)   {
 		   if (tagincorrecteta) h->asymmdist3D_a40->Fill(ptavgtp, abs(probeeta), asymmtp/2./ptavgtp, evtwt);
 		   if (tagincorrecteta) h->absasymmdist3D_a40->Fill(ptavgtp, abs(probeeta), abs(asymmtp/2./ptavgtp), evtwt);
-		   if (tagincorrecteta) h->absasymmdist3D_gen_a40->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
+       if (isMC && tagincorrecteta && h->absasymmdist3D_gen_a40) h->absasymmdist3D_gen_a40->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
 
 		   h->dijetasymmetry2D_a04->Fill(ptavgtp, probeeta, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.4-0.0001, asymmtp/2./ptavgtp, evtwt);
@@ -682,7 +718,7 @@ void analyse(string input = "RERECOHP", string outputfiletag = "AK4_nojetid", bo
 		 if (alpha < 0.45) {
 		   if (tagincorrecteta) h->asymmdist3D_a45->Fill(ptavgtp, abs(probeeta), asymmtp/2./ptavgtp, evtwt);
 		   if (tagincorrecteta) h->absasymmdist3D_a45->Fill(ptavgtp, abs(probeeta), abs(asymmtp/2./ptavgtp), evtwt);
-		   if (tagincorrecteta) h->absasymmdist3D_gen_a45->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
+       if (isMC && tagincorrecteta && h->absasymmdist3D_gen_a45) h->absasymmdist3D_gen_a45->Fill(ptavgtp_gen, abs(probeeta_gen), abs(asymmtp_gen/2./ptavgtp_gen), evtwt);
 
 		   h->dijetasymmetry3D->Fill(ptavgtp, probeeta, 0.45-0.0001, asymmtp/2./ptavgtp, evtwt);
 		   h->dijetasymmetry3Dabseta->Fill(ptavgtp, abs(probeeta), 0.45-0.0001, asymmtp/2./ptavgtp, evtwt);

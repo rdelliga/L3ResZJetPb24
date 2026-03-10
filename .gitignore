@@ -17,10 +17,15 @@ fillhistograms/*_rdict.pcm
 # Batch directories (timestamped)
 batch/*/logs/
 batch/*_2*/
+batch/jobs/
 
 # Test output
 fillhistograms/test_output/
 test_output/
+
+# Archive/obsolete working areas
+**/archive/
+**/obsolete/
 
 # Editor files
 *~

@@ -223,33 +223,34 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
     absasymmdist3D = new TH3D("absasymmdist3D",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
     asymmdist3D = new TH3D("asymmdist3D",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
 
-  // JER needs asymmetries as function of alpha
-  asymmdist3D_a10 = new TH3D("asymmdist3D_a10",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
-  absasymmdist3D_a10  = new TH3D("absasymmdist3D_a10",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
-  asymmdist3D_a15 = new TH3D("asymmdist3D_a15",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
-  absasymmdist3D_a15 = new TH3D("absasymmdist3D_a15",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
-  asymmdist3D_a20 = new TH3D("asymmdist3D_a20",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
-  absasymmdist3D_a20 = new TH3D("absasymmdist3D_a20",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
-  asymmdist3D_a25 = new TH3D("asymmdist3D_a25",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
-  absasymmdist3D_a25 = new TH3D("absasymmdist3D_a25",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
-  asymmdist3D_a30 = new TH3D("asymmdist3D_a30",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
-  absasymmdist3D_a30 = new TH3D("absasymmdist3D_a30",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
-  asymmdist3D_a35 = new TH3D("asymmdist3D_a35",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
-  absasymmdist3D_a35 = new TH3D("absasymmdist3D_a35",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
-  asymmdist3D_a40 = new TH3D("asymmdist3D_a40",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
-  absasymmdist3D_a40 = new TH3D("absasymmdist3D_a40",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
-  asymmdist3D_a45 = new TH3D("asymmdist3D_a45",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
-  absasymmdist3D_a45 = new TH3D("absasymmdist3D_a45",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+    // JER needs asymmetries as function of alpha
+    asymmdist3D_a10 = new TH3D("asymmdist3D_a10",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
+    absasymmdist3D_a10  = new TH3D("absasymmdist3D_a10",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+    asymmdist3D_a15 = new TH3D("asymmdist3D_a15",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
+    absasymmdist3D_a15 = new TH3D("absasymmdist3D_a15",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+    asymmdist3D_a20 = new TH3D("asymmdist3D_a20",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
+    absasymmdist3D_a20 = new TH3D("absasymmdist3D_a20",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+    asymmdist3D_a25 = new TH3D("asymmdist3D_a25",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
+    absasymmdist3D_a25 = new TH3D("absasymmdist3D_a25",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+    asymmdist3D_a30 = new TH3D("asymmdist3D_a30",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
+    absasymmdist3D_a30 = new TH3D("absasymmdist3D_a30",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+    asymmdist3D_a35 = new TH3D("asymmdist3D_a35",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
+    absasymmdist3D_a35 = new TH3D("absasymmdist3D_a35",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+    asymmdist3D_a40 = new TH3D("asymmdist3D_a40",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
+    absasymmdist3D_a40 = new TH3D("absasymmdist3D_a40",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+    asymmdist3D_a45 = new TH3D("asymmdist3D_a45",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
+    absasymmdist3D_a45 = new TH3D("absasymmdist3D_a45",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
 
-  if (ismc) {
-    absasymmdist3D_gen_a10 = new TH3D("absasymmdist3D_gen_a10",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
-    absasymmdist3D_gen_a15 = new TH3D("absasymmdist3D_gen_a15",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
-    absasymmdist3D_gen_a20 = new TH3D("absasymmdist3D_gen_a20",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
-    absasymmdist3D_gen_a25 = new TH3D("absasymmdist3D_gen_a25",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
-    absasymmdist3D_gen_a30 = new TH3D("absasymmdist3D_gen_a30",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
-    absasymmdist3D_gen_a35 = new TH3D("absasymmdist3D_gen_a35",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
-    absasymmdist3D_gen_a40 = new TH3D("absasymmdist3D_gen_a40",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
-    absasymmdist3D_gen_a45 = new TH3D("absasymmdist3D_gen_a45",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+    if (ismc) {
+      absasymmdist3D_gen_a10 = new TH3D("absasymmdist3D_gen_a10",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+      absasymmdist3D_gen_a15 = new TH3D("absasymmdist3D_gen_a15",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+      absasymmdist3D_gen_a20 = new TH3D("absasymmdist3D_gen_a20",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+      absasymmdist3D_gen_a25 = new TH3D("absasymmdist3D_gen_a25",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+      absasymmdist3D_gen_a30 = new TH3D("absasymmdist3D_gen_a30",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+      absasymmdist3D_gen_a35 = new TH3D("absasymmdist3D_gen_a35",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+      absasymmdist3D_gen_a40 = new TH3D("absasymmdist3D_gen_a40",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+      absasymmdist3D_gen_a45 = new TH3D("absasymmdist3D_gen_a45",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
+    }
   }
 
   // ============================================
