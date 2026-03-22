@@ -1,0 +1,30 @@
+# Git Setup for Residual Analysis
+
+###0. CMSSW
+cmsrel CMSSW_15_1_0_patch3
+cd CMSSW_15_1_0_patch3
+
+### 1. Clone from CERN GitLab (Source)
+git clone ssh://git@gitlab.cern.ch:7999/bharikri/residualanalysis.git
+cd residualanalysis
+git fetch --all
+git branch -a
+git checkout remotes/origin/L3ResPhotonJet
+
+### 2. Create/Switch to Working Branch
+git checkout -b L3ResZJetPb24
+
+### 3. Setup Private GitHub (Destination)
+# Add GitHub as a new remote named "personal"
+git remote add personal https://github.com/rdelliga/L3ResZJetPb24.git
+
+# Switch remote to SSH (to fix auth issues)
+git remote set-url personal git@github.com:rdelliga/L3ResZJetPb24.git
+
+### 4. Push to GitHub
+# First push (sets upstream link)
+# Git has now permanently linked your local branch L3ResZJetPb24 to the one on your GitHub (personal) with -u option
+git push -u personal L3ResZJetPb24
+
+# Future pushes just
+git push

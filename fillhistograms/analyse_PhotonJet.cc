@@ -98,7 +98,7 @@ void analyse_PhotonJet(string input = "PHOTONHP",
   // Set default output directory
   if (outputDir.empty()) {
     config.outputDir =
-        "/eos/cms/store/group/phys_heavyions/bharikri/JetMinPOG/L3ResPhotonJet";
+        "../L3Residual";
   } else {
     config.outputDir = outputDir;
   }
@@ -165,7 +165,7 @@ void analyse_PhotonJet(string input = "PHOTONHP",
 
   // Define tree paths
   std::string evtPath = "hiEvtAnalyzer/HiTree";
-  std::string triggerPath = "hltanalysis/HltTree";
+//  std::string triggerPath = "hltanalysis/HltTree";
   std::string skimPath = "skimanalysis/HltTree";
   std::string photonPath = "ggHiNtuplizer/EventTree";
 
@@ -180,7 +180,7 @@ void analyse_PhotonJet(string input = "PHOTONHP",
   auto evtTree = chains->evtChain;
   auto photonTree = chains->photonChain;
   auto jetTree = chains->jetChain;
-  auto triggerTree = chains->triggerChain;
+//  auto triggerTree = chains->triggerChain;
   auto skimTree = chains->skimChain;
 
   // Cuts and weights from event tree
@@ -246,9 +246,9 @@ void analyse_PhotonJet(string input = "PHOTONHP",
 
   if (!isMC) {
   //   cout << "Use Photon trigger: HLT_PPRefGEDPhoton30_v6" << endl;
-    triggerTree->SetBranchStatus("*", 0);
-    triggerTree->SetBranchStatus("HLT_PPRefGEDPhoton30_v6", 1);
-    triggerTree->SetBranchAddress("HLT_PPRefGEDPhoton30_v6", &HLT_Photon30);
+//    triggerTree->SetBranchStatus("*", 0);
+//    triggerTree->SetBranchStatus("HLT_PPRefGEDPhoton30_v6", 1);
+//    triggerTree->SetBranchAddress("HLT_PPRefGEDPhoton30_v6", &HLT_Photon30);
   }
 
   // JETS
@@ -363,11 +363,6 @@ void analyse_PhotonJet(string input = "PHOTONHP",
     photonTree->SetBranchAddress("pho_genMatchedIndex", &pho_genMatchedIndex);
   }
 
-  auto pthatWeights = LoadPthatWeights("jecfiles/2024_PP_private_test_weights.txt");
-  std::vector<float> pthatBins;
-  for (const auto& kv : pthatWeights) pthatBins.push_back(kv.first);
-  std::sort(pthatBins.begin(), pthatBins.end());
-
   TFile *outfile = new TFile(outputfilename.c_str(), "RECREATE");
 
   // Local map for histogram storage (not global to avoid ROOT cleanup issues)
@@ -447,7 +442,7 @@ void analyse_PhotonJet(string input = "PHOTONHP",
   cout << "Processing " << nentries << " events" << endl;
   for (Long64_t i = 0; i < nentries; ++i) {
     evtTree->GetEntry(i);
-    triggerTree->GetEntry(i);
+//    triggerTree->GetEntry(i);
     photonTree->GetEntry(i);
 
     // Photon trigger logic
@@ -458,16 +453,10 @@ void analyse_PhotonJet(string input = "PHOTONHP",
 
      if (!trigger) continue;
 
-    auto get_weight = [pthatWeights, pthatBins](float pthat) {
-        float bin = GetPthatBin(pthat, pthatBins);
-        auto it = pthatWeights.find(bin);
-        if (it != pthatWeights.end()) return static_cast<float>(it->second);
-        return 0.f;
-    };
 
     evtwt = 1;
     if (isMC) {
-      evtwt *= weight*get_weight(pthat);
+      evtwt *= weight;
     }
 
     // cout << weight << " " << evtwt << endl;
