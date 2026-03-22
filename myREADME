@@ -1,3 +1,11 @@
+# Running the Z+Jet Analysis (Muon Channel)
+
+# MC
+root -l -b -q 'analyse_ZJet.cc("ZJETMC_0", "AK4_zjet", true, false, "era", -1, -1, "", -1, 1, "ak4PFJetAnalyzer/t", "muon")'
+
+# Data
+root -l -b -q 'analyse_ZJet.cc("ZJETDATA_0", "AK4_zjet", false, false, "era", -1, -1, "", -1, 1, "ak4PFJetAnalyzer/t", "muon")'
+
 # Git Setup for Residual Analysis
 
 ###0. CMSSW
