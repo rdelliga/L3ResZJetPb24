@@ -17,12 +17,14 @@ struct TreeChains {
     TChain* triggerChain;
     TChain* skimChain;
     TChain* photonChain;  // nullptr if not needed
+    TChain* muonChain;    // ADD THIS LINE - nullptr if not needed
 
     Long64_t nEntries;
 
     TreeChains() : evtChain(nullptr), jetChain(nullptr),
                    triggerChain(nullptr), skimChain(nullptr),
-                   photonChain(nullptr), nEntries(0) {}
+                   photonChain(nullptr), muonChain(nullptr),  // ADD muonChain(nullptr)
+                   nEntries(0) {}
 
     ~TreeChains() {
         // Note: ROOT manages TChain cleanup
@@ -33,6 +35,7 @@ struct TreeChains {
 inline TreeChains* BuildChains(const std::vector<std::string>& files,
                                 const std::string& jetTreeName,
                                 bool needPhotonTree = false,
+                                bool needMuonTree = false,    // ADD THIS PARAMETER
                                 bool verbose = true) {
 
     TreeChains* chains = new TreeChains();
@@ -45,6 +48,9 @@ inline TreeChains* BuildChains(const std::vector<std::string>& files,
 
     if (needPhotonTree) {
         chains->photonChain = new TChain("ggHiNtuplizer/EventTree");
+    }
+    if (needMuonTree) {                                    // ADD THIS BLOCK
+        chains->muonChain = new TChain("muonAnalyzer/MuonTree");
     }
 
     // Add files to all chains
@@ -81,6 +87,12 @@ inline TreeChains* BuildChains(const std::vector<std::string>& files,
             nFilesSkipped++;
             continue;
         }
+        if (needMuonTree && !testFile->Get("muonAnalyzer/MuonTree")) {  // ADD THIS BLOCK
+            std::cerr << "WARNING: Missing muon tree in: " << file << std::endl;
+            delete testFile;
+            nFilesSkipped++;
+            continue;
+        }
         delete testFile;
 
         // Add to chains
@@ -91,6 +103,9 @@ inline TreeChains* BuildChains(const std::vector<std::string>& files,
 
         if (chains->photonChain) {
             chains->photonChain->Add(file.c_str());
+        }
+        if (chains->muonChain) {                          // ADD THIS BLOCK
+            chains->muonChain->Add(file.c_str());
         }
 
         nFilesAdded++;
@@ -116,7 +131,8 @@ inline TreeChains* BuildChains(const std::vector<std::string>& files,
 // Build chains from InputConfig
 inline TreeChains* BuildChainsFromConfig(const InputConfig& config,
                                           const std::string& jetTreeName,
-                                          bool needPhotonTree = false) {
+                                          bool needPhotonTree = false,
+                                          bool needMuonTree = false) {  // ADD THIS PARAMETER
     std::vector<std::string> files = GetInputFiles(config);
 
     if (files.empty()) {
@@ -126,7 +142,7 @@ inline TreeChains* BuildChainsFromConfig(const InputConfig& config,
 
     std::cout << "Building chains from " << files.size() << " files" << std::endl;
 
-    return BuildChains(files, jetTreeName, needPhotonTree);
+    return BuildChains(files, jetTreeName, needPhotonTree, needMuonTree);  // PASS needMuonTree
 }
 
 #endif

@@ -1,0 +1,2 @@
+{ 1 JetEta 1 JetPt [0]+[1]*log10(0.01*x) Correction L3Residual}
+   0.000  1.300  4     40   300    1.018853  -0.180923
