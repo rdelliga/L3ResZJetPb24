@@ -62,7 +62,11 @@ ZCandidate ReconstructZFromMuons(Int_t nReco,
                                  std::vector<float>* recoEta,
                                  std::vector<float>* recoPhi,
                                  std::vector<int>* recoCharge,
-                                 std::vector<bool>* recoIDTight) {
+                                 std::vector<bool>* recoIDTight,
+                                 std::vector<float>* recoPFChIso,
+                                 std::vector<float>* recoPFPhoIso,
+                                 std::vector<float>* recoPFNeuIso,
+                                 std::vector<float>* recoPFPUIso) {
   ZCandidate z;
   if (nReco < 2) return z;
   float bestMassDiff = 999;
@@ -75,10 +79,16 @@ ZCandidate ReconstructZFromMuons(Int_t nReco,
     if (fabs((*recoEta)[i]) > 2.4) continue;  // Acceptance
     // Tight muon ID check
     if (!(*recoIDTight)[i]) continue;
+    // Muon 'i' Isolation Check ---
+    float iso_i = (*recoPFChIso)[i] + std::max(0.0f, (*recoPFNeuIso)[i] + (*recoPFPhoIso)[i] - 0.5f * (*recoPFPUIso)[i]);
+    if ((iso_i / (*recoPt)[i]) > 0.15) continue;
     for (int j = i+1; j < nReco; j++) {
       if ((*recoPt)[j] < 20.0) continue;
       if (fabs((*recoEta)[j]) > 2.4) continue;
       if (!(*recoIDTight)[j]) continue;
+      // --- Muon 'j' Isolation Check ---
+      float iso_j = (*recoPFChIso)[j] + std::max(0.0f, (*recoPFNeuIso)[j] + (*recoPFPhoIso)[j] - 0.5f * (*recoPFPUIso)[j]);
+      if ((iso_j / (*recoPt)[j]) > 0.15) continue;
       // Opposite sign requirement
       if ((*recoCharge)[i] * (*recoCharge)[j] >= 0) continue;
       // Reconstruct Z 4-vector
@@ -119,13 +129,12 @@ ZCandidate ReconstructZFromElectrons(Int_t nEle,
                                      std::vector<float>* eleEta,
                                      std::vector<float>* elePhi,
                                      std::vector<int>* eleCharge,
-                                     std::vector<int>* eleIDbit) {
+                                     std::vector<int>* eleCutIdWP80, 
+                                     std::vector<float>* elePFRelIsoWithEA) {
   ZCandidate z;
   if (nEle < 2) return z;
   float bestMassDiff = 999;
   float targetMass = 91.1880;  // Z mass in GeV
-  // Tight electron ID bit (bit 2 in eleIDbit corresponds to "tight")
-  const int TIGHT_ELE_BIT = 2;
 
   // Loop over all opposite-sign electron pairs
   for (int i = 0; i < nEle; i++) {
@@ -133,12 +142,16 @@ ZCandidate ReconstructZFromElectrons(Int_t nEle,
     if ((*elePt)[i] < 20.0) continue;  // pT threshold
     if (fabs((*eleEta)[i]) > 2.5) continue;  // Acceptance (slightly wider than muons)
 
-    // Tight electron ID check (bit 2 = tight)
-    if (eleIDbit && !((*eleIDbit)[i] & (1 << TIGHT_ELE_BIT))) continue;
+    // Tight electron ID check (WP80 = tight)
+    //if (eleCutIdWP80 && (*eleCutIdWP80)[i] != 1) continue;
+
+    // --- Electron 'i' Isolation Check ---
+    if (elePFRelIsoWithEA && (*elePFRelIsoWithEA)[i] > 0.15) continue;
     for (int j = i+1; j < nEle; j++) {
       if ((*elePt)[j] < 20.0) continue;
       if (fabs((*eleEta)[j]) > 2.5) continue;
-      if (eleIDbit && !((*eleIDbit)[j] & (1 << TIGHT_ELE_BIT))) continue;
+      //if (eleCutIdWP80 && (*eleCutIdWP80)[j] != 1) continue;
+      if (elePFRelIsoWithEA && (*elePFRelIsoWithEA)[j] > 0.15) continue;
       // Opposite sign requirement
       if ((*eleCharge)[i] * (*eleCharge)[j] >= 0) continue;
       // Reconstruct Z 4-vector
@@ -173,24 +186,30 @@ ZCandidate ReconstructZFromElectrons(Int_t nEle,
   return z;
 }
 
-// Reconstruct generator-level Z from gen-level muons (muonAnalyzer tree)
 ZCandidate ReconstructGenZFromMuons(Int_t nGen,
-                                     std::vector<int>* genPID,
-                                     std::vector<int>* genStatus,
-                                     std::vector<float>* genPt,
-                                     std::vector<float>* genEta,
-                                     std::vector<float>* genPhi,
-                                     std::vector<int>* genMotherID) {
+                                    std::vector<int>* genPID,
+                                    std::vector<int>* genStatus,
+                                    std::vector<float>* genPt,
+                                    std::vector<float>* genEta,
+                                    std::vector<float>* genPhi,
+                                    std::vector<int>* genMotherID) {
   ZCandidate genZ;
-  if (nGen < 2) return genZ;
+  
+  // 1. First check if the pointers exist
   if (!genPID || !genStatus || !genPt) return genZ;
+  
+  // 2. FORCE nGen to be the actual vector size, ignoring the garbage tree variable
+  int safe_nGen = genPID->size();
+  
+  // 3. Now safely check if we have enough particles
+  if (safe_nGen < 2) return genZ;
 
   float bestMassDiff = 999;
   float targetMass = 91.1880;
   const float muon_mass = 0.1056583745;
 
   // Find two opposite-sign final-state muons
-  for (int i = 0; i < nGen; i++) {
+  for (int i = 0; i < safe_nGen; i++) {
     // Must be muon (PID = ±13)
     if (abs((*genPID)[i]) != 13) continue;
 
@@ -249,68 +268,51 @@ ZCandidate ReconstructGenZFromMuons(Int_t nGen,
 
 // Reconstruct generator-level Z from gen-level electrons (ggHiNtuplizer tree)
 ZCandidate ReconstructGenZFromElectrons(Int_t nMC,
-                                         std::vector<int>* mcPID,
-                                         std::vector<int>* mcStatus,
-                                         std::vector<float>* mcPt,
-                                         std::vector<float>* mcEta,
-                                         std::vector<float>* mcPhi,
-                                         std::vector<int>* mcMomPID) {
+                                        std::vector<int>* mcPID,
+                                        std::vector<int>* mcStatus,
+                                        std::vector<float>* mcPt,
+                                        std::vector<float>* mcEta,
+                                        std::vector<float>* mcPhi,
+                                        std::vector<int>* mcMomPID) {
   ZCandidate genZ;
-  if (nMC < 2) return genZ;
-  if (!mcPID || !mcStatus || !mcPt) return genZ;
+  if (nMC < 2 || !mcPID || !mcStatus || !mcPt) return genZ;
 
   float bestMassDiff = 999;
   float targetMass = 91.1880;
-  const float electron_mass = 0.000510998950;
+  
+  // Identify if we are looking for muons (13) or electrons (11)
+  // Based on the first lepton found in the event
+  int targetPID = 11; 
+  for(int k=0; k<nMC; k++) {
+      if (abs((*mcPID)[k]) == 13) { targetPID = 13; break; }
+      if (abs((*mcPID)[k]) == 11) { targetPID = 11; break; }
+  }
 
-  // Find two opposite-sign final-state electrons
   for (int i = 0; i < nMC; i++) {
-    // Must be electron (PID = ±11)
-    if (abs((*mcPID)[i]) != 11) continue;
-
-    // Must be final state (status = 1)
+    if (abs((*mcPID)[i]) != targetPID) continue;
     if ((*mcStatus)[i] != 1) continue;
-
-    // Optional: check mother
-    if (mcMomPID && i < (int)mcMomPID->size()) {
-      int momPID = abs((*mcMomPID)[i]);
-      if (momPID != 23 && momPID != 11 && momPID != 0 && momPID != 2212) continue;
-    }
-
     if ((*mcPt)[i] < 10.0) continue;
 
     for (int j = i+1; j < nMC; j++) {
-      if (abs((*mcPID)[j]) != 11) continue;
+      if (abs((*mcPID)[j]) != targetPID) continue; // FIXED: used to be hardcoded 11
       if ((*mcStatus)[j] != 1) continue;
       if ((*mcPt)[j] < 10.0) continue;
-
-      // Opposite sign
       if ((*mcPID)[i] * (*mcPID)[j] >= 0) continue;
 
-      // Reconstruct Z
-      TLorentzVector ele1, ele2, Z;
-      ele1.SetPtEtaPhiM((*mcPt)[i], (*mcEta)[i], (*mcPhi)[i], electron_mass);
-      ele2.SetPtEtaPhiM((*mcPt)[j], (*mcEta)[j], (*mcPhi)[j], electron_mass);
-      Z = ele1 + ele2;
+      TLorentzVector l1, l2, Z;
+      float m = (targetPID == 13) ? 0.105658 : 0.000511;
+      l1.SetPtEtaPhiM((*mcPt)[i], (*mcEta)[i], (*mcPhi)[i], m);
+      l2.SetPtEtaPhiM((*mcPt)[j], (*mcEta)[j], (*mcPhi)[j], m);
+      Z = l1 + l2;
 
       if (Z.M() < 60.0 || Z.M() > 120.0) continue;
 
       float massDiff = fabs(Z.M() - targetMass);
       if (massDiff < bestMassDiff) {
         bestMassDiff = massDiff;
-        genZ.pt = Z.Pt();
-        genZ.eta = Z.Eta();
-        genZ.phi = Z.Phi();
-        genZ.mass = Z.M();
-        genZ.rapidity = Z.Rapidity();
-        genZ.lepton1_idx = i;
-        genZ.lepton2_idx = j;
-        genZ.lepton1_pt = (*mcPt)[i];
-        genZ.lepton1_eta = (*mcEta)[i];
-        genZ.lepton1_phi = (*mcPhi)[i];
-        genZ.lepton2_pt = (*mcPt)[j];
-        genZ.lepton2_eta = (*mcEta)[j];
-        genZ.lepton2_phi = (*mcPhi)[j];
+        genZ.pt = Z.Pt(); genZ.eta = Z.Eta(); genZ.phi = Z.Phi();
+        genZ.mass = Z.M(); genZ.rapidity = Z.Rapidity();
+        genZ.lepton1_pt = (*mcPt)[i]; genZ.lepton2_pt = (*mcPt)[j];
         genZ.isValid = true;
       }
     }
@@ -360,7 +362,7 @@ void analyse_ZJet(string input = "ZJETHP",
                   string inputType = "era", int maxFiles = -1,
                   int maxEvents = -1, string outputDir = "",
                   int batchIndex = -1, int totalBatches = 1,
-                  string jetPath = "akCs4PFJetAnalyzer/t",
+                  string jetPath = "ak4PFJetAnalyzer/t",
                   string channel = "muon") {  // "muon", "electron", or "both"
 
   bool usecalotrig = false;
@@ -471,7 +473,7 @@ void analyse_ZJet(string input = "ZJETHP",
   cout << "Building input chains..." << endl;
 
   // Determine which lepton trees we need based on channel
-  bool needPhotonTree = (channel == "electron" || channel == "both");
+  bool needPhotonTree = (channel == "electron" || channel == "both" || isMC);
   bool needMuonTree = (channel == "muon" || channel == "both");
 
   TreeChains *chains = BuildChainsFromConfig(config, jetPath, needPhotonTree, needMuonTree);
@@ -499,13 +501,19 @@ void analyse_ZJet(string input = "ZJETHP",
   std::vector<int> *recoCharge = 0;
   std::vector<bool> *recoIDTight = 0;  // Muon ID bits
 
+  std::vector<float> *recoPFChIso = 0;
+  std::vector<float> *recoPFPhoIso = 0;
+  std::vector<float> *recoPFNeuIso = 0;
+  std::vector<float> *recoPFPUIso = 0;
+
   // Electron variables (vectors)
   Int_t nEle = 0;
   std::vector<float> *elePt = 0;
   std::vector<float> *eleEta = 0;
   std::vector<float> *elePhi = 0;
   std::vector<int> *eleCharge = 0;
-  std::vector<int> *eleIDbit = 0;  // Electron ID bits
+  std::vector<int> *eleCutIdWP80 = 0;  // Tight Electron ID
+  std::vector<float> *elePFRelIsoWithEA = 0;
 
   // MC truth matching branches (only for MC)
   // Electron gen-info (from ggHiNtuplizer/EventTree)
@@ -559,8 +567,8 @@ void analyse_ZJet(string input = "ZJETHP",
   if (!isMC) {
     triggerTree->SetBranchStatus("*", 0);
     if (channel == "muon" || channel == "both") {
-      triggerTree->SetBranchStatus("HLT_HIL2SingleMu7_v*", 1);
-      triggerTree->SetBranchAddress("HLT_HIL2SingleMu7_v*", &HLT_SingleMu);
+      triggerTree->SetBranchStatus("HLT_PPRefL2SingleMu7_v*", 1);
+      triggerTree->SetBranchAddress("HLT_PPRefL2SingleMu7_v*", &HLT_SingleMu);
     }
     if (channel == "electron" || channel == "both") {
       // TODO: Update trigger name based on actual trigger in forest
@@ -590,6 +598,11 @@ void analyse_ZJet(string input = "ZJETHP",
   Float_t jtmuf[MAXJETS];
   Int_t jtchm[MAXJETS]; // charged multiplicity
 
+  Float_t jtPfNHM[MAXJETS]; // Neutral Hadron Multiplicity
+  Float_t jtPfCEM[MAXJETS]; // Charged EM Multiplicity
+  Float_t jtPfNEM[MAXJETS]; // Neutral EM Multiplicity
+  Float_t jtPfMUM[MAXJETS]; // Muon Multiplicity
+
   //Int_t jtn[MAXJETS];
 
   jetTree->SetBranchAddress("evt", &evt);
@@ -616,6 +629,16 @@ void analyse_ZJet(string input = "ZJETHP",
   jetTree->SetBranchStatus("jtPfCEF", 1);
   jetTree->SetBranchStatus("jtPfMUF", 1);
   jetTree->SetBranchStatus("jtPfCHM", 1);
+
+  jetTree->SetBranchAddress("jtPfNHM", &jtPfNHM);
+  jetTree->SetBranchAddress("jtPfCEM", &jtPfCEM);
+  jetTree->SetBranchAddress("jtPfNEM", &jtPfNEM);
+  jetTree->SetBranchAddress("jtPfMUM", &jtPfMUM);
+  
+  jetTree->SetBranchStatus("jtPfNHM", 1);
+  jetTree->SetBranchStatus("jtPfCEM", 1);
+  jetTree->SetBranchStatus("jtPfNEM", 1);
+  jetTree->SetBranchStatus("jtPfMUM", 1);
 
   // Gen level jet information
   Float_t jtpt_gen[MAXJETS];
@@ -650,6 +673,16 @@ void analyse_ZJet(string input = "ZJETHP",
     muonTree->SetBranchAddress("recoPhi", &recoPhi);
     muonTree->SetBranchAddress("recoCharge", &recoCharge);
     muonTree->SetBranchAddress("recoIDTight", &recoIDTight);
+
+    muonTree->SetBranchStatus("recoPFChIso", 1);
+    muonTree->SetBranchStatus("recoPFPhoIso", 1);
+    muonTree->SetBranchStatus("recoPFNeuIso", 1);
+    muonTree->SetBranchStatus("recoPFPUIso", 1);
+
+    muonTree->SetBranchAddress("recoPFChIso", &recoPFChIso);
+    muonTree->SetBranchAddress("recoPFPhoIso", &recoPFPhoIso);
+    muonTree->SetBranchAddress("recoPFNeuIso", &recoPFNeuIso);
+    muonTree->SetBranchAddress("recoPFPUIso", &recoPFPUIso);
     // Gen-level muon branches (MC only)
     if (isMC) {
       muonTree->SetBranchStatus("nGen", 1);
@@ -678,19 +711,23 @@ void analyse_ZJet(string input = "ZJETHP",
     photonTree->SetBranchStatus("eleEta", 1);
     photonTree->SetBranchStatus("elePhi", 1);
     photonTree->SetBranchStatus("eleCharge", 1);
-    photonTree->SetBranchStatus("eleIDbit", 1);
+    photonTree->SetBranchStatus("eleCutIdWP80", 1);
 
     photonTree->SetBranchAddress("nEle", &nEle);
     photonTree->SetBranchAddress("elePt", &elePt);
     photonTree->SetBranchAddress("eleEta", &eleEta);
     photonTree->SetBranchAddress("elePhi", &elePhi);
     photonTree->SetBranchAddress("eleCharge", &eleCharge);
-    photonTree->SetBranchAddress("eleIDbit", &eleIDbit);
+    photonTree->SetBranchAddress("eleCutIdWP80", &eleCutIdWP80);
+
+    photonTree->SetBranchStatus("elePFRelIsoWithEA", 1);
+    photonTree->SetBranchAddress("elePFRelIsoWithEA", &elePFRelIsoWithEA);
   }
 
   if (isMC) {
     // MC truth is in photonTree (ggHiNtuplizer/EventTree) - for electrons
-    if (photonTree && (channel == "electron" || channel == "both")) {
+    if (photonTree && (channel == "electron" || channel == "both" || isMC)) {
+      if (channel == "muon") { photonTree->SetBranchStatus("*", 0); }
       photonTree->SetBranchStatus("mcPID", 1);
       photonTree->SetBranchStatus("mcStatus", 1);
       photonTree->SetBranchStatus("mcMomPID", 1);
@@ -756,9 +793,11 @@ void analyse_ZJet(string input = "ZJETHP",
   FactorizedJetCorrector *corr;
   vector<JetCorrectorParameters> vpar;
   vpar.push_back(JetCorrectorParameters(jecfile.c_str()));
-  if (!isMC) {
+  if (!isMC && !l2file.empty()) {
     cout << "Applying L2 Residual from file " << l2file.c_str() << endl;
     vpar.push_back(JetCorrectorParameters(l2file.c_str()));
+  } else if (!isMC) {
+    cout << "\033[1;31m[WARNING]: No L2 Residual file provided. Proceeding with MC-base JEC only.\033[0m" << endl;
   }
   corr = new FactorizedJetCorrector(vpar);
 #endif
@@ -795,17 +834,22 @@ void analyse_ZJet(string input = "ZJETHP",
   Long64_t nEvents_hasAwayJet = 0;
   Long64_t nEvents_passVeto = 0;
 
+  Long64_t i_processed = 0;
   for (Long64_t i = 0; i < nentries; ++i) {
     evtTree->GetEntry(i);
     triggerTree->GetEntry(i);
     // Get entries from appropriate lepton trees
-    if (muonTree) muonTree->GetEntry(i);
-    if (photonTree) photonTree->GetEntry(i);
-
+    // ONLY read the trees required for the active channel
+    if (muonTree && (channel == "muon" || channel == "both")) { muonTree->GetEntry(i); }
+    // We need photonTree even in muon mode for MC to get the gen info
+    if (photonTree && (channel == "electron" || channel == "both" || isMC)) { photonTree->GetEntry(i); }
+    
     // Progress monitoring
     if (i % 10000 == 0) {
       cout << "Processing event " << i << " / " << nentries << endl;
     }
+    if (i == 100000) break;
+    i_processed++;
 
     // Trigger logic
     if (!isMC) {
@@ -840,13 +884,14 @@ void analyse_ZJet(string input = "ZJETHP",
     bool hasZMuon = false, hasZElectron = false;
 
     if (channel == "muon" || channel == "both") {
-      zMuon = ReconstructZFromMuons(nReco, recoPt, recoEta, recoPhi, recoCharge, recoIDTight);
+      zMuon = ReconstructZFromMuons(nReco, recoPt, recoEta, recoPhi, recoCharge, recoIDTight, 
+                              recoPFChIso, recoPFPhoIso, recoPFNeuIso, recoPFPUIso);
       hasZMuon = zMuon.isValid;
       if (hasZMuon) nEventsWithMuonZ++;
     }
 
     if (channel == "electron" || channel == "both") {
-      zElectron = ReconstructZFromElectrons(nEle, elePt, eleEta, elePhi, eleCharge, eleIDbit);
+      zElectron = ReconstructZFromElectrons(nEle, elePt, eleEta, elePhi, eleCharge, eleCutIdWP80, elePFRelIsoWithEA);
       hasZElectron = zElectron.isValid;
       if (hasZElectron) nEventsWithElectronZ++;
     }
@@ -881,36 +926,23 @@ void analyse_ZJet(string input = "ZJETHP",
     float deltaMass_recoGen = 999;
 
     if (isMC) {
-      // Reconstruct gen-level Z based on channel
-      if (channel == "muon") {
-        // Use muon gen-info from muonAnalyzer tree
-        genZ = ReconstructGenZFromMuons(nGen, genPID, genStatus,
-                                         genPt, genEta, genPhi, genMotherID);
-      } else if (channel == "electron") {
-        // Use electron gen-info from ggHiNtuplizer tree
-        if (photonTree) {
-          // Need to get nMC - check if it exists as a branch
-          // For now, use mcPID->size() as nMC
-          int nMC = mcPID ? mcPID->size() : 0;
-          genZ = ReconstructGenZFromElectrons(nMC, mcPID, mcStatus,
-                                               mcPt, mcEta, mcPhi, mcMomPID);
-        }
-      } else if (channel == "both") {
-        // Determine which channel was actually used for selected Z
-        if (selectedZ.isValid) {
-          // Check if we used muon or electron channel
-          bool usedMuon = (hasZMuon && selectedZ.lepton1_pt == zMuon.lepton1_pt);
-
-          if (usedMuon) {
-            genZ = ReconstructGenZFromMuons(nGen, genPID, genStatus,
-                                             genPt, genEta, genPhi, genMotherID);
-          } else {
-            if (photonTree) {
-              int nMC = mcPID ? mcPID->size() : 0;
-              genZ = ReconstructGenZFromElectrons(nMC, mcPID, mcStatus,
-                                                   mcPt, mcEta, mcPhi, mcMomPID);
-            }
-          }
+      // For BOTH muon and electron channels, the gen info is in the mcPID branches (ggHiNtuplizer)
+      if (photonTree) {
+        int nMC = mcPID ? mcPID->size() : 0;
+        
+        // If channel is muon, we look for PID 13 in the mc branches
+        if (channel == "muon") {
+            // Re-using the electron function logic but looking for muons (PID 13)
+            // We'll create a temp function or just modify yours:
+            genZ = ReconstructGenZFromElectrons(nMC, mcPID, mcStatus, mcPt, mcEta, mcPhi, mcMomPID);
+            
+            /* Note: If your ReconstructGenZFromElectrons function is strictly hardcoded 
+               to PID 11, you should change that function's loop to:
+               int targetPID = (channel == "muon") ? 13 : 11;
+               if (abs((*mcPID)[i]) != targetPID) continue; 
+            */
+        } else {
+            genZ = ReconstructGenZFromElectrons(nMC, mcPID, mcStatus, mcPt, mcEta, mcPhi, mcMomPID);
         }
       }
 
@@ -1002,7 +1034,7 @@ void analyse_ZJet(string input = "ZJETHP",
     //double djrespasymm;
 
     // Z pt selection
-    if (Z_pt < 40) continue;
+    if (Z_pt < 60) continue;
 
     nEvents_ZptCut++;
 
@@ -1032,26 +1064,44 @@ void analyse_ZJet(string input = "ZJETHP",
     // fill passjteta for all jets in the event?
     bool passjetid[nref];
     for (int j = 0; j < nref; ++j) {
-      passjetid[j] = true;
+      passjetid[j] = false; // Default to fail
+      
       if (checkjetid) {
-        if (abs(jteta[j]) <= 2.6) {
-          if (jtnhf[j] >= 0.99) passjetid[j] = false;
-          if (jtnef[j] >= 0.9) passjetid[j] = false;
-          if (jtchf[j] <= 0.01) passjetid[j] = false;
-          if (jtcef[j] >= 0.8) passjetid[j] = false;
-          if (jtmuf[j] >= 0.8) passjetid[j] = false;
-          if (jtchm[j] <= 0) passjetid[j] = false;
-        } else if (abs(jteta[j]) <= 2.7) {
-          if (jtnhf[j] >= 0.9) passjetid[j] = false;
-          if (jtnef[j] >= 0.99) passjetid[j] = false;
-          if (jtmuf[j] >= 0.8) passjetid[j] = false;
-          if (jtcef[j] >= 0.8) passjetid[j] = false;
-        } else if (abs(jteta[j]) <= 3.0) {
-          if (jtnhf[j] >= 0.99) passjetid[j] = false;
-          if (jtnef[j] >= 0.99) passjetid[j] = false;
-        } else if (abs(jteta[j]) <= 5.0) {
-          if (jtnef[j] >= 0.4) passjetid[j] = false;
+        float eta = fabs(jteta[j]);
+        
+        // 1. Calculate Multiplicities
+        // Total Multiplicity
+        int m = jtchm[j] + jtPfNHM[j] + jtPfCEM[j] + jtPfNEM[j] + jtPfMUM[j];
+        // Charged Multiplicity
+        int cm = jtchm[j] + jtPfCEM[j] + jtPfMUM[j];
+        // Neutral Multiplicity
+        int nm = jtPfNHM[j] + jtPfNEM[j];
+
+        // 2. Apply pp-specific ID cuts based on eta range
+        if (eta <= 2.6) {
+          if ((jtnhf[j] < 0.9) && (jtnef[j] < 0.9) && (m > 1) && (jtmuf[j] < 0.8) && 
+              (jtchf[j] > 0.01) && (cm > 0) && (jtcef[j] < 0.8)) {
+            passjetid[j] = true;
+          }
+        } 
+        else if (eta > 2.6 && eta <= 2.7) {
+          if ((jtnhf[j] < 0.9) && (jtnef[j] < 0.99) && (jtmuf[j] < 0.8) && 
+              (cm > 0) && (jtcef[j] < 0.8)) {
+            passjetid[j] = true;
+          }
+        } 
+        else if (eta > 2.7 && eta <= 3.0) {
+          if ((jtnef[j] < 0.99) && (nm > 1)) {
+            passjetid[j] = true;
+          }
+        } 
+        else if (eta > 3.0 && eta <= 5.0) {
+          if ((jtnhf[j] > 0.2) && (jtnef[j] < 0.9) && (nm > 10)) {
+            passjetid[j] = true;
+          }
         }
+      } else {
+        passjetid[j] = true; // If checkjetid is false, everyone passes
         //	   if (jtpt[j] > jtptmin)	   cout << passjetid[j] << endl;
         //  if (passjetid[j] < 2 and nref > 2  and jtpt[j] > 70  and jtpt[1] >
         //  40) cout << "Pass jetid: " << passjetid[j] << " pt: " << jtpt[j] <<
@@ -1089,7 +1139,7 @@ void analyse_ZJet(string input = "ZJETHP",
 
     for (int j = 0; j < nref; j++) {
       if (checkjetid && passjetid[j] == 0) continue; // Apply jet ID
-      if (jtpt[j] < 30.0) continue; // Jet kinematic cuts, Minimum pT
+      if (jtpt[j] < 40.0) continue; // Jet kinematic cuts, Minimum pT
 
       // Calculate delta-phi with Z
       float dphi = abs(jtphi[j] - Z_phi);
@@ -1097,7 +1147,7 @@ void analyse_ZJet(string input = "ZJETHP",
         dphi = 2 * TMath::Pi() - dphi;
 
       // Back-to-back requirement
-      if (dphi < 2*TMath::Pi()/3) continue;
+      if (dphi < 7*TMath::Pi()/8) continue;
 
       // Check overlap with BOTH Z decay leptons
       float deta1 = jteta[j] - selectedZ.lepton1_eta;
@@ -1179,15 +1229,9 @@ void analyse_ZJet(string input = "ZJETHP",
     if (applyjetvetomap && vetomap) {
       bool passVetoMap = true;
 
-      // Check Z position (use rapidity for veto map eta coordinate)
-      int z_bin = vetomap->FindBin(Z_eta, Z_phi);
-      if (vetomap->GetBinContent(z_bin) > 0) passVetoMap = false;
-
       // Check leading away-side jet
-      if (passVetoMap) {
-        int jet_bin = vetomap->FindBin(jet_eta, jet_phi);
-        if (vetomap->GetBinContent(jet_bin) > 0) passVetoMap = false;
-      }
+      int jet_bin = vetomap->FindBin(jet_eta, jet_phi);
+      if (vetomap->GetBinContent(jet_bin) > 0) passVetoMap = false;
 
       // Check subleading away-side jet if available
       if (passVetoMap && nAwayJets >= 2) {
@@ -1396,7 +1440,7 @@ void analyse_ZJet(string input = "ZJETHP",
   cout << "\n========================================" << endl;
   cout << "Z+Jet Analysis Summary" << endl;
   cout << "========================================" << endl;
-  cout << "Total events processed: " << nentries << endl;
+  cout << "Total events processed: " << (i_processed < nentries ? i_processed : nentries) << endl;
   cout << endl;
   
   cout << "--- Z Reconstruction ---" << endl;
@@ -1423,7 +1467,7 @@ void analyse_ZJet(string input = "ZJETHP",
   cout << "Events with Z:              " << nWithZ << " (100%)" << endl;
   cout << "  + has jets:               " << nEvents_hasJets 
        << " (" << 100.0*nEvents_hasJets/nWithZ << "%)" << endl;
-  cout << "  + Z_pT > 40 GeV:          " << nEvents_ZptCut 
+  cout << "  + Z_pT > 60 GeV:          " << nEvents_ZptCut 
        << " (" << 100.0*nEvents_ZptCut/nWithZ << "%)" << endl;
   cout << "  + has away-side jet:      " << nEvents_hasAwayJet 
        << " (" << 100.0*nEvents_hasAwayJet/nWithZ << "%)" << endl;
