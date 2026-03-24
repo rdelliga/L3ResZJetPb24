@@ -473,17 +473,17 @@ void analyse_ZJet(string input = "ZJETHP",
   cout << "Building input chains..." << endl;
 
   // Determine which lepton trees we need based on channel
-  bool needPhotonTree = (channel == "electron" || channel == "both" || isMC);
+  bool needElectronTree = (channel == "electron" || channel == "both" || isMC);
   bool needMuonTree = (channel == "muon" || channel == "both");
 
-  TreeChains *chains = BuildChainsFromConfig(config, jetPath, needPhotonTree, needMuonTree);
+  TreeChains *chains = BuildChainsFromConfig(config, jetPath, needElectronTree, needMuonTree);
   if (!chains || chains->nEntries == 0) {
     cerr << "ERROR: No entries found in input!" << endl;
     return;
   }
 
   auto evtTree = chains->evtChain;
-  auto photonTree = chains->photonChain;  // For electrons
+  auto electronTree = chains->photonChain;  // For electrons
   auto muonTree = chains->muonChain;      // For muons
   auto jetTree = chains->jetChain;
   auto triggerTree = chains->triggerChain;
@@ -573,7 +573,7 @@ void analyse_ZJet(string input = "ZJETHP",
     if (channel == "electron" || channel == "both") {
       // TODO: Update trigger name based on actual trigger in forest
       cout << "WARNING: Using placeholder dielectron trigger name - UPDATE THIS!" << endl;
-      cout << "Check available triggers with: photonTree->GetListOfBranches()->Print()" << endl;
+      cout << "Check available triggers with: electronTree->GetListOfBranches()->Print()" << endl;
       // triggerTree->SetBranchStatus("HLT_SingleEle*", 1);
       // triggerTree->SetBranchAddress("HLT_SingleEle*", &HLT_SingleEle);
     }
@@ -705,45 +705,45 @@ void analyse_ZJet(string input = "ZJETHP",
 
   // Set electron branch addresses (from ggHiNtuplizer/EventTree)
   if (channel == "electron" || channel == "both") {
-    photonTree->SetBranchStatus("*", 0);
-    photonTree->SetBranchStatus("nEle", 1);
-    photonTree->SetBranchStatus("elePt", 1);
-    photonTree->SetBranchStatus("eleEta", 1);
-    photonTree->SetBranchStatus("elePhi", 1);
-    photonTree->SetBranchStatus("eleCharge", 1);
-    photonTree->SetBranchStatus("eleCutIdWP80", 1);
+    electronTree->SetBranchStatus("*", 0);
+    electronTree->SetBranchStatus("nEle", 1);
+    electronTree->SetBranchStatus("elePt", 1);
+    electronTree->SetBranchStatus("eleEta", 1);
+    electronTree->SetBranchStatus("elePhi", 1);
+    electronTree->SetBranchStatus("eleCharge", 1);
+    electronTree->SetBranchStatus("eleCutIdWP80", 1);
 
-    photonTree->SetBranchAddress("nEle", &nEle);
-    photonTree->SetBranchAddress("elePt", &elePt);
-    photonTree->SetBranchAddress("eleEta", &eleEta);
-    photonTree->SetBranchAddress("elePhi", &elePhi);
-    photonTree->SetBranchAddress("eleCharge", &eleCharge);
-    photonTree->SetBranchAddress("eleCutIdWP80", &eleCutIdWP80);
+    electronTree->SetBranchAddress("nEle", &nEle);
+    electronTree->SetBranchAddress("elePt", &elePt);
+    electronTree->SetBranchAddress("eleEta", &eleEta);
+    electronTree->SetBranchAddress("elePhi", &elePhi);
+    electronTree->SetBranchAddress("eleCharge", &eleCharge);
+    electronTree->SetBranchAddress("eleCutIdWP80", &eleCutIdWP80);
 
-    photonTree->SetBranchStatus("elePFRelIsoWithEA", 1);
-    photonTree->SetBranchAddress("elePFRelIsoWithEA", &elePFRelIsoWithEA);
+    electronTree->SetBranchStatus("elePFRelIsoWithEA", 1);
+    electronTree->SetBranchAddress("elePFRelIsoWithEA", &elePFRelIsoWithEA);
   }
 
   if (isMC) {
-    // MC truth is in photonTree (ggHiNtuplizer/EventTree) - for electrons
-    if (photonTree && (channel == "electron" || channel == "both" || isMC)) {
-      if (channel == "muon") { photonTree->SetBranchStatus("*", 0); }
-      photonTree->SetBranchStatus("mcPID", 1);
-      photonTree->SetBranchStatus("mcStatus", 1);
-      photonTree->SetBranchStatus("mcMomPID", 1);
-      photonTree->SetBranchStatus("mcPt", 1);
-      photonTree->SetBranchStatus("mcEta", 1);
-      photonTree->SetBranchStatus("mcPhi", 1);
+    // MC truth is in electronTree (ggHiNtuplizer/EventTree) - for electrons
+    if (electronTree && (channel == "electron" || channel == "both" || isMC)) {
+      if (channel == "muon") { electronTree->SetBranchStatus("*", 0); }
+      electronTree->SetBranchStatus("mcPID", 1);
+      electronTree->SetBranchStatus("mcStatus", 1);
+      electronTree->SetBranchStatus("mcMomPID", 1);
+      electronTree->SetBranchStatus("mcPt", 1);
+      electronTree->SetBranchStatus("mcEta", 1);
+      electronTree->SetBranchStatus("mcPhi", 1);
       // Note: mcMass might not exist in all forests
-      // photonTree->SetBranchStatus("mcMass", 1);
+      // electronTree->SetBranchStatus("mcMass", 1);
 
-      photonTree->SetBranchAddress("mcPID", &mcPID);
-      photonTree->SetBranchAddress("mcStatus", &mcStatus);
-      photonTree->SetBranchAddress("mcMomPID", &mcMomPID);
-      photonTree->SetBranchAddress("mcPt", &mcPt);
-      photonTree->SetBranchAddress("mcEta", &mcEta);
-      photonTree->SetBranchAddress("mcPhi", &mcPhi);
-      // photonTree->SetBranchAddress("mcMass", &mcMass);
+      electronTree->SetBranchAddress("mcPID", &mcPID);
+      electronTree->SetBranchAddress("mcStatus", &mcStatus);
+      electronTree->SetBranchAddress("mcMomPID", &mcMomPID);
+      electronTree->SetBranchAddress("mcPt", &mcPt);
+      electronTree->SetBranchAddress("mcEta", &mcEta);
+      electronTree->SetBranchAddress("mcPhi", &mcPhi);
+      // electronTree->SetBranchAddress("mcMass", &mcMass);
     }
   }
 
@@ -772,9 +772,9 @@ void analyse_ZJet(string input = "ZJETHP",
           assert(dir2);
           dir2->cd();
 
-          // Use PHOTONJET analysis type - will be adapted for Z+jet in histograms class
+          // Use ZJET analysis type
           histograms *h = new histograms(dir2, etaedges[i], etaedges[i + 1],
-                                         hibins[j], hibins[j + 1], isMC, AnalysisType::PHOTONJET);
+                                         hibins[j], hibins[j + 1], isMC, AnalysisType::ZJET);
           _histos[name2.c_str()].push_back(h);
         }
       }
@@ -841,14 +841,14 @@ void analyse_ZJet(string input = "ZJETHP",
     // Get entries from appropriate lepton trees
     // ONLY read the trees required for the active channel
     if (muonTree && (channel == "muon" || channel == "both")) { muonTree->GetEntry(i); }
-    // We need photonTree even in muon mode for MC to get the gen info
-    if (photonTree && (channel == "electron" || channel == "both" || isMC)) { photonTree->GetEntry(i); }
+    // We need electronTree even in muon mode for MC to get the gen info
+    if (electronTree && (channel == "electron" || channel == "both" || isMC)) { electronTree->GetEntry(i); }
     
     // Progress monitoring
     if (i % 10000 == 0) {
       cout << "Processing event " << i << " / " << nentries << endl;
     }
-    if (i == 20000000) break;
+    if (i == 40000000) break;
     i_processed++;
 
     // Trigger logic
@@ -927,7 +927,7 @@ void analyse_ZJet(string input = "ZJETHP",
 
     if (isMC) {
       // For BOTH muon and electron channels, the gen info is in the mcPID branches (ggHiNtuplizer)
-      if (photonTree) {
+      if (electronTree) {
         int nMC = mcPID ? mcPID->size() : 0;
         
         // If channel is muon, we look for PID 13 in the mc branches
@@ -1102,7 +1102,7 @@ void analyse_ZJet(string input = "ZJETHP",
         }
       } else {
         passjetid[j] = true; // If checkjetid is false, everyone passes
-        //	   if (jtpt[j] > jtptmin)	   cout << passjetid[j] << endl;
+        //       if (jtpt[j] > jtptmin)    cout << passjetid[j] << endl;
         //  if (passjetid[j] < 2 and nref > 2  and jtpt[j] > 70  and jtpt[1] >
         //  40) cout << "Pass jetid: " << passjetid[j] << " pt: " << jtpt[j] <<
         //  " " << jteta[j] << " " << j << " " << i <<  endl;
@@ -1118,10 +1118,10 @@ void analyse_ZJet(string input = "ZJETHP",
       corr->setJetPt(jtpt[j]);
       // corr->setJetE(jteu[jetidx]);
       corr->setJetEta(jteta[j]);
-      // 	 corr->setJetPhi(jthpi[j]);
+      //     corr->setJetPhi(jthpi[j]);
       vector<float> v = corr->getSubCorrections();
       float jes = v.back();
-      //	 cout << "New jes correction jet pt: " << jtpt[j] << " " <<
+      //     cout << "New jes correction jet pt: " << jtpt[j] << " " <<
       //jteta[j] << " "  << jes << endl;
       jtpt[j] *= jes;
 #endif
@@ -1261,30 +1261,27 @@ void analyse_ZJet(string input = "ZJETHP",
         if (jet_eta >= h->etamin && jet_eta < h->etamax &&
             hiBin >= h->hibinmin && hiBin < h->hibinmax) {
 
-          // Z properties (reuse photon histograms for now - TODO: rename in histograms class)
-          h->photon_pt->Fill(Z_pt, evtwt);
-          h->photon_eta->Fill(Z_eta, evtwt);
-          h->photon_phi->Fill(Z_phi, evtwt);
-          // Use HoverE histogram for Z mass
-          h->photon_HoverE->Fill(Z_mass, evtwt);
-          // Use sigmaIetaIeta for Z rapidity
-          h->photon_sigmaIetaIeta->Fill(Z_rapidity, evtwt);
+          // Z properties (using new Z+Jet specific histograms)
+          h->z_pt->Fill(Z_pt, evtwt);
+          h->z_eta->Fill(Z_eta, evtwt);
+          h->z_phi->Fill(Z_phi, evtwt);
+          h->z_mass->Fill(Z_mass, evtwt);
+          // (Rapidity removed as we didn't add a specific histogram for it)
 
           // Gen-level Z histograms (MC only)
           if (isMC && hasGenZ) {
-            // Reuse photon gen-histograms for gen-level Z
-            if (h->genphoton_pt) h->genphoton_pt->Fill(genZ.pt, evtwt);
-            if (h->genphoton_eta) h->genphoton_eta->Fill(genZ.eta, evtwt);
-            if (h->genphoton_phi) h->genphoton_phi->Fill(genZ.phi, evtwt);
+            if (h->genz_pt) h->genz_pt->Fill(genZ.pt, evtwt);
+            if (h->genz_eta) h->genz_eta->Fill(genZ.eta, evtwt);
+            if (h->genz_phi) h->genz_phi->Fill(genZ.phi, evtwt);
 
             // Z response: reco_pT / gen_pT
-            if (h->photonresponse && genZ.pt > 0) {
-              h->photonresponse->Fill(genZ.pt, Z_pt / genZ.pt, evtwt);
+            if (h->zresponse && genZ.pt > 0) {
+              h->zresponse->Fill(genZ.pt, Z_pt / genZ.pt, evtwt);
             }
 
             // Z pT resolution: (reco - gen) / gen
-            if (h->photon_ptres && genZ.pt > 0) {
-              h->photon_ptres->Fill((Z_pt - genZ.pt) / genZ.pt, evtwt);
+            if (h->z_ptres && genZ.pt > 0) {
+              h->z_ptres->Fill((Z_pt - genZ.pt) / genZ.pt, evtwt);
             }
           }
 
@@ -1295,29 +1292,29 @@ void analyse_ZJet(string input = "ZJETHP",
           h->awayside_jet_uncorr_pt->Fill(jtpt_uncorr[awayJetIdx], evtwt);
 
           // Z+Jet system
-          h->photonjet_dphi->Fill(dphi_zjet, evtwt);
-          h->photonjet_balance->Fill(balance, evtwt);
-          h->photonjet_ptavg->Fill(ptavgtp, evtwt);
-          h->photonjet_alpha->Fill(alpha, evtwt);
+          h->zjet_dphi->Fill(dphi_zjet, evtwt);
+          h->zjet_balance->Fill(balance, evtwt);
+          h->zjet_ptavg->Fill(ptavgtp, evtwt);
+          h->zjet_alpha->Fill(alpha, evtwt);
 
-          // Trigger histograms (reuse photon trigger for Z trigger)
+          // Trigger histograms
           if (trigger) {
-            h->HLTPhoton30->Fill(1, evtwt);
-            h->HLTPhoton30_ptav->Fill(ptavgtp, evtwt);
+            if (h->HLT_Z) h->HLT_Z->Fill(1, evtwt);
+            if (h->HLT_Z_ptav) h->HLT_Z_ptav->Fill(ptavgtp, evtwt);
           }
 
           // Alpha-dependent balance profiles  (analogous to dijet asymmetry)
           if (alpha < 0.1) {
-            h->photonjet_balance_a01->Fill(ptavgtp, balance, evtwt);
-            h->photonjet_balance2D_a01->Fill(ptavgtp, jet_eta, balance, evtwt);
+            h->zjet_balance_a01->Fill(ptavgtp, balance, evtwt);
+            h->zjet_balance2D_a01->Fill(ptavgtp, jet_eta, balance, evtwt);
           }
           if (alpha < 0.2) {
-            h->photonjet_balance_a02->Fill(ptavgtp, balance, evtwt);
-            h->photonjet_balance2D_a02->Fill(ptavgtp, jet_eta, balance, evtwt);
+            h->zjet_balance_a02->Fill(ptavgtp, balance, evtwt);
+            h->zjet_balance2D_a02->Fill(ptavgtp, jet_eta, balance, evtwt);
           }
           if (alpha < 0.3) {
-            h->photonjet_balance_a03->Fill(ptavgtp, balance, evtwt);
-            h->photonjet_balance2D_a03->Fill(ptavgtp, jet_eta, balance, evtwt);
+            h->zjet_balance_a03->Fill(ptavgtp, balance, evtwt);
+            h->zjet_balance2D_a03->Fill(ptavgtp, jet_eta, balance, evtwt);
 
             // Jet composition for alpha < 0.3 (like dijets)
             h->jet_nef->Fill(jet_pt, jtnef[awayJetIdx], evtwt);
@@ -1327,16 +1324,16 @@ void analyse_ZJet(string input = "ZJETHP",
             h->jet_muf->Fill(jet_pt, jtmuf[awayJetIdx], evtwt);
           }
           if (alpha < 0.4) {
-            h->photonjet_balance_a04->Fill(ptavgtp, balance, evtwt);
-            h->photonjet_balance2D_a04->Fill(ptavgtp, jet_eta, balance, evtwt);
+            h->zjet_balance_a04->Fill(ptavgtp, balance, evtwt);
+            h->zjet_balance2D_a04->Fill(ptavgtp, jet_eta, balance, evtwt);
           }
           if (alpha < 0.5) {
-            h->photonjet_balance_a05->Fill(ptavgtp, balance, evtwt);
-            h->photonjet_balance2D_a05->Fill(ptavgtp, jet_eta, balance, evtwt);
+            h->zjet_balance_a05->Fill(ptavgtp, balance, evtwt);
+            h->zjet_balance2D_a05->Fill(ptavgtp, jet_eta, balance, evtwt);
           }
           if (alpha < 0.6) {
-            h->photonjet_balance_a06->Fill(ptavgtp, balance, evtwt);
-            h->photonjet_balance2D_a06->Fill(ptavgtp, jet_eta, balance, evtwt);
+            h->zjet_balance_a06->Fill(ptavgtp, balance, evtwt);
+            h->zjet_balance2D_a06->Fill(ptavgtp, jet_eta, balance, evtwt);
           }
 
           // 3D balance profiles (KEY for L3 residual derivation)
@@ -1352,20 +1349,20 @@ void analyse_ZJet(string input = "ZJETHP",
 
               if (alpha < alphaThreshold) {
                 // Fill balance profiles (weighted)
-                h->photonjet_balance3D->Fill(ptavgtp, jet_eta, alphaFillValue, balance, evtwt);
-                h->photonjet_balance3Dwide->Fill(ptavgtp, jet_eta, alphaFillValue, balance, evtwt);
-                h->photonjet_balance3Dnarrow->Fill(ptavgtp, jet_eta, alphaFillValue, balance, evtwt);
-                h->photonjet_balance3Dabseta->Fill(ptavgtp, abs(jet_eta), alphaFillValue, balance, evtwt);
-                h->photonjet_balance3Dabsetawide->Fill(ptavgtp, abs(jet_eta), alphaFillValue, balance, evtwt);
-                h->photonjet_balance3Dabsetanarrow->Fill(ptavgtp, abs(jet_eta), alphaFillValue, balance, evtwt);
+                h->zjet_balance3D->Fill(ptavgtp, jet_eta, alphaFillValue, balance, evtwt);
+                h->zjet_balance3Dwide->Fill(ptavgtp, jet_eta, alphaFillValue, balance, evtwt);
+                h->zjet_balance3Dnarrow->Fill(ptavgtp, jet_eta, alphaFillValue, balance, evtwt);
+                h->zjet_balance3Dabseta->Fill(ptavgtp, abs(jet_eta), alphaFillValue, balance, evtwt);
+                h->zjet_balance3Dabsetawide->Fill(ptavgtp, abs(jet_eta), alphaFillValue, balance, evtwt);
+                h->zjet_balance3Dabsetanarrow->Fill(ptavgtp, abs(jet_eta), alphaFillValue, balance, evtwt);
 
                 // Fill counts histograms (UNWEIGHTED - just count entries)
-                if (h->photonjet_balance3D_counts) h->photonjet_balance3D_counts->Fill(ptavgtp, jet_eta, alphaFillValue);
-                if (h->photonjet_balance3Dwide_counts) h->photonjet_balance3Dwide_counts->Fill(ptavgtp, jet_eta, alphaFillValue);
-                if (h->photonjet_balance3Dnarrow_counts) h->photonjet_balance3Dnarrow_counts->Fill(ptavgtp, jet_eta, alphaFillValue);
-                if (h->photonjet_balance3Dabseta_counts) h->photonjet_balance3Dabseta_counts->Fill(ptavgtp, abs(jet_eta), alphaFillValue);
-                if (h->photonjet_balance3Dabsetawide_counts) h->photonjet_balance3Dabsetawide_counts->Fill(ptavgtp, abs(jet_eta), alphaFillValue);
-                if (h->photonjet_balance3Dabsetanarrow_counts) h->photonjet_balance3Dabsetanarrow_counts->Fill(ptavgtp, abs(jet_eta), alphaFillValue);
+                if (h->zjet_balance3D_counts) h->zjet_balance3D_counts->Fill(ptavgtp, jet_eta, alphaFillValue);
+                if (h->zjet_balance3Dwide_counts) h->zjet_balance3Dwide_counts->Fill(ptavgtp, jet_eta, alphaFillValue);
+                if (h->zjet_balance3Dnarrow_counts) h->zjet_balance3Dnarrow_counts->Fill(ptavgtp, jet_eta, alphaFillValue);
+                if (h->zjet_balance3Dabseta_counts) h->zjet_balance3Dabseta_counts->Fill(ptavgtp, abs(jet_eta), alphaFillValue);
+                if (h->zjet_balance3Dabsetawide_counts) h->zjet_balance3Dabsetawide_counts->Fill(ptavgtp, abs(jet_eta), alphaFillValue);
+                if (h->zjet_balance3Dabsetanarrow_counts) h->zjet_balance3Dabsetanarrow_counts->Fill(ptavgtp, abs(jet_eta), alphaFillValue);
               }
             }
           }
@@ -1387,11 +1384,11 @@ void analyse_ZJet(string input = "ZJETHP",
             if (j == 0 && passjetid[0]) {
               // trigger check; leading jet pt
               if (trigger)
-                h->HLTPhoton30->Fill(jtpt[awayJetIndices[0]], evtwt);
+                if (h->HLT_Z) h->HLT_Z->Fill(jtpt[awayJetIndices[0]], evtwt);
             }
 
             // These are actually obsolete after all the selections
-            /*	       if (j == 0 and nref > 1 and dphitp > 2.7) { // Fill dijet
+            /* if (j == 0 and nref > 1 and dphitp > 2.7) { // Fill dijet
               system based on leading jet pT
               h->dijetasymmetry->Fill(abs(djetasymm),evtwt);
               h->dijetasymmetry_now->Fill(abs(djetasymm));

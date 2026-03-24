@@ -13,7 +13,8 @@
 enum class AnalysisType {
   DIJET = 0,      // L2 Residual dijet analysis
   PHOTONJET = 1,  // L3 Residual photon+jet analysis
-  ALL = 2         // Create all histograms (default, backward compatible)
+  ALL = 2,        // Create all histograms (default, backward compatible)
+  ZJET = 3        // L3 Residual Z+jet analysis
 };
 
 class histograms {
@@ -82,6 +83,13 @@ class histograms {
   TH1D* genphoton_phi;
   TProfile* photonresponse;
   TH1D* photon_ptres;
+
+  // Gen Z histograms (MC only)
+  TH1D* genz_pt;
+  TH1D* genz_eta;
+  TH1D* genz_phi;
+  TProfile* zresponse;
+  TH1D* z_ptres;
 
   TH1D* genjetdyn_kt;
   TH1D* genjetdyn_deltaR;
@@ -166,6 +174,53 @@ class histograms {
   TH1D* HLTPhoton30;
   TH1D* HLTPhoton30_ptav;
 
+// Z trigger histograms
+  TH1D* HLT_Z;
+  TH1D* HLT_Z_ptav;
+
+// Z+Jet histograms (L3 residual)
+  TH1D* z_pt;
+  TH1D* z_eta;
+  TH1D* z_phi;
+  TH1D* z_mass;
+
+  TH1D* zjet_dphi;
+  TH1D* zjet_balance;
+  TH1D* zjet_ptavg;
+  TH1D* zjet_alpha;
+
+  // Z+Jet balance profiles
+  TProfile* zjet_balance_a01;
+  TProfile* zjet_balance_a02;
+  TProfile* zjet_balance_a03;
+  TProfile* zjet_balance_a04;
+  TProfile* zjet_balance_a05;
+  TProfile* zjet_balance_a06;
+
+  // 2D profiles for L3 residual derivation
+  TProfile2D* zjet_balance2D_a01;
+  TProfile2D* zjet_balance2D_a02;
+  TProfile2D* zjet_balance2D_a03;
+  TProfile2D* zjet_balance2D_a04;
+  TProfile2D* zjet_balance2D_a05;
+  TProfile2D* zjet_balance2D_a06;
+
+  // 3D profiles
+  TProfile3D* zjet_balance3D;
+  TProfile3D* zjet_balance3Dwide;
+  TProfile3D* zjet_balance3Dnarrow;
+  TProfile3D* zjet_balance3Dabseta;
+  TProfile3D* zjet_balance3Dabsetawide;
+  TProfile3D* zjet_balance3Dabsetanarrow;
+  TH3D* zjet_balance3D_counts;
+  TH3D* zjet_balance3Dwide_counts;
+  TH3D* zjet_balance3Dnarrow_counts;
+  TH3D* zjet_balance3Dabseta_counts;
+  TH3D* zjet_balance3Dabsetawide_counts;
+  TH3D* zjet_balance3Dabsetanarrow_counts;
+
+  // Balance distribution histogram
+  TH3D* zjet_balance_dist;
 
 // JERC dijets
   TProfile* dijetasymmetry_a01;

@@ -23,8 +23,10 @@ void histograms::initializePointers() {
   genjetdyn_kt = nullptr; genjetdyn_deltaR = nullptr;
   genjetdyn_z = nullptr; genjetdyn_z_cutdeltaR = nullptr;
   genphoton_pt = nullptr; genphoton_eta = nullptr; genphoton_phi = nullptr;
+  genz_pt = nullptr; genz_eta = nullptr; genz_phi = nullptr;
   plane_inclusive = nullptr; jetresponse = nullptr;
   photonresponse = nullptr; ptres = nullptr; photon_ptres = nullptr;
+  zresponse = nullptr; z_ptres = nullptr;
   ktres = nullptr; deltaRres = nullptr; zres = nullptr;
   
   // Dijet histograms
@@ -42,12 +44,14 @@ void histograms::initializePointers() {
   dijetasymmetry3Dnarrow = nullptr; dijetasymmetry3Dabseta = nullptr;
   dijetasymmetry3Dabsetawide = nullptr; dijetasymmetry3Dabsetanarrow = nullptr;
   
+  // Photon+Jet / Z+Jet shared
+  awayside_jet_pt = nullptr; awayside_jet_eta = nullptr;
+  awayside_jet_phi = nullptr; awayside_jet_uncorr_pt = nullptr;
+
   // Photon+Jet histograms
   photon_pt = nullptr; photon_eta = nullptr; photon_phi = nullptr;
   photon_HoverE = nullptr; photon_sigmaIetaIeta = nullptr;
   photon_SwissCrx = nullptr; photon_SeedTime = nullptr;
-  awayside_jet_pt = nullptr; awayside_jet_eta = nullptr;
-  awayside_jet_phi = nullptr; awayside_jet_uncorr_pt = nullptr;
   photonjet_dphi = nullptr; photonjet_balance = nullptr;
   photonjet_ptavg = nullptr; photonjet_alpha = nullptr;
   photonjet_balance_a01 = nullptr; photonjet_balance_a02 = nullptr;
@@ -63,6 +67,26 @@ void histograms::initializePointers() {
   photonjet_balance3Dnarrow_counts = nullptr; photonjet_balance3Dabseta_counts = nullptr;
   photonjet_balance3Dabsetawide_counts = nullptr; photonjet_balance3Dabsetanarrow_counts = nullptr;
   HLTPhoton30 = nullptr; HLTPhoton30_ptav = nullptr;
+  photonjet_balance_dist = nullptr;
+
+  // Z+Jet histograms
+  z_pt = nullptr; z_eta = nullptr; z_phi = nullptr; z_mass = nullptr;
+  HLT_Z = nullptr; HLT_Z_ptav = nullptr;
+  zjet_dphi = nullptr; zjet_balance = nullptr;
+  zjet_ptavg = nullptr; zjet_alpha = nullptr;
+  zjet_balance_a01 = nullptr; zjet_balance_a02 = nullptr;
+  zjet_balance_a03 = nullptr; zjet_balance_a04 = nullptr;
+  zjet_balance_a05 = nullptr; zjet_balance_a06 = nullptr;
+  zjet_balance2D_a01 = nullptr; zjet_balance2D_a02 = nullptr;
+  zjet_balance2D_a03 = nullptr; zjet_balance2D_a04 = nullptr;
+  zjet_balance2D_a05 = nullptr; zjet_balance2D_a06 = nullptr;
+  zjet_balance3D = nullptr; zjet_balance3Dwide = nullptr;
+  zjet_balance3Dnarrow = nullptr; zjet_balance3Dabseta = nullptr;
+  zjet_balance3Dabsetawide = nullptr; zjet_balance3Dabsetanarrow = nullptr;
+  zjet_balance3D_counts = nullptr; zjet_balance3Dwide_counts = nullptr;
+  zjet_balance3Dnarrow_counts = nullptr; zjet_balance3Dabseta_counts = nullptr;
+  zjet_balance3Dabsetawide_counts = nullptr; zjet_balance3Dabsetanarrow_counts = nullptr;
+  zjet_balance_dist = nullptr;
   
   // JER histograms
   responses3D = nullptr; phiresponse = nullptr; etaresponse = nullptr;
@@ -104,6 +128,7 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   
   bool createDijet = (type == AnalysisType::DIJET || type == AnalysisType::ALL);
   bool createPhotonJet = (type == AnalysisType::PHOTONJET || type == AnalysisType::ALL);
+  bool createZJet = (type == AnalysisType::ZJET || type == AnalysisType::ALL);
   
   // ============================================
   // COMMON HISTOGRAMS (created for all analyses)
@@ -132,11 +157,22 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
     genjet_phi = new TH1D("gen jet phi"," gen jet #phi; gen jet #phi;", 20, -2.5, 2.5);
     jetresponse = new TProfile("response","",100,100,1000);
     ptres = new TH1D("pT res"," pT ; (pT_reco-pT_gen)/pT_gen;", 40, -2, 2);
-    genphoton_pt = new TH1D("gen photon pT", "gen photon p_{T}; gen photon p_{T};", 100, 0, 500);
-    genphoton_eta = new TH1D("gen photon eta", "gen photon #eta; gen photon #eta;", 50, -2.5, 2.5);
-    genphoton_phi = new TH1D("gen photon phi", "gen photon #phi; gen photon #phi;", nphis, phirange);
-    photonresponse = new TProfile("photon response", "", 100, 0, 500);
-    photon_ptres = new TH1D("photon pT res", "photon p_{T}; (p_{T,reco}-p_{T,gen})/p_{T,gen};", 40, -0.5, 0.5);
+    
+    if (createPhotonJet) {
+      genphoton_pt = new TH1D("gen photon pT", "gen photon p_{T}; gen photon p_{T};", 100, 0, 500);
+      genphoton_eta = new TH1D("gen photon eta", "gen photon #eta; gen photon #eta;", 50, -2.5, 2.5);
+      genphoton_phi = new TH1D("gen photon phi", "gen photon #phi; gen photon #phi;", nphis, phirange);
+      photonresponse = new TProfile("photon response", "", 100, 0, 500);
+      photon_ptres = new TH1D("photon pT res", "photon p_{T}; (p_{T,reco}-p_{T,gen})/p_{T,gen};", 40, -0.5, 0.5);
+    }
+    
+    if (createZJet) {
+      genz_pt = new TH1D("gen z pT", "gen Z p_{T}; gen Z p_{T};", 100, 0, 500);
+      genz_eta = new TH1D("gen z eta", "gen Z #eta; gen Z #eta;", 50, -2.5, 2.5);
+      genz_phi = new TH1D("gen z phi", "gen Z #phi; gen Z #phi;", nphis, phirange);
+      zresponse = new TProfile("z response", "", 100, 0, 500);
+      z_ptres = new TH1D("z pT res", "Z p_{T}; (p_{T,reco}-p_{T,gen})/p_{T,gen};", 40, -0.5, 0.5);
+    }
   }
   
   // Weight histograms (common)
@@ -178,7 +214,7 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
     dijetasymmetry_now = new TH1D("dijetasymmetry_now","  ; asymmetry;", 40, 0, 1);
     dijetdeltaphi  = new TH1D("dijetdeltaphi"," ; delta phi;", 40, 0, 3.1415926535);
     dijetdeltaeta  = new TH1D("dijetdeltaeta"," ; delta eta;", 40, 0, 5.2);
-    
+   
     dijetasymmetry_a01 = new TProfile("dijetasymmetry_a01","  ; ;",  nptforjec, &ptforjec[0]);
     dijetasymmetry_a02 = new TProfile("dijetasymmetry_a02","  ; ;",  nptforjec, &ptforjec[0]);
     dijetbalance_a03 = new TH1D("dijetbalance_a03","  ; ;", 20, -2, 2);
@@ -213,13 +249,13 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
     vector<double> y(161);
     for (unsigned int i = 0; i != y.size(); ++i) y[i] = -1 + 0.0125*i;
     const int ny = y.size()-1;
-    
+   
     if (ismc) {
       responses3D = new TH3D("responses3D",";;", nptforJER, &ptforJER[0], netaforjer, &etaforjer[0], nx, &x[0]);
       phiresponse = new TH3D("phiresponses3D",";;", nptforJER, &ptforJER[0], netaforjer, &etaforjer[0], ny, &y[0]);
       etaresponse = new TH3D("etaresponses3D",";;", nptforJER, &ptforJER[0], netaforjer, &etaforjer[0], ny, &y[0]);
     }
-    
+   
     absasymmdist3D = new TH3D("absasymmdist3D",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], nx, &x[0]);
     asymmdist3D = new TH3D("asymmdist3D",";;", nptforjec, &ptforjec[0], njeretas, &jeretarange[0], ny, &y[0]);
 
@@ -254,6 +290,16 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
   }
 
   // ============================================
+  // L3 RESIDUAL COMMON (Photon+Jet & Z+Jet)
+  // ============================================
+  if (createPhotonJet || createZJet) {
+    awayside_jet_pt = new TH1D("awayside_jet_pt", "Away-side Jet p_{T}", 100, 0, 500);
+    awayside_jet_eta = new TH1D("awayside_jet_eta", "Away-side Jet #eta", netas, etarange);
+    awayside_jet_phi = new TH1D("awayside_jet_phi", "Away-side Jet #phi", nphis, phirange);
+    awayside_jet_uncorr_pt = new TH1D("awayside_jet_uncorr_pt", "Away-side Jet p_{T} (uncorr)", 100, 0, 500);
+  }
+
+  // ============================================
   // PHOTON+JET SPECIFIC HISTOGRAMS
   // ============================================
   if (createPhotonJet) {
@@ -264,11 +310,6 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
     photon_sigmaIetaIeta = new TH1D("photon_sigmaIetaIeta", "Photon #sigma_{i#etai#eta}", 50, 0, 0.05);
     photon_SwissCrx = new TH1D("photon_SwissCrx", "Photon Swiss Cross", 50, 0.8, 1.0);
     photon_SeedTime = new TH1D("photon_SeedTime", "Photon Seed Time", 50, -10, 10);
-
-    awayside_jet_pt = new TH1D("awayside_jet_pt", "Away-side Jet p_{T}", 100, 0, 500);
-    awayside_jet_eta = new TH1D("awayside_jet_eta", "Away-side Jet #eta", netas, etarange);
-    awayside_jet_phi = new TH1D("awayside_jet_phi", "Away-side Jet #phi", nphis, phirange);
-    awayside_jet_uncorr_pt = new TH1D("awayside_jet_uncorr_pt", "Away-side Jet p_{T} (uncorr)", 100, 0, 500);
 
     photonjet_dphi = new TH1D("photonjet_dphi", "#Delta#phi(#gamma,jet)", 50, 0, 3.14159);
     photonjet_balance = new TH1D("photonjet_balance", "p_{T}^{jet}/p_{T}^{#gamma}", 50, 0, 2);
@@ -329,6 +370,72 @@ histograms::histograms(TDirectory *dir, float etamin, float etamax, float hibinm
 
       photonjet_balance_dist = new TH3D("photonjet_balance_dist",
                                          "Balance distribution;p_{T}^{#gamma} (GeV);#alpha;p_{T}^{jet}/p_{T}^{#gamma}",
+                                         nptforjec, &ptforjec[0],
+                                         nalphavalues, &alphavalues[0],
+                                         50, balanceEdges);
+    }
+  }
+
+  // ============================================
+  // Z+JET SPECIFIC HISTOGRAMS
+  // ============================================
+  if (createZJet) {
+    z_pt = new TH1D("z_pt", "Z p_{T}", 100, 0, 500);
+    z_eta = new TH1D("z_eta", "Z #eta", 50, -2.5, 2.5);
+    z_phi = new TH1D("z_phi", "Z #phi", nphis, phirange);
+    z_mass = new TH1D("z_mass", "Z mass", 60, 60, 120);
+
+    zjet_dphi = new TH1D("zjet_dphi", "#Delta#phi(Z,jet)", 50, 0, 3.14159);
+    zjet_balance = new TH1D("zjet_balance", "p_{T}^{jet}/p_{T}^{Z}", 50, 0, 2);
+    zjet_ptavg = new TH1D("zjet_ptavg", "p_{T,avg}", 100, 0, 500);
+    zjet_alpha = new TH1D("zjet_alpha", "#alpha (3rd jet fraction)", 50, 0, 1);
+
+    // 1D profiles
+    zjet_balance_a01 = new TProfile("zjet_balance_a01", "Balance (#alpha<0.1)", nptforjec, &ptforjec[0]);
+    zjet_balance_a02 = new TProfile("zjet_balance_a02", "Balance (#alpha<0.2)", nptforjec, &ptforjec[0]);
+    zjet_balance_a03 = new TProfile("zjet_balance_a03", "Balance (#alpha<0.3)", nptforjec, &ptforjec[0]);
+    zjet_balance_a04 = new TProfile("zjet_balance_a04", "Balance (#alpha<0.4)", nptforjec, &ptforjec[0]);
+    zjet_balance_a05 = new TProfile("zjet_balance_a05", "Balance (#alpha<0.5)", nptforjec, &ptforjec[0]);
+    zjet_balance_a06 = new TProfile("zjet_balance_a06", "Balance (#alpha<0.6)", nptforjec, &ptforjec[0]);
+
+    // 2D profiles
+    zjet_balance2D_a01 = new TProfile2D("zjet_balance2D_a01", "Balance (#alpha<0.1)", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
+    zjet_balance2D_a02 = new TProfile2D("zjet_balance2D_a02", "Balance (#alpha<0.2)", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
+    zjet_balance2D_a03 = new TProfile2D("zjet_balance2D_a03", "Balance (#alpha<0.3)", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
+    zjet_balance2D_a04 = new TProfile2D("zjet_balance2D_a04", "Balance (#alpha<0.4)", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
+    zjet_balance2D_a05 = new TProfile2D("zjet_balance2D_a05", "Balance (#alpha<0.5)", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
+    zjet_balance2D_a06 = new TProfile2D("zjet_balance2D_a06", "Balance (#alpha<0.6)", nptforjec, &ptforjec[0], nwetas, &wetarange[0]);
+
+    // Z trigger
+    HLT_Z = new TH1D("HLT_Z", "HLT Z events (Mu/Ele)", 2, 0, 2);
+    HLT_Z_ptav = new TH1D("HLT_Z_ptav", "p_{T,avg} (HLT Z)", 100, 0, 500);
+
+    // 3D profiles (only for wide eta bin)
+    if ((this->etamin - this->etamax) < -10) {
+      zjet_balance3D = new TProfile3D("zjet_balance3D", "Balance vs p_{T,avg}, #eta_{jet}, #alpha", nptforjec, &ptforjec[0], nwetas, &wetarange[0], nalphavalues, &alphavalues[0]);
+      zjet_balance3Dwide = new TProfile3D("zjet_balance3Dwide", "Balance (wide #eta bins)", nptforjec, &ptforjec[0], nwetas, &wetarange[0], nalphavalues, &alphavalues[0]);
+      zjet_balance3Dnarrow = new TProfile3D("zjet_balance3Dnarrow", "Balance (narrow #eta bins)", nptforjec, &ptforjec[0], netas, &etarange[0], nalphavalues, &alphavalues[0]);
+      zjet_balance3Dabseta = new TProfile3D("zjet_balance3Dabseta", "Balance vs p_{T,avg}, |#eta_{jet}|, #alpha", nptforjec, &ptforjec[0], nwabsetas, &wabsetarange[0], nalphavalues, &alphavalues[0]);
+      zjet_balance3Dabsetawide = new TProfile3D("zjet_balance3Dabsetawide", "Balance (wide |#eta| bins)", nptforjec, &ptforjec[0], ndwabsetas, &dwabsetarange[0], nalphavalues, &alphavalues[0]);
+      zjet_balance3Dabsetanarrow = new TProfile3D("zjet_balance3Dabsetanarrow", "Balance (narrow |#eta| bins)", nptforjec, &ptforjec[0], nabsetas, &absetarange[0], nalphavalues, &alphavalues[0]);
+      zjet_balance3D_counts = new TH3D("zjet_balance3D_counts", "Entries vs p_{T,avg}, #eta_{jet}, #alpha", nptforjec, &ptforjec[0], nwetas, &wetarange[0], nalphavalues, &alphavalues[0]);
+      zjet_balance3Dwide_counts = new TH3D("zjet_balance3Dwide_counts", "Entries (wide #eta bins)", nptforjec, &ptforjec[0], nwetas, &wetarange[0], nalphavalues, &alphavalues[0]);
+      zjet_balance3Dnarrow_counts = new TH3D("zjet_balance3Dnarrow_counts", "Entries (narrow #eta bins)", nptforjec, &ptforjec[0], netas, &etarange[0], nalphavalues, &alphavalues[0]);
+      zjet_balance3Dabseta_counts = new TH3D("zjet_balance3Dabseta_counts", "Entries vs p_{T,avg}, |#eta_{jet}|, #alpha", nptforjec, &ptforjec[0], nwabsetas, &wabsetarange[0], nalphavalues, &alphavalues[0]);
+      zjet_balance3Dabsetawide_counts = new TH3D("zjet_balance3Dabsetawide_counts", "Entries (wide |#eta| bins)", nptforjec, &ptforjec[0], ndwabsetas, &dwabsetarange[0], nalphavalues, &alphavalues[0]);
+      zjet_balance3Dabsetanarrow_counts = new TH3D("zjet_balance3Dabsetanarrow_counts", "Entries (narrow |#eta| bins)", nptforjec, &ptforjec[0], nabsetas, &absetarange[0], nalphavalues, &alphavalues[0]);
+      
+      static double balanceEdges[51];
+      static bool balanceEdgesInit = false;
+      if (!balanceEdgesInit) {
+        for (int i = 0; i <= 50; ++i) {
+          balanceEdges[i] = 0.0 + (2.0 / 50.0) * i;
+        }
+        balanceEdgesInit = true;
+      }
+
+      zjet_balance_dist = new TH3D("zjet_balance_dist",
+                                         "Balance distribution;p_{T}^{Z} (GeV);#alpha;p_{T}^{jet}/p_{T}^{Z}",
                                          nptforjec, &ptforjec[0],
                                          nalphavalues, &alphavalues[0],
                                          50, balanceEdges);

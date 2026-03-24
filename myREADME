@@ -18,8 +18,8 @@ root -l -b -q 'analyse_ZJet.cc("ZJETDATA_0", "AK4_zjet", false, false, "era", -1
 # Derive the 3D Responses, Fit the Residuals and Produce the .txt File
 
 # Inside residualanalysis folder (cd ..)
-root -l -b -q 'L3Residual/deriveL3_from_photonjet.C("L3Residual/ZJETMC_0_AK4_zjet_ak4.root", "L3Residual/ZJETDATA_0_AK4_zjet_ak4.root", "L3Residual/L3_derived_zjet.root", true, 5, false, true)'
-root -l -b -q 'L3Residual/dofits_L3.C("L3Residual/L3_derived_zjet.root", 40, 300, "L3Res_zjet", false, "2024ppRef", "pp 480.4 pb^{-1}", true, false)'
+root -l -b -q 'L3Residual/deriveL3.C("L3Residual/ZJETMC_0_AK4_zjet_ak4.root", "L3Residual/ZJETDATA_0_AK4_zjet_ak4.root", "L3Residual/L3_derived_zjet.root", "zjet", true, 5, false, true)'
+root -l -b -q 'L3Residual/dofits_L3.C("L3Residual/L3_derived_zjet.root", 40, 300, "L3Res_zjet", false, "2024ppRef", "pp 480.4 pb^{-1}", true, false, "zjet")'
 
 
 # Git Setup for Residual Analysis

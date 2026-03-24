@@ -111,13 +111,13 @@ static std::vector<TString> splitInputFiles(const TString& in) {
   return out;
 }
 
-static TH1D* loadPtCorrectionHist(TFile* f, int refAlphaBin) {
+static TH1D* loadPtCorrectionHist(TFile* f, int refAlphaBin, const TString& obj) {
   if (!f) return nullptr;
   // Prefer an already-built alpha->0 correction if present
   if (auto* h0 = (TH1D*)f->Get("ratio_vspT_alpha0")) return h0;
   if (auto* hc = (TH1D*)f->Get("corr_vspT")) return hc;
   // Fall back to the nominal-alpha ratio
-  return (TH1D*)f->Get(Form("ratio_vsphotonpt_alpha%d", refAlphaBin));
+  return (TH1D*)f->Get(Form("ratio_vs%spt_alpha%d", obj.Data(), refAlphaBin));
 }
 
 static TString defaultInputLabel(const TString& path, int indexOneBased) {
@@ -131,8 +131,8 @@ static TString defaultInputLabel(const TString& path, int indexOneBased) {
   return Form("Input %d", indexOneBased);
 }
 
-static TH1D* makePtFrameFromHist(const TH1* href, const TString& name, const TString& yTitle, double ymin, double ymax) {
-  const TString title = Form(";p_{T}^{#gamma} (GeV);%s", yTitle.Data());
+static TH1D* makePtFrameFromHist(const TH1* href, const TString& name, const TString& yTitle, double ymin, double ymax, TString refPtLabel = "p_{T}^{#gamma}") {
+  const TString title = Form(";%s (GeV);%s", refPtLabel.Data(), yTitle.Data());
   if (!href) {
     TH1D* h = new TH1D(name, title, 100, 20, 600);
     h->SetMinimum(ymin);
@@ -242,14 +242,15 @@ static TF1* makeL3PtFitFunc(const char* name, double xmin, double xmax) {
 }
 
 void dofits_L3(TString inFileL3Derived = "L3_derived.root",
-               double ptminG = 30.,
-               double ptmaxG = 100.,
-               string outfilename = "L3Res_photonjet",
+               double ptminG = 40.,
+               double ptmaxG = 300.,
+               string outfilename = "L3Res_output",
                bool closure = false,
                string runLabel = "2024ppRef",
                string lumiLabel = "pp 480.4 pb^{-1}",
                bool plotRawResponses = true,
                bool saveAlphaExtrap = false,
+               TString mode = "zjet", // Added here for convenience
                int refAlphaBin = 5,
                double fitAlphaMin = 0.0,
                double fitAlphaMax = 0.4,
@@ -262,7 +263,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
                TString mcRawFileForDist = "",
                TString dataRawFileForDist = "",
                bool writeL2L3 = true,
-               string l2ResidualFile = "fillhistograms/jecfiles/L2Residuals_2024ppRef_fixed.txt",
+               string l2ResidualFile = "fillhistograms/jecfiles/Prompt24HIpp_V1_DATA_L2Residual_AK4PF.txt",
                string outBaseDir = "L3Residual",
                string jecOutDir = "",
                TString inputLabelsCSV = "",
@@ -270,8 +271,14 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
                TString inputPtRangesCSV = "",
                bool plotPerAlphaPtFits = false) {
 
+  TString obj = (mode == "zjet") ? "z" : "photon";
+
   doClosure = closure;
   _run = runLabel;
+
+  TString refPtLabel = (mode == "zjet") ? "p_{T}^{Z}" : "p_{T}^{#gamma}";
+  TString refName = (mode == "zjet") ? "Z+jet" : "#gamma+jet";
+  TString refPlain = (mode == "zjet") ? "Z" : "Photon";
 
   setTDRStyle();
   gStyle->SetOptStat(0);
@@ -340,7 +347,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
   cout << "============================================" << endl;
   cout << "L3 Residual Fitting" << endl;
   cout << "Input file(s): " << inFileL3Derived << endl;
-  cout << "Photon+jet pT range: " << ptminG << " - " << ptmaxG << " GeV" << endl;
+  cout << refPlain << "+jet pT range: " << ptminG << " - " << ptmaxG << " GeV" << endl;
   cout << "Reference alpha bin: " << refAlphaBin << endl;
   cout << "Alpha fit range: " << fitAlphaMin << " - " << fitAlphaMax << endl;
   cout << "Closure test: " << (doClosure ? "YES" : "NO") << endl;
@@ -506,7 +513,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         }
 
         TCanvas* cAlpha = new TCanvas(Form("cAlpha_pt%.0fto%.0f_eta%.3fto%.3f", ptBinLo, ptBinHi, etaBinLo, etaBinHi), 
-                                       Form("cAlpha_pt%.0fto%.0f_eta%.3fto%.3f", ptBinLo, ptBinHi, etaBinLo, etaBinHi), 800, 600);
+                                      Form("cAlpha_pt%.0fto%.0f_eta%.3fto%.3f", ptBinLo, ptBinHi, etaBinLo, etaBinHi), 800, 600);
         cAlpha->cd();
         hAlphaRatioNorm->SetMinimum(0.97);
         hAlphaRatioNorm->SetMaximum(1.05);
@@ -559,7 +566,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         tbin->SetNDC();
         tbin->SetTextFont(42);
         tbin->SetTextSize(0.035);
-        tbin->DrawLatex(0.18, 0.85, Form("%.0f < p_{T}^{#gamma} < %.0f GeV", ptBinLo, ptBinHi));
+        tbin->DrawLatex(0.18, 0.85, Form("%.0f < %s < %.0f GeV", ptBinLo, refPtLabel.Data(), ptBinHi));
         tbin->DrawLatex(0.18, 0.80, Form("%.3f < |#eta_{jet}| < %.3f", etaBinLo, etaBinHi));
         tbin->DrawLatex(0.18, 0.75, Form("p0 = %.4f", fAlpha->GetParameter(0)));
         tbin->DrawLatex(0.18, 0.70, Form("p1 = %.4f", fAlpha->GetParameter(1)));
@@ -594,7 +601,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         // Second loop: kFSR extraction per pT bin.
         // L3 is treated as pT-only: choose a single wide |eta| bin (barrel) or collapse over eta.
         // Do NOT draw/use y-error bars for the normalized ratio points (fully correlated).
-        cout << "\n=== Extracting kFSR vs photon pT (alpha->0 extrapolation) ===" << endl;
+        cout << "\n=== Extracting kFSR vs " << refPlain.Data() << " pT (alpha->0 extrapolation) ===" << endl;
         cout << "kFSR extraction uses " << (useSingleEtaBin ? "single eta bin" : "eta-collapsed")
           << ", etaBinForL3=" << etaBinForL3 << endl;
     
@@ -602,7 +609,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     std::vector<double> ptEdges(nptbins + 1);
     for (int b = 1; b <= nptbins + 1; ++b) ptEdges[b-1] = balance3D_mc->GetXaxis()->GetBinLowEdge(b);
     
-    TH1D* hkFSR = new TH1D("kFSR_vsPt", "k_{FSR} (Normalized Ratio extrapolated to #alpha#rightarrow0) vs p_{T}^{#gamma};p_{T}^{#gamma} (GeV);k_{FSR}", 
+    TH1D* hkFSR = new TH1D("kFSR_vsPt", Form("k_{FSR} (Normalized Ratio extrapolated to #alpha#rightarrow0) vs %s;%s (GeV);k_{FSR}", refPtLabel.Data(), refPtLabel.Data()), 
                            nptbins, ptEdges.data());
     
     auto ratioAt = [&](int ptbin, int alphabin) -> double {
@@ -744,7 +751,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         t->SetNDC();
         t->SetTextFont(42);
         t->SetTextSize(0.035);
-        t->DrawLatex(0.18, 0.86, Form("p_{T}^{#gamma}: %.0f-%.0f GeV", ptBinLo, ptBinHi));
+        t->DrawLatex(0.18, 0.86, Form("%s: %.0f-%.0f GeV", refPtLabel.Data(), ptBinLo, ptBinHi));
         t->DrawLatex(0.18, 0.81, Form("Ref #alpha < %.2f (bin %d), excluded", refAlphaVal, refAlphaBin));
         t->DrawLatex(0.18, 0.76, Form("Fit: %.2f < #alpha < %.2f", fitAlphaMin, fitAlphaMax));
         t->DrawLatex(0.18, 0.71, Form("k_{FSR} = %.4f #pm %.4f", kfsr, kfsr_err));
@@ -793,13 +800,13 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     // Create kFSR vs pT diagnostic plot (no functional fit)
     // kFSR is defined per pT bin from the linear alpha-extrapolation.
     // Only the FINAL correction is fit vs pT.
-    cout << "\n=== kFSR vs photon pT (diagnostic; no fit) ===" << endl;
+    cout << "\n=== kFSR vs " << refPlain.Data() << " pT (diagnostic; no fit) ===" << endl;
     
-    TCanvas* ckFSR = new TCanvas("ckFSR", "kFSR vs photon pT", 800, 600);
+    TCanvas* ckFSR = new TCanvas("ckFSR", Form("kFSR vs %s pT", refPlain.Data()), 800, 600);
     ckFSR->SetLogx();
     ckFSR->cd();
     
-    TH1D* hFramekFSR = makePtFrameFromHist(hkFSR, "hFramekFSR", "k_{FSR} (\"#alpha#rightarrow0\" intercept)", 0.9, 1.1);
+    TH1D* hFramekFSR = makePtFrameFromHist(hkFSR, "hFramekFSR", "k_{FSR} (\"#alpha#rightarrow0\" intercept)", 0.9, 1.1, refPtLabel);
     hFramekFSR->Draw();
     styleLogxAxis(hFramekFSR);
 
@@ -846,10 +853,10 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
   cout << "\n=== Loading pT-dependent response ratios ===" << endl;
   map<int, TH1D*> ratioVsPt;
   for (int alpha = 1; alpha <= nalphabins; ++alpha) {
-    TH1D* h = (TH1D*)inFile->Get(Form("ratio_vsphotonpt_alpha%d", alpha));
+    TH1D* h = (TH1D*)inFile->Get(Form("ratio_vs%spt_alpha%d", obj.Data(), alpha));
     if (h) {
       ratioVsPt[alpha] = h;
-      cout << "  Loaded ratio_vsphotonpt_alpha" << alpha << endl;
+      cout << "  Loaded ratio_vs" << obj << "pt_alpha" << alpha << endl;
     }
   }
   if (ratioVsPt.empty()) {
@@ -888,7 +895,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       TCanvas* cCorr = new TCanvas("cCorrAlpha0", "Ref-alpha ratio and kFSR-corrected alpha->0 ratio", 900, 700);
       cCorr->SetLogx();
       cCorr->cd();
-      TH1D* hFrame = makePtFrameFromHist(hRef, "hFrameCorrAlpha0", "#frac{R_{MC}}{R_{Data}}", 0.7, 1.5);
+      TH1D* hFrame = makePtFrameFromHist(hRef, "hFrameCorrAlpha0", "#frac{R_{MC}}{R_{Data}}", 0.7, 1.5, refPtLabel);
       hFrame->Draw();
       styleLogxAxis(hFrame);
       const double xMin = hFrame->GetXaxis()->GetBinLowEdge(1);
@@ -937,7 +944,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     c->cd();
 
     TH1D* href = ratioVsPt.begin()->second;
-    TH1D* hFrame = makePtFrameFromHist(href, Form("hFrame_ratioOverlayPt_%s", outfilename.c_str()), "#frac{R_{MC}}{R_{Data}}", 0.7, 1.5);
+    TH1D* hFrame = makePtFrameFromHist(href, Form("hFrame_ratioOverlayPt_%s", outfilename.c_str()), "#frac{R_{MC}}{R_{Data}}", 0.7, 1.5, refPtLabel);
     hFrame->Draw();
     styleLogxAxis(hFrame);
 
@@ -1009,10 +1016,10 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       cout << "WARNING: cannot open input " << inputFiles2[i] << ", skipping" << endl;
       continue;
     }
-    TH1D* hIn = loadPtCorrectionHist(fIn, refAlphaBin);
+    TH1D* hIn = loadPtCorrectionHist(fIn, refAlphaBin, obj);
     if (!hIn) {
       cout << "WARNING: could not find pT correction hist in " << inputFiles2[i]
-           << " (expected corr_vspT or ratio_vspT_alpha0 or ratio_vsphotonpt_alphaN); skipping" << endl;
+           << " (expected corr_vspT or ratio_vspT_alpha0 or ratio_vs" << obj << "pt_alphaN); skipping" << endl;
       fIn->Close();
       continue;
     }
@@ -1154,7 +1161,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     }
 
     // Draw axes from the multigraph so titles and log-x behave like other plots
-    mg->SetTitle(";p_{T}^{#gamma} (GeV);#frac{R_{MC}}{R_{Data}}");
+    mg->SetTitle(Form(";%s (GeV);#frac{R_{MC}}{R_{Data}}", refPtLabel.Data()));
     mg->Draw("AP");
     mg->GetXaxis()->SetLimits(xMin, xMax);
     mg->SetMinimum(yMin);
@@ -1273,7 +1280,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       ftxt.close();
 
       gSystem->mkdir(jecOutDir.c_str(), kTRUE);
-      const std::string outTag = doCombined ? "combined" : "photonjet";
+      const std::string outTag = doCombined ? "combined" : mode.Data();
       const std::string l3TxtJec = Form("%s/L3Residuals_%s_%s_AK4PF.txt", jecOutDir.c_str(), _run.c_str(), outTag.c_str());
       std::ofstream ftxt2(l3TxtJec);
       ftxt2 << "{ 1 JetEta 1 JetPt " << l3PtFitExpr() << " Correction L3Residual}\n";
@@ -1314,7 +1321,8 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       if (!readSimpleJecFile(l2ResidualFile, l2Header, l2recs)) {
         cout << "WARNING: Could not read L2Residual file: " << l2ResidualFile << " (skipping L2L3 write)" << endl;
       } else {
-        const std::string l2l3Txt = Form("%s/L2L3Residuals_%s_photonjet_AK4PF.txt", jecOutDir.c_str(), _run.c_str());
+        const std::string outTag = doCombined ? "combined" : mode.Data();
+        const std::string l2l3Txt = Form("%s/L2L3Residuals_%s_%s_AK4PF.txt", jecOutDir.c_str(), _run.c_str(), outTag.c_str());
         std::ofstream out(l2l3Txt);
         // Preserve the L2 file structure (eta bins, pT validity range, and functional form).
         // We refit the product (L2(pt)*L3(pt)) to the SAME functional form as the L2 file.
@@ -1363,23 +1371,23 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         out.close();
         cout << "Wrote combined L2L3Residual JEC text: " << l2l3Txt << endl;
       }
-      }
     }
+  }
 
   cout << "\n=== Creating plots for all alpha bins ===" << endl;
 
   // Optional: overlay balance distributions (MC vs Data) from raw analysis files
-  // Uses TH3D photonjet_balance_dist: (photon pT, alpha, balance)
+  // Uses TH3D balance_dist: (ref pT, alpha, balance)
   if (plotBalanceDistOverlay) {
     TFile* fMcRaw = TFile::Open(mcRawFileForDist, "READ");
     TFile* fDtRaw = TFile::Open(dataRawFileForDist, "READ");
     if (!fMcRaw || fMcRaw->IsZombie() || !fDtRaw || fDtRaw->IsZombie()) {
       cout << "WARNING: Could not open raw files for balance_dist overlay; skipping." << endl;
     } else {
-      TH3D* hMcDist = (TH3D*)fMcRaw->Get("hibin_-1.0_0.0/eta_-5.2_5.2/photonjet_balance_dist");
-      TH3D* hDtDist = (TH3D*)fDtRaw->Get("hibin_-1.0_0.0/eta_-5.2_5.2/photonjet_balance_dist");
+      TH3D* hMcDist = (TH3D*)fMcRaw->Get(Form("hibin_-1.0_0.0/eta_-5.2_5.2/%s_balance_dist", mode.Data()));
+      TH3D* hDtDist = (TH3D*)fDtRaw->Get(Form("hibin_-1.0_0.0/eta_-5.2_5.2/%s_balance_dist", mode.Data()));
       if (!hMcDist || !hDtDist) {
-        cout << "WARNING: photonjet_balance_dist not found in raw files; skipping overlay." << endl;
+        cout << "WARNING: " << mode.Data() << "_balance_dist not found in raw files; skipping overlay." << endl;
       } else {
         const std::string distFolder = rawFolder + "/balance_dist_overlay";
         gSystem->mkdir(distFolder.c_str(), kTRUE);
@@ -1425,7 +1433,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
           t->SetNDC();
           t->SetTextFont(42);
           t->SetTextSize(0.035);
-          t->DrawLatex(0.18, 0.85, Form("%.0f < p_{T}^{#gamma} < %.0f GeV", ptLo, ptHi));
+          t->DrawLatex(0.18, 0.85, Form("%.0f < %s < %.0f GeV", ptLo, refPtLabel.Data(), ptHi));
           CMS_lumi(c, 0, 0);
 
           c->SaveAs(Form("%s/balance_dist_overlay_pt%.0fto%.0f.png", distFolder.c_str(), ptLo, ptHi));
@@ -1452,7 +1460,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     cout << "  Alpha cut: alpha < " << alphaCutVal << endl;
 
     // Ratio plot
-    TH1D* hFrame1 = makePtFrameFromHist(hRatio, Form("hFrame1_a%d", alphaBin), "#frac{R_{MC}}{R_{Data}}", 0.7, 1.5);
+    TH1D* hFrame1 = makePtFrameFromHist(hRatio, Form("hFrame1_a%d", alphaBin), "#frac{R_{MC}}{R_{Data}}", 0.7, 1.5, refPtLabel);
     TCanvas* c1 = new TCanvas(Form("c1_a%d", alphaBin), Form("c1_a%d", alphaBin), 800, 600);
     c1->SetLogx();
     c1->cd();
@@ -1473,7 +1481,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
     leg1->SetFillStyle(0);
     leg1->SetTextFont(42);
     leg1->SetTextSize(0.035);
-    leg1->AddEntry(hRatio, Form("#gamma+jet (#alpha < %.2f)", alphaCutVal), "PLE");
+    leg1->AddEntry(hRatio, Form("%s (#alpha < %.2f)", refName.Data(), alphaCutVal), "PLE");
     leg1->Draw();
     TLatex* tex = new TLatex();
     tex->SetNDC();
@@ -1486,12 +1494,12 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
 
     // Optional raw MC/Data responses (no fits, no ratio)
     if (plotRawResponses) {
-      TH1D* hMcRaw = (TH1D*)inFile->Get(Form("balance_vsphotonpt_mc_alpha%d", alphaBin));
-      TH1D* hDtRaw = (TH1D*)inFile->Get(Form("balance_vsphotonpt_data_alpha%d", alphaBin));
+      TH1D* hMcRaw = (TH1D*)inFile->Get(Form("balance_vs%spt_mc_alpha%d", obj.Data(), alphaBin));
+      TH1D* hDtRaw = (TH1D*)inFile->Get(Form("balance_vs%spt_data_alpha%d", obj.Data(), alphaBin));
       if (!hMcRaw || !hDtRaw) {
         // Create a placeholder raw plot so users have a consistent output even when raw histos are missing
         TCanvas* cRaw = new TCanvas(Form("cRaw_a%d_missing", alphaBin), Form("cRaw_a%d_missing", alphaBin), 800, 600);
-        TH1D* frameRaw = makePtFrameFromHist(hRatio, Form("hFrameRaw_a%d_missing", alphaBin), "#frac{R_{MC}}{R_{Data}}", 0.7, 1.5);
+        TH1D* frameRaw = makePtFrameFromHist(hRatio, Form("hFrameRaw_a%d_missing", alphaBin), "#frac{R_{MC}}{R_{Data}}", 0.7, 1.5, refPtLabel);
         frameRaw->Draw();
         styleLogxAxis(frameRaw);
         TLatex t; t.SetNDC(); t.SetTextFont(42); t.SetTextSize(0.04); t.DrawLatex(0.18, 0.55, "Raw MC/Data responses not found in input");
@@ -1501,7 +1509,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       } else {
         TCanvas* cRaw = new TCanvas(Form("cRaw_a%d", alphaBin), Form("cRaw_a%d", alphaBin), 800, 600);
         cRaw->SetLogx();
-        TH1D* frameRaw = makePtFrameFromHist(hMcRaw, Form("hFrameRaw_a%d", alphaBin), "#frac{R_{MC}}{R_{Data}}", 0.7, 1.5);
+        TH1D* frameRaw = makePtFrameFromHist(hMcRaw, Form("hFrameRaw_a%d", alphaBin), "#frac{R_{MC}}{R_{Data}}", 0.7, 1.5, refPtLabel);
         frameRaw->Draw();
         styleLogxAxis(frameRaw);
         frameRaw->GetXaxis()->SetNoExponent(kTRUE);
@@ -1527,7 +1535,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
         delete legRaw;
         // Optional diagnostic: per-alpha pT fits (off by default)
         if (plotPerAlphaPtFits) {
-          TH1D* hFrame2 = makePtFrameFromHist(hRatio, Form("hFrame2_a%d", alphaBin), "#frac{R_{MC}}{R_{Data}}", 0.7, 1.5);
+          TH1D* hFrame2 = makePtFrameFromHist(hRatio, Form("hFrame2_a%d", alphaBin), "#frac{R_{MC}}{R_{Data}}", 0.7, 1.5, refPtLabel);
           TCanvas* c2 = new TCanvas(Form("c2_a%d", alphaBin), Form("c2_a%d", alphaBin), 800, 600);
           c2->SetLogx();
           c2->cd();
@@ -1578,7 +1586,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
           leg2->SetFillStyle(0);
           leg2->SetTextFont(42);
           leg2->SetTextSize(0.030);
-          leg2->AddEntry(hRatioClean, "#gamma+jet (cleaned)", "PLE");
+          leg2->AddEntry(hRatioClean, Form("%s (cleaned)", refName.Data()), "PLE");
           leg2->AddEntry(f0, Form("f_{0}: const (p0=%.4f)", f0->GetParameter(0)), "L");
           leg2->AddEntry(f1, Form("f_{1}: p0=%.4f, p1=%.4f", f1->GetParameter(0), f1->GetParameter(1)), "L");
           leg2->Draw();
@@ -1591,7 +1599,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
 
           // Closure plot for this alpha bin (optional)
           if (doClosure) {
-            TH1D* hFrame3 = makePtFrameFromHist(hRatio, Form("hFrame3_a%d", alphaBin), "Corrected balance", 0.7, 1.3);
+            TH1D* hFrame3 = makePtFrameFromHist(hRatio, Form("hFrame3_a%d", alphaBin), "Corrected balance", 0.7, 1.3, refPtLabel);
             TCanvas* c3 = new TCanvas(Form("c3_a%d", alphaBin), Form("c3_a%d", alphaBin), 800, 600);
             c3->SetLogx();
             c3->cd();
@@ -1668,7 +1676,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       h2dCounts->SetName(Form("counts_pteta_mc_alpha%d", alphaBin));
       double ptMinAll = balance3D_mc->GetXaxis()->GetBinLowEdge(1);
       double ptMaxAll = balance3D_mc->GetXaxis()->GetBinLowEdge(nptbins+1);
-      h2dCounts->SetTitle(Form("MC Counts (#alpha < %.2f);p_{T}^{#gamma} (GeV) [%.0f-%.0f];|#eta_{jet}| [%.3f-%.3f]", alphaCutVal, ptMinAll, ptMaxAll, etaMinAll, etaMaxAll));
+      h2dCounts->SetTitle(Form("MC Counts (#alpha < %.2f);%s (GeV) [%.0f-%.0f];|#eta_{jet}| [%.3f-%.3f]", alphaCutVal, refPtLabel.Data(), ptMinAll, ptMaxAll, etaMinAll, etaMaxAll));
       TCanvas* cCounts = new TCanvas(Form("cCounts_mc_a%d", alphaBin), Form("cCounts_mc_a%d", alphaBin), 1000, 700);
       cCounts->SetRightMargin(0.15);
       cCounts->SetLeftMargin(0.12);
@@ -1697,7 +1705,7 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       h2dCountsData->SetName(Form("counts_pteta_data_alpha%d", alphaBin));
       double ptMinAll = balance3D_data->GetXaxis()->GetBinLowEdge(1);
       double ptMaxAll = balance3D_data->GetXaxis()->GetBinLowEdge(nptbins+1);
-      h2dCountsData->SetTitle(Form("Data Counts (#alpha < %.2f);p_{T}^{#gamma} (GeV) [%.0f-%.0f];|#eta_{jet}| [%.3f-%.3f]", alphaCutVal, ptMinAll, ptMaxAll, etaMinAll, etaMaxAll));
+      h2dCountsData->SetTitle(Form("Data Counts (#alpha < %.2f);%s (GeV) [%.0f-%.0f];|#eta_{jet}| [%.3f-%.3f]", alphaCutVal, refPtLabel.Data(), ptMinAll, ptMaxAll, etaMinAll, etaMaxAll));
       TCanvas* cCountsData = new TCanvas(Form("cCounts_data_a%d", alphaBin), Form("cCounts_data_a%d", alphaBin), 1000, 700);
       cCountsData->SetRightMargin(0.15);
       cCountsData->SetLeftMargin(0.12);
@@ -1729,9 +1737,9 @@ void dofits_L3(TString inFileL3Derived = "L3_derived.root",
       for (int b = 1; b <= netabins + 1; ++b) etaEdges[b-1] = balance3D_mc->GetYaxis()->GetBinLowEdge(b);
       
       TH2D* h2dL3Res = new TH2D(Form("l3res_pteta_alpha%d", alphaBin),
-                                 Form("L3 Residual (MC/Data) (#alpha < %.2f);p_{T}^{#gamma} (GeV) [%.0f-%.0f];|#eta_{jet}| [%.3f-%.3f]",
-                                      alphaCutVal, ptMinAll, ptMaxAll, etaMinAll, etaMaxAll),
-                                 nptbins, ptEdges.data(), netabins, etaEdges.data());
+                                Form("L3 Residual (MC/Data) (#alpha < %.2f);%s (GeV) [%.0f-%.0f];|#eta_{jet}| [%.3f-%.3f]",
+                                      alphaCutVal, refPtLabel.Data(), ptMinAll, ptMaxAll, etaMinAll, etaMaxAll),
+                                nptbins, ptEdges.data(), netabins, etaEdges.data());
       
       // Fill from 3D profiles with cumulative alpha cut
       balance3D_mc->GetZaxis()->SetRange(1, alphaBin);
