@@ -22,6 +22,10 @@ root -l -b -q 'L3Residual/deriveL3.C("L3Residual/ZJETMC_0_AK4_zjet_ak4.root", "L
 root -l -b -q 'L3Residual/dofits_L3.C("L3Residual/L3_derived_zjet.root", 40, 300, "L3Res_zjet", false, "2024ppRef", "pp 480.4 pb^{-1}", true, false, "zjet")'
 
 
+# Validation and plotting tool
+root -l -b -q 'L3Residual/plotresponse_L3.C("L3Residual/ZJETDATA_0_AK4_zjet_ak4.root", "Data", false, "", "zjet")'
+root -l -b -q 'L3Residual/plotresponse_L3.C("L3Residual/ZJETDATA_0_AK4_zjet_ak4.root", "Comparison", false, "L3Residual/ZJETMC_0_AK4_zjet_ak4.root", "zjet")'
+
 # Git Setup for Residual Analysis
 
 ###0. CMSSW

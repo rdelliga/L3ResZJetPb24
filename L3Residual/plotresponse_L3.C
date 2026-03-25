@@ -1,11 +1,15 @@
-// Plot photon+jet distributions from analyse_PhotonJet.cc output
+// Plot Z/photon+jet distributions from analyse_PhotonJet.cc/analyse_ZJet.cc output
 // Shows raw distributions (Data or MC) with optional normalized MC vs Data comparison
 //
-// Input: ROOT files produced by analyse_PhotonJet.cc
+// Input: ROOT files produced by analyse_PhotonJet.cc/analyse_ZJet.cc
 //
-// Usage:
-//   root -l -b -q 'plotresponse_L3.C("data.root", "Data")'
-//   root -l -b -q 'plotresponse_L3.C("data.root", "Data", false, "mc.root")'  // with MC comparison
+// Usage (Z+jet):
+//   root -l -b -q 'plotresponse_L3.C("data.root", "Data", false, "", "zjet")'
+//   root -l -b -q 'plotresponse_L3.C("data.root", "Data", false, "mc.root", "zjet")' // with MC comparison
+//
+// Usage (Photon+jet):
+//   root -l -b -q 'plotresponse_L3.C("data.root", "Data", false, "", "photonjet")'
+//   root -l -b -q 'plotresponse_L3.C("data.root", "Data", false, "mc.root", "photonjet")' // with MC comparison
 
 #include "TFile.h"
 #include "TH1D.h"
@@ -34,17 +38,17 @@ static void NormalizeToUnityWidth(TH1* h) {
 }
 
 static void DrawSelectionText(double ptMin, double ptMax, double alphaCutMax,
-                              double meanData, bool hasMC, double meanMC) {
+                              double meanData, bool hasMC, double meanMC, TString refPtLabel) {
   TLatex latex;
   latex.SetNDC(true);
   latex.SetTextFont(42);
   latex.SetTextSize(0.035);
-  latex.DrawLatex(0.18, 0.86, Form("%.0f < p_{T}^{#gamma} < %.0f GeV", ptMin, ptMax));
+  latex.DrawLatex(0.18, 0.86, Form("%.0f < %s < %.0f GeV", ptMin, refPtLabel.Data(), ptMax));
   latex.DrawLatex(0.18, 0.81, Form("#alpha < %.2f", alphaCutMax));
   if (hasMC) {
-    latex.DrawLatex(0.18, 0.76, Form("#LTp_{T}^{jet}/p_{T}^{#gamma}#GT: Data %.3f, MC %.3f", meanData, meanMC));
+    latex.DrawLatex(0.18, 0.76, Form("#LTp_{T}^{jet}/%s#GT: Data %.3f, MC %.3f", refPtLabel.Data(), meanData, meanMC));
   } else {
-    latex.DrawLatex(0.18, 0.76, Form("#LTp_{T}^{jet}/p_{T}^{#gamma}#GT: %.3f", meanData));
+    latex.DrawLatex(0.18, 0.76, Form("#LTp_{T}^{jet}/%s#GT: %.3f", refPtLabel.Data(), meanData));
   }
 }
 
@@ -52,6 +56,7 @@ void plotresponse_L3(TString inputFile = "",
                      TString tag = "Data",
                      bool isMC = false,
                      TString mcFile = "",
+                     TString mode = "zjet", // Options: "photonjet" or "zjet"
                      TString runLabel = "2024ppRef",
                      TString lumiLabel = "pp 480.4 pb^{-1}") {
   
@@ -62,6 +67,10 @@ void plotresponse_L3(TString inputFile = "",
     return;
   }
   
+  TString obj = (mode == "zjet") ? "z" : "photon";
+  TString refPtLabel = (mode == "zjet") ? "p_{T}^{Z}" : "p_{T}^{#gamma}";
+  TString refName = (mode == "zjet") ? "Z" : "#gamma";
+
   setTDRStyle();
   gStyle->SetOptStat(0);
   gStyle->SetOptFit(0);
@@ -86,14 +95,14 @@ void plotresponse_L3(TString inputFile = "",
   }
   
   cout << "============================================" << endl;
-  cout << "Photon+Jet Distribution Plotting" << endl;
+  cout << "Distribution Plotting (" << mode << ")" << endl;
   cout << "Input file: " << inputFile << endl;
   cout << "Tag: " << tag << endl;
   if (mcFilePtr) cout << "MC comparison file: " << mcFile << endl;
   cout << "============================================" << endl;
   
   // Create output directory
-  string outfolder = Form("L3plots_%s", tag.Data());
+  string outfolder = Form("L3plots_%s_%s", mode.Data(), tag.Data());
   gSystem->mkdir(outfolder.c_str(), kTRUE);
   
   // Access histograms - navigate to hibin and eta directories
@@ -117,15 +126,15 @@ void plotresponse_L3(TString inputFile = "",
   
   // List of histograms to plot with axis labels
   vector<pair<string, pair<string, string>>> histConfigs = {
-    {"photon_pt", {"Photon p_{T} (GeV)", "Events"}},
-    {"photon_eta", {"Photon #eta", "Events"}},
-    {"photon_phi", {"Photon #phi (rad)", "Events"}},
+    {Form("%s_pt", obj.Data()), {Form("%s (GeV)", refPtLabel.Data()), "Events"}},
+    {Form("%s_eta", obj.Data()), {Form("%s #eta", refName.Data()), "Events"}},
+    {Form("%s_phi", obj.Data()), {Form("%s #phi (rad)", refName.Data()), "Events"}},
     {"awayside_jet_pt", {"Jet p_{T} (GeV)", "Events"}},
     {"awayside_jet_eta", {"Jet #eta", "Events"}},
     {"awayside_jet_phi", {"Jet #phi (rad)", "Events"}},
-    {"photonjet_dphi", {"#Delta#phi(#gamma,jet) (rad)", "Events"}},
-    {"photonjet_alpha", {"#alpha", "Events"}},
-    {"photonjet_ptavg", {"p_{T,avg} (GeV)", "Events"}}
+    {Form("%s_dphi", mode.Data()), {Form("#Delta#phi(%s,jet) (rad)", refName.Data()), "Events"}},
+    {Form("%s_alpha", mode.Data()), {"#alpha", "Events"}},
+    {Form("%s_ptavg", mode.Data()), {"p_{T,avg} (GeV)", "Events"}}
   };
   
   TCanvas* c = new TCanvas("c", "Distribution", 800, 600);
@@ -235,10 +244,10 @@ void plotresponse_L3(TString inputFile = "",
   }
   
   // Plot balance distributions from TH3D
-  TH3D* balance_dist = (TH3D*)histDir->Get("photonjet_balance_dist");
+  TH3D* balance_dist = (TH3D*)histDir->Get(Form("%s_balance_dist", mode.Data()));
   TH3D* balance_dist_mc = nullptr;
   if (mcHistDir) {
-    balance_dist_mc = (TH3D*)mcHistDir->Get("photonjet_balance_dist");
+    balance_dist_mc = (TH3D*)mcHistDir->Get(Form("%s_balance_dist", mode.Data()));
   }
   if (balance_dist) {
     cout << "\n=== Plotting balance distributions ===" << endl;
@@ -284,7 +293,7 @@ void plotresponse_L3(TString inputFile = "",
         h_bal->SetMarkerStyle(20);
         h_bal->SetMarkerColor(kBlue + 1);
         h_bal->SetMarkerSize(0.6);
-        h_bal->GetXaxis()->SetTitle("p_{T}^{jet} / p_{T}^{#gamma}");
+        h_bal->GetXaxis()->SetTitle(Form("p_{T}^{jet} / %s", refPtLabel.Data()));
         h_bal->GetYaxis()->SetTitle("Events");
         h_bal->GetYaxis()->SetTitleOffset(1.45);
         h_bal->GetXaxis()->SetTitleSize(0.045);
@@ -297,7 +306,7 @@ void plotresponse_L3(TString inputFile = "",
         // In single-file mode, write the raw balance slices
         if (!mcFilePtr) {
           h_bal->Draw("E");
-          DrawSelectionText(ptMin, ptMax, alphaCutMax, meanData, false, 0.0);
+          DrawSelectionText(ptMin, ptMax, alphaCutMax, meanData, false, 0.0, refPtLabel);
 
           TLegend* legBal = new TLegend(0.65, 0.78, 0.88, 0.88);
           legBal->SetBorderSize(0);
@@ -339,7 +348,7 @@ void plotresponse_L3(TString inputFile = "",
           h_bal_norm->SetLineColor(kRed + 1);
           h_bal_norm->SetMarkerColor(kRed + 1);
           h_bal_norm->SetLineWidth(2);
-          h_bal_norm->GetXaxis()->SetTitle("p_{T}^{jet} / p_{T}^{#gamma}");
+          h_bal_norm->GetXaxis()->SetTitle(Form("p_{T}^{jet} / %s", refPtLabel.Data()));
           h_bal_norm->GetYaxis()->SetTitle("Norm. Events");
           h_bal_norm->GetYaxis()->SetTitleOffset(1.45);
           h_bal_norm->Draw("E");
@@ -349,7 +358,7 @@ void plotresponse_L3(TString inputFile = "",
           h_bal_mc_norm->SetLineWidth(2);
           h_bal_mc_norm->Draw("E SAME");
 
-          DrawSelectionText(ptMin, ptMax, alphaCutMax, meanData, true, meanMC);
+          DrawSelectionText(ptMin, ptMax, alphaCutMax, meanData, true, meanMC, refPtLabel);
 
           TLegend* legBalComp = new TLegend(0.65, 0.74, 0.88, 0.88);
           legBalComp->SetBorderSize(0);
@@ -380,7 +389,7 @@ void plotresponse_L3(TString inputFile = "",
     
     c->SetLogy();
   } else {
-    cout << "WARNING: photonjet_balance_dist not found" << endl;
+    cout << "WARNING: " << mode.Data() << "jet_balance_dist not found" << endl;
   }
   
   delete c;
